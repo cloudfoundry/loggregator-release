@@ -13,9 +13,6 @@ import (
 	"code.cloudfoundry.org/loggregator/plumbing"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
-	"code.cloudfoundry.org/loggregator/metron/app"
-
-	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -28,34 +25,18 @@ import (
 )
 
 var _ = Describe("Metron", func() {
-	var (
-		metronCleanup  func()
-		metronConfig   app.Config
-		consumerServer *Server
-		eventEmitter   dropsonde.EventEmitter
-	)
-
-	BeforeEach(func() {
-		var err error
-		consumerServer, err = NewServer()
+	It("accepts connections on the v1 API", func() {
+		consumerServer, err := NewServer()
 		Expect(err).ToNot(HaveOccurred())
-
-		var metronReady func()
-		metronCleanup, metronConfig, metronReady = testservers.StartMetron(
+		defer consumerServer.Stop()
+		metronCleanup, metronPorts := testservers.StartMetron(
 			testservers.BuildMetronConfig("localhost", consumerServer.Port()),
 		)
-		metronReady()
-	})
+		defer metronCleanup()
 
-	AfterEach(func() {
-		consumerServer.Stop()
-		metronCleanup()
-	})
-
-	It("accepts connections on the v1 API", func() {
-		udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("127.0.0.1:%d", metronConfig.IncomingUDPPort))
+		udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("127.0.0.1:%d", metronPorts.UDP))
 		Expect(err).ToNot(HaveOccurred())
-		eventEmitter = emitter.NewEventEmitter(udpEmitter, "some-origin")
+		eventEmitter := emitter.NewEventEmitter(udpEmitter, "some-origin")
 
 		emitEnvelope := &events.Envelope{
 			Origin:    proto.String("some-origin"),
@@ -84,6 +65,14 @@ var _ = Describe("Metron", func() {
 	})
 
 	It("accepts connections on the v2 API", func() {
+		consumerServer, err := NewServer()
+		Expect(err).ToNot(HaveOccurred())
+		defer consumerServer.Stop()
+		metronCleanup, metronPorts := testservers.StartMetron(
+			testservers.BuildMetronConfig("localhost", consumerServer.Port()),
+		)
+		defer metronCleanup()
+
 		emitEnvelope := &v2.Envelope{
 			Message: &v2.Envelope_Log{
 				Log: &v2.Log{
@@ -93,7 +82,7 @@ var _ = Describe("Metron", func() {
 			},
 		}
 
-		client := metronClient(metronConfig)
+		client := metronClient(metronPorts.GRPC)
 		sender, err := client.Sender(context.Background())
 		Expect(err).ToNot(HaveOccurred())
 
@@ -151,13 +140,13 @@ func HomeAddrToPort(addr net.Addr) int {
 	return port
 }
 
-func metronClient(conf app.Config) v2.IngressClient {
-	addr := fmt.Sprintf("127.0.0.1:%d", conf.GRPC.Port)
+func metronClient(port int) v2.IngressClient {
+	addr := fmt.Sprintf("127.0.0.1:%d", port)
 
 	tlsConfig, err := plumbing.NewClientMutualTLSConfig(
-		conf.GRPC.CertFile,
-		conf.GRPC.KeyFile,
-		conf.GRPC.CAFile,
+		testservers.Cert("metron.crt"),
+		testservers.Cert("metron.key"),
+		testservers.Cert("loggregator-ca.crt"),
 		"metron",
 	)
 	if err != nil {

@@ -16,36 +16,32 @@ import (
 )
 
 var _ = Describe("End to end tests", func() {
-	XIt("sends messages from metron through doppler and traffic controller", func() {
+	It("sends messages from metron through doppler and traffic controller", func() {
 		etcdCleanup, etcdClientURL := testservers.StartTestEtcd()
 		defer etcdCleanup()
-
-		dopplerCleanup, dopplerWSPort, dopplerGRPCPort := testservers.StartDoppler(
+		dopplerCleanup, dopplerPorts := testservers.StartDoppler(
 			testservers.BuildDopplerConfig(etcdClientURL, 0, 0),
 		)
 		defer dopplerCleanup()
-
-		metronCleanup, metronConfig, metronReady := testservers.StartMetron(
-			testservers.BuildMetronConfig("localhost", dopplerGRPCPort),
+		metronCleanup, metronPorts := testservers.StartMetron(
+			testservers.BuildMetronConfig("localhost", dopplerPorts.GRPC),
 		)
 		defer metronCleanup()
-		trafficcontrollerCleanup, tcPort := testservers.StartTrafficController(
+		trafficcontrollerCleanup, tcPorts := testservers.StartTrafficController(
 			testservers.BuildTrafficControllerConf(
 				etcdClientURL,
-				dopplerWSPort,
-				dopplerGRPCPort,
-				metronConfig.IncomingUDPPort,
+				dopplerPorts.GRPC,
+				metronPorts.UDP,
 			),
 		)
 		defer trafficcontrollerCleanup()
-		metronReady()
 
 		const writeRatePerSecond = 10
-		metronStreamWriter := endtoend.NewMetronStreamWriter(metronConfig.IncomingUDPPort)
+		metronStreamWriter := endtoend.NewMetronStreamWriter(metronPorts.UDP)
 		generator := messagegenerator.NewLogMessageGenerator("custom-app-id")
 		writeStrategy := writestrategies.NewConstantWriteStrategy(generator, metronStreamWriter, writeRatePerSecond)
 
-		firehoseReader := endtoend.NewFirehoseReader(tcPort)
+		firehoseReader := endtoend.NewFirehoseReader(tcPorts.WS)
 		ex := experiment.NewExperiment(firehoseReader)
 		ex.AddWriteStrategy(writeStrategy)
 

@@ -28,6 +28,7 @@ func StartServer(addr string, gatherer prometheus.Gatherer) net.Listener {
 	if err != nil {
 		log.Fatalf("Unable to setup Health endpoint (%s): %s", addr, err)
 	}
+	log.Printf("health bound to: %s", lis.Addr())
 
 	go func() {
 		log.Printf("Metrics endpoint is listening on %s", lis.Addr().String())

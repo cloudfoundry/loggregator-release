@@ -159,10 +159,6 @@ func Parse(confData []byte) (*Config, error) {
 		config.EtcdMaxConcurrentRequests = 1
 	}
 
-	if config.GRPC.Port == 0 {
-		config.GRPC.Port = 8082
-	}
-
 	if config.HealthAddr == "" {
 		config.HealthAddr = "localhost:14825"
 	}

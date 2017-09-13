@@ -2,7 +2,6 @@ package testservers
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"os/exec"
 
@@ -14,11 +13,6 @@ import (
 )
 
 func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int) config.Config {
-	dopplerUDPPort := getUDPPort()
-	dopplerWSPort := getTCPPort()
-	dopplerGRPCPort := getTCPPort()
-	pprofPort := getTCPPort()
-
 	return config.Config{
 		Index:        "42",
 		JobName:      "test-job-name",
@@ -26,15 +20,12 @@ func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int)
 		IP:           "127.0.0.1",
 		SharedSecret: "test-shared-secret",
 
-		IncomingUDPPort: uint32(dopplerUDPPort),
-		OutgoingPort:    uint32(dopplerWSPort),
 		GRPC: config.GRPC{
-			Port:     uint16(dopplerGRPCPort),
 			CertFile: Cert("doppler.crt"),
 			KeyFile:  Cert("doppler.key"),
 			CAFile:   Cert("loggregator-ca.crt"),
 		},
-		PPROFPort: uint32(pprofPort),
+		HealthAddr: "localhost:0",
 
 		EtcdUrls:                  []string{etcdClientURL},
 		EtcdMaxConcurrentRequests: 10,
@@ -56,7 +47,13 @@ func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int)
 	}
 }
 
-func StartDoppler(conf config.Config) (cleanup func(), wsPort, grpcPort int) {
+type DopplerPorts struct {
+	GRPC   int
+	PProf  int
+	Health int
+}
+
+func StartDoppler(conf config.Config) (cleanup func(), dp DopplerPorts) {
 	By("making sure doppler was built")
 	dopplerPath := os.Getenv("DOPPLER_BUILD_PATH")
 	Expect(dopplerPath).ToNot(BeEmpty())
@@ -66,6 +63,7 @@ func StartDoppler(conf config.Config) (cleanup func(), wsPort, grpcPort int) {
 
 	By("starting doppler")
 	dopplerCommand := exec.Command(dopplerPath, "--config", filename)
+
 	dopplerSession, err := gexec.Start(
 		dopplerCommand,
 		gexec.NewPrefixedWriter(color("o", "doppler", green, blue), GinkgoWriter),
@@ -74,20 +72,15 @@ func StartDoppler(conf config.Config) (cleanup func(), wsPort, grpcPort int) {
 	Expect(err).ToNot(HaveOccurred())
 
 	By("waiting for doppler to listen")
-	dopplerStartedFn := func() bool {
-		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", conf.PPROFPort))
-		if err != nil {
-			return false
-		}
-		conn.Close()
-		return true
-	}
-	Eventually(dopplerStartedFn).Should(BeTrue())
+	_ = waitForPortBinding("udp", dopplerSession.Err)
+	dp.GRPC = waitForPortBinding("grpc", dopplerSession.Err)
+	dp.PProf = waitForPortBinding("pprof", dopplerSession.Err)
+	dp.Health = waitForPortBinding("health", dopplerSession.Err)
 
 	cleanup = func() {
 		os.Remove(filename)
 		dopplerSession.Kill().Wait()
 	}
 
-	return cleanup, int(conf.OutgoingPort), int(conf.GRPC.Port)
+	return cleanup, dp
 }

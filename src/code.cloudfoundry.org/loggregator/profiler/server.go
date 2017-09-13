@@ -30,7 +30,7 @@ func (s *server) Start() {
 		log.Panicf("Error creating pprof listener: %s", err)
 	}
 
-	log.Printf("Starting pprof server on: %s", lis.Addr().String())
+	log.Printf("pprof bound to: %s", lis.Addr())
 	err = http.Serve(lis, nil)
 	if err != nil {
 		log.Panicf("Error starting pprof server: %s", err)

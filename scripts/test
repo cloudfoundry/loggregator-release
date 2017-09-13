@@ -247,7 +247,7 @@ function run_install_tools {
     go get github.com/opennota/check/cmd/varcheck
     go get github.com/kisielk/errcheck
     go get github.com/gordonklaus/ineffassign
-    go get github.com/mvdan/interfacer/cmd/interfacer
+    go get mvdan.cc/interfacer
     go get honnef.co/go/tools/cmd/megacheck
 }
 
@@ -275,7 +275,7 @@ function run_linters {
     echo running varcheck
     varcheck "$loggregator_pkg/..."
     echo running errcheck
-    errcheck "$loggregator_pkg/..."
+    errcheck -ignore '[cC]lose' "$loggregator_pkg/..."
     echo running ineffassign
     ineffassign "$loggregator_dir"
     echo running interfacer

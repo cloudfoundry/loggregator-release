@@ -12,30 +12,16 @@ import (
 )
 
 var _ = Describe("Metron Health Endpoint", func() {
-	var (
-		consumerServer *Server
-		metronCleanup  func()
-	)
-
-	BeforeEach(func() {
-		var err error
-		consumerServer, err = NewServer()
+	It("returns health metrics", func() {
+		consumerServer, err := NewServer()
 		Expect(err).ToNot(HaveOccurred())
-
-		var metronReady func()
-		metronCleanup, _, metronReady = testservers.StartMetron(
+		defer consumerServer.Stop()
+		metronCleanup, metronPorts := testservers.StartMetron(
 			testservers.BuildMetronConfig("localhost", consumerServer.Port()),
 		)
-		metronReady()
-	})
+		defer metronCleanup()
 
-	AfterEach(func() {
-		consumerServer.Stop()
-		metronCleanup()
-	})
-
-	It("returns health metrics", func() {
-		resp, err := http.Get(fmt.Sprintf("http://localhost:7629/health"))
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/health", metronPorts.Health))
 		Expect(err).ToNot(HaveOccurred())
 		defer resp.Body.Close()
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))

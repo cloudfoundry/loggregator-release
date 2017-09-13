@@ -2,7 +2,6 @@ package testservers
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"os/exec"
 
@@ -13,23 +12,20 @@ import (
 	tcConf "code.cloudfoundry.org/loggregator/trafficcontroller/app"
 )
 
-func BuildTrafficControllerConf(etcdClientURL string, dopplerWSPort, dopplerGRPCPort, metronPort int) tcConf.Config {
-	tcPort := getTCPPort()
+func BuildTrafficControllerConf(etcdClientURL string, dopplerGRPCPort, metronPort int) tcConf.Config {
 	return tcConf.Config{
 		IP: "127.0.0.1",
 
-		DopplerPort: uint32(dopplerWSPort),
 		GRPC: tcConf.GRPC{
 			Port:     uint16(dopplerGRPCPort),
 			CertFile: Cert("trafficcontroller.crt"),
 			KeyFile:  Cert("trafficcontroller.key"),
 			CAFile:   Cert("loggregator-ca.crt"),
 		},
-		OutgoingDropsondePort: uint32(tcPort),
-		PPROFPort:             uint32(getTCPPort()),
 		MetronConfig: tcConf.MetronConfig{
 			UDPAddress: fmt.Sprintf("localhost:%d", metronPort),
 		},
+		HealthAddr: "localhost:0",
 
 		EtcdUrls: []string{etcdClientURL}, EtcdMaxConcurrentRequests: 5,
 
@@ -38,12 +34,25 @@ func BuildTrafficControllerConf(etcdClientURL string, dopplerWSPort, dopplerGRPC
 
 		ApiHost:         "http://127.0.0.1:65530",
 		UaaHost:         "http://127.0.0.1:65531",
+		UaaCACert:       Cert("loggregator-ca.crt"),
 		UaaClient:       "bob",
 		UaaClientSecret: "yourUncle",
+		CCTLSClientConfig: tcConf.CCTLSClientConfig{
+			CertFile:   Cert("trafficcontroller.crt"),
+			KeyFile:    Cert("trafficcontroller.key"),
+			CAFile:     Cert("loggregator-ca.crt"),
+			ServerName: "cloud-controller",
+		},
 	}
 }
 
-func StartTrafficController(conf tcConf.Config) (func(), int) {
+type TrafficControllerPorts struct {
+	WS     int
+	Health int
+	PProf  int
+}
+
+func StartTrafficController(conf tcConf.Config) (cleanup func(), tp TrafficControllerPorts) {
 	By("making sure trafficcontroller was build")
 	tcPath := os.Getenv("TRAFFIC_CONTROLLER_BUILD_PATH")
 	Expect(tcPath).ToNot(BeEmpty())
@@ -61,17 +70,13 @@ func StartTrafficController(conf tcConf.Config) (func(), int) {
 	Expect(err).ToNot(HaveOccurred())
 
 	By("waiting for trafficcontroller to listen")
-	Eventually(func() bool {
-		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", conf.PPROFPort))
-		if err != nil {
-			return false
-		}
-		conn.Close()
-		return true
-	}, 10).Should(BeTrue())
+	tp.WS = waitForPortBinding("ws", tcSession.Err)
+	tp.Health = waitForPortBinding("health", tcSession.Err)
+	tp.PProf = waitForPortBinding("pprof", tcSession.Err)
 
-	return func() {
+	cleanup = func() {
 		os.Remove(filename)
 		tcSession.Kill().Wait()
-	}, int(conf.OutgoingDropsondePort)
+	}
+	return cleanup, tp
 }

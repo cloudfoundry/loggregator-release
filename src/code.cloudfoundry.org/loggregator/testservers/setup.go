@@ -4,9 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
+	"log"
+	"regexp"
+	"strconv"
+	"time"
 
 	"github.com/onsi/ginkgo/config"
+	"github.com/onsi/gomega/gbytes"
 )
 
 const (
@@ -25,34 +29,6 @@ const (
 	cyan
 	colorFmt = "\x1b[%dm[%s]\x1b[%dm[%s]\x1b[0m "
 )
-
-func getTCPPort() int {
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		panic(err)
-	}
-
-	l, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		panic(err)
-	}
-	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port
-}
-
-func getUDPPort() int {
-	addr, err := net.ResolveUDPAddr("udp", "localhost:0")
-	if err != nil {
-		panic(err)
-	}
-
-	c, err := net.ListenUDP("udp", addr)
-	if err != nil {
-		panic(err)
-	}
-	defer c.Close()
-	return c.LocalAddr().(*net.UDPAddr).Port
-}
 
 func color(oe, proc string, oeColor, procColor int) string {
 	if config.DefaultReporterConfig.NoColor {
@@ -79,4 +55,24 @@ func writeConfigToFile(name string, conf interface{}) (string, error) {
 	}
 
 	return confFile.Name(), nil
+}
+
+func waitForPortBinding(prefix string, buf *gbytes.Buffer) int {
+	formattedRegex := fmt.Sprintf(`%s bound to: .*:(\d+)`, prefix)
+	re := regexp.MustCompile(formattedRegex)
+
+	for i := 0; i < 10; i++ {
+		data := buf.Contents()
+		result := re.FindSubmatch(data)
+		if len(result) == 2 {
+			port, err := strconv.Atoi(string(result[1]))
+			if err != nil {
+				log.Panicf("unable to parse port number, port: %#v", result[1])
+			}
+			return port
+		}
+		time.Sleep(time.Second)
+	}
+	log.Panicf("timed out waiting for port binding, prefix: %s", prefix)
+	return 0
 }

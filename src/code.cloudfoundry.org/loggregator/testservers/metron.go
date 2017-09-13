@@ -2,10 +2,8 @@ package testservers
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"os/exec"
-	"time"
 
 	"code.cloudfoundry.org/loggregator/metron/app"
 
@@ -15,9 +13,6 @@ import (
 )
 
 func BuildMetronConfig(dopplerURI string, dopplerGRPCPort int) app.Config {
-	metronUDPPort := getUDPPort()
-	metronGRPCPort := getTCPPort()
-
 	return app.Config{
 		Index: jobIndex,
 		Job:   jobName,
@@ -28,15 +23,11 @@ func BuildMetronConfig(dopplerURI string, dopplerGRPCPort int) app.Config {
 			"auto-tag-2": "auto-tag-value-2",
 		},
 
-		IncomingUDPPort:    metronUDPPort,
-		HealthEndpointPort: uint(7629),
-		PPROFPort:          uint32(getTCPPort()),
-		Deployment:         "deployment",
+		Deployment: "deployment",
 
 		DopplerAddr: fmt.Sprintf("%s:%d", dopplerURI, dopplerGRPCPort),
 
 		GRPC: app.GRPC{
-			Port:     uint16(metronGRPCPort),
 			CertFile: Cert("metron.crt"),
 			KeyFile:  Cert("metron.key"),
 			CAFile:   Cert("loggregator-ca.crt"),
@@ -47,7 +38,14 @@ func BuildMetronConfig(dopplerURI string, dopplerGRPCPort int) app.Config {
 	}
 }
 
-func StartMetron(conf app.Config) (func(), app.Config, func()) {
+type MetronPorts struct {
+	GRPC   int
+	UDP    int
+	Health int
+	PProf  int
+}
+
+func StartMetron(conf app.Config) (cleanup func(), mp MetronPorts) {
 	By("making sure metron was build")
 	metronPath := os.Getenv("METRON_BUILD_PATH")
 	Expect(metronPath).ToNot(BeEmpty())
@@ -65,21 +63,14 @@ func StartMetron(conf app.Config) (func(), app.Config, func()) {
 	Expect(err).ToNot(HaveOccurred())
 
 	By("waiting for metron to listen")
-	Eventually(func() bool {
-		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", conf.PPROFPort))
-		if err != nil {
-			return false
-		}
-		conn.Close()
-		return true
-	}, 5).Should(BeTrue())
+	mp.GRPC = waitForPortBinding("grpc", metronSession.Err)
+	mp.UDP = waitForPortBinding("udp", metronSession.Err)
+	mp.Health = waitForPortBinding("health", metronSession.Err)
+	mp.PProf = waitForPortBinding("pprof", metronSession.Err)
 
-	return func() {
-			os.Remove(filename)
-			metronSession.Kill().Wait()
-		}, conf, func() {
-			// TODO When we switch to gRPC we should wait until
-			// we can connect to it
-			time.Sleep(10 * time.Second)
-		}
+	cleanup = func() {
+		os.Remove(filename)
+		metronSession.Kill().Wait()
+	}
+	return cleanup, mp
 }

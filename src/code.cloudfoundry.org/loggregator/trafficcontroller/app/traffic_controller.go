@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -199,7 +200,12 @@ func (t *TrafficController) Start() {
 		dopplerHandler = accessMiddleware(dopplerHandler)
 	}
 	go func() {
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", t.conf.OutgoingDropsondePort), dopplerHandler))
+		lis, err := net.Listen("tcp", fmt.Sprintf(":%d", t.conf.OutgoingDropsondePort))
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("ws bound to: %s", lis.Addr())
+		log.Fatal(http.Serve(lis, dopplerHandler))
 	}()
 
 	// We start the profiler last so that we can definitively claim that we're ready for

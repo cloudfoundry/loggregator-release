@@ -1,7 +1,9 @@
 package doppler_test
 
 import (
-	"time"
+	"fmt"
+
+	"code.cloudfoundry.org/loggregator/testservers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -10,26 +12,39 @@ import (
 var _ = Describe("doppler service registration", func() {
 	Context("with doppler healthy and running", func() {
 		It("registers and unregisters itself", func() {
-			registration, err := etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(string(registration.Value)).To(Equal(localIPAddress))
+			etcdCleanup, etcdClientURL := testservers.StartTestEtcd()
+			defer etcdCleanup()
+			config := testservers.BuildDopplerConfig(etcdClientURL, 0, 0)
+			dopplerCleanup, _ := testservers.StartDoppler(config)
+			etcdAdapter := etcdAdapter(etcdClientURL)
 
-			registration, err = etcdAdapter.Get("/doppler/meta/z1/doppler_z1/0")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(registration.Value)).NotTo(BeZero())
+			var f interface{} = func() string {
+				registration, err := etcdAdapter.Get("healthstatus/doppler/test-availability-zone/test-job-name/42")
+				if err != nil {
+					return ""
+				}
+				return string(registration.Value)
+			}
+			Eventually(f).Should(Equal("127.0.0.1"))
+			f = func() string {
+				registration, err := etcdAdapter.Get("/doppler/meta/test-availability-zone/test-job-name/42")
+				if err != nil {
+					return ""
+				}
+				return string(registration.Value)
+			}
+			expectedJSON := fmt.Sprintf(`{"version": 1, "endpoints":["udp://127.0.0.1:%d", "ws://127.0.0.1:%d"]}`, config.IncomingUDPPort, config.OutgoingPort)
+			Eventually(f).Should(MatchJSON(expectedJSON))
 
-			By("dying")
-			dopplerSession.Kill().Wait(5 * time.Second)
+			dopplerCleanup()
 
-			fLegacy := func() error {
-				_, err := etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
+			f = func() error {
+				_, err := etcdAdapter.Get("healthstatus/doppler/test-availability-zone/test-job-name/42")
 				return err
 			}
-
-			Eventually(fLegacy, 20).Should(HaveOccurred())
-
-			f := func() error {
-				_, err := etcdAdapter.Get("/doppler/meta/z1/doppler_z1/0")
+			Eventually(f, 20).Should(HaveOccurred())
+			f = func() error {
+				_, err := etcdAdapter.Get("/doppler/meta/test-availability-zone/test-job-name/42")
 				return err
 			}
 			Eventually(f, 20).Should(HaveOccurred())

@@ -27,20 +27,16 @@ func NewUDPListener(host string, batcher Batcher, metricProto string) (*UDPListe
 	return listener, byteChan
 }
 
-func (l *UDPListener) Address() string {
-	return l.connection.LocalAddr().String()
-}
-
 func (l *UDPListener) Start() {
 	connection, err := net.ListenPacket("udp", l.host)
 	if err != nil {
 		log.Fatalf("Failed to listen on port. %s", err)
 	}
 
-	log.Printf("UDP listener listening on port %s", l.host)
 	l.lock.Lock()
 	l.connection = connection
 	l.lock.Unlock()
+	log.Printf("udp bound to: %s", l.connection.LocalAddr())
 
 	readBuffer := make([]byte, 65535) //buffer with size = max theoretical UDP size
 	defer close(l.dataChannel)

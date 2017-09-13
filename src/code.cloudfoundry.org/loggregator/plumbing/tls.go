@@ -25,6 +25,22 @@ func NewTLSConfig() *tls.Config {
 	}
 }
 
+// NewServerTLSConfig creates a new tls.Config that is intended to be used
+// with a non-mutual auth server. The config will be loaded with the provided
+// cert and key.
+func NewServerTLSConfig(certFile, keyFile string) (*tls.Config, error) {
+	tlsCert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load keypair: %s", err)
+	}
+
+	tlsConfig := NewTLSConfig()
+
+	tlsConfig.Certificates = []tls.Certificate{tlsCert}
+
+	return tlsConfig, nil
+}
+
 var cipherMap = map[string]uint16{
 	"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256": tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 	"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384": tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,

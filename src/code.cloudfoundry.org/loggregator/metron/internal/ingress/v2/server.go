@@ -28,6 +28,7 @@ func (s *Server) Start() {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
+	log.Printf("grpc bound to: %s", lis.Addr())
 
 	grpcServer := grpc.NewServer(s.opts...)
 	v2.RegisterIngressServer(grpcServer, s.rx)

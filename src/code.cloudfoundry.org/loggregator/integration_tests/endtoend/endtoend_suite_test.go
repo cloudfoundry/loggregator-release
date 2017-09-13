@@ -11,9 +11,7 @@ import (
 
 func TestIntegrationTest(t *testing.T) {
 	RegisterFailHandler(Fail)
-
-	// This test is pending for being flaky...
-	//	RunSpecs(t, "End to end Integration Test Suite")
+	RunSpecs(t, "End to end Integration Test Suite")
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {

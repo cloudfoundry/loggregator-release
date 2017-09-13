@@ -28,7 +28,7 @@ func New(address string, name string, writer ByteArrayWriter) (*NetworkReader, e
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Listening on %s", address)
+	log.Printf("udp bound to: %s", connection.LocalAddr())
 
 	return &NetworkReader{
 		connection:  connection,

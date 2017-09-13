@@ -1,36 +1,32 @@
 package doppler_test
 
 import (
-	"crypto/sha1"
+	"bytes"
+	"context"
 	"crypto/tls"
-	"encoding/binary"
-	"fmt"
 	"log"
 	"net"
-	"net/http"
-	"os/exec"
+	"sync"
 	"testing"
 
 	"time"
 
-	"code.cloudfoundry.org/loggregator/doppler/app/config"
+	"code.cloudfoundry.org/loggregator/integration_tests/binaries"
 	"code.cloudfoundry.org/loggregator/plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing/v2"
+	"code.cloudfoundry.org/loggregator/testservers"
+	"code.cloudfoundry.org/workpool"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/cloudfoundry/storeadapter"
-	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
+	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/gogo/protobuf/proto"
-	"github.com/gorilla/websocket"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 )
 
 func TestDoppler(t *testing.T) {
@@ -40,72 +36,23 @@ func TestDoppler(t *testing.T) {
 	RunSpecs(t, "Doppler Integration Suite")
 }
 
-var (
-	dopplerSession *gexec.Session
-	localIPAddress string
-	etcdRunner     *etcdstorerunner.ETCDClusterRunner
-	etcdAdapter    storeadapter.StoreAdapter
-
-	pathToDopplerExec    string
-	pathToHTTPEchoServer string
-	pathToTCPEchoServer  string
-	pathToConfigFile     = "fixtures/doppler.json"
-)
-
-var _ = BeforeSuite(func() {
-	var err error
-	etcdPort := 5555
-	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, nil)
-	etcdRunner.Start()
-	etcdAdapter = etcdRunner.Adapter(nil)
-
-	pathToDopplerExec, err = gexec.Build("code.cloudfoundry.org/loggregator/doppler", "-race")
-	Expect(err).NotTo(HaveOccurred())
-
-	pathToHTTPEchoServer, err = gexec.Build("tools/echo/cmd/http_server")
-	Expect(err).NotTo(HaveOccurred())
-
-	pathToTCPEchoServer, err = gexec.Build("tools/echo/cmd/tcp_server")
-	Expect(err).NotTo(HaveOccurred())
-})
-
-var _ = JustBeforeEach(func() {
-	var err error
-
-	etcdRunner.Reset()
-
-	command := exec.Command(pathToDopplerExec, "--config="+pathToConfigFile)
-	dopplerSession, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-
-	dopplerStartedFn := func() bool {
-		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", 6790))
-		if err != nil {
-			return false
-		}
-		conn.Close()
-		return true
+var _ = SynchronizedBeforeSuite(func() []byte {
+	bp, errors := binaries.Build()
+	for err := range errors {
+		Expect(err).ToNot(HaveOccurred())
 	}
-	Eventually(dopplerStartedFn, 3).Should(BeTrue())
-	localIPAddress = "127.0.0.1"
-	Eventually(func() error {
-		_, err := etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
-		return err
-	}, time.Second+config.HeartbeatInterval).ShouldNot(HaveOccurred())
+	text, err := bp.Marshal()
+	Expect(err).ToNot(HaveOccurred())
+	return text
+}, func(bpText []byte) {
+	var bp binaries.BuildPaths
+	err := bp.Unmarshal(bpText)
+	Expect(err).ToNot(HaveOccurred())
+	bp.SetEnv()
 })
 
-var _ = AfterEach(func() {
-	dopplerSession.Kill().Wait()
-})
-
-var _ = AfterSuite(func() {
-	etcdAdapter.Disconnect()
-
-	if etcdRunner != nil {
-		etcdRunner.Stop()
-	}
-
-	gexec.CleanupBuildArtifacts()
+var _ = SynchronizedAfterSuite(func() {}, func() {
+	binaries.Cleanup()
 })
 
 func buildLogMessage() []byte {
@@ -116,7 +63,7 @@ func buildLogMessage() []byte {
 			Message:     []byte("foo"),
 			MessageType: events.LogMessage_OUT.Enum(),
 			Timestamp:   proto.Int64(time.Now().UnixNano()),
-			AppId:       proto.String("test-app"),
+			AppId:       proto.String("some-test-app-id"),
 		},
 	}
 	b, err := proto.Marshal(e)
@@ -124,202 +71,303 @@ func buildLogMessage() []byte {
 	return b
 }
 
-func buildContainerMetric() []byte {
-	e := &events.Envelope{
-		Origin:    proto.String("foo"),
-		EventType: events.Envelope_ContainerMetric.Enum(),
-		Timestamp: proto.Int64(time.Now().UnixNano()),
-		ContainerMetric: &events.ContainerMetric{
-			ApplicationId: proto.String("test-app"),
-			InstanceIndex: proto.Int32(1),
-			CpuPercentage: proto.Float64(12.2),
-			MemoryBytes:   proto.Uint64(1234),
-			DiskBytes:     proto.Uint64(4321),
-		},
+func dopplerEgressClient(addr string) (func(), plumbing.DopplerClient) {
+	creds, err := plumbing.NewClientCredentials(
+		testservers.Cert("doppler.crt"),
+		testservers.Cert("doppler.key"),
+		testservers.Cert("loggregator-ca.crt"),
+		"doppler",
+	)
+	Expect(err).ToNot(HaveOccurred())
+
+	out, err := grpc.Dial(addr, grpc.WithTransportCredentials(creds))
+	Expect(err).ToNot(HaveOccurred())
+	return func() {
+		_ = out.Close()
+	}, plumbing.NewDopplerClient(out)
+}
+
+func dopplerIngressV1Client(addr string) (func(), plumbing.DopplerIngestor_PusherClient) {
+	creds, err := plumbing.NewClientCredentials(
+		testservers.Cert("doppler.crt"),
+		testservers.Cert("doppler.key"),
+		testservers.Cert("loggregator-ca.crt"),
+		"doppler",
+	)
+	Expect(err).ToNot(HaveOccurred())
+
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(creds))
+	Expect(err).ToNot(HaveOccurred())
+	client := plumbing.NewDopplerIngestorClient(conn)
+
+	var (
+		pusherClient plumbing.DopplerIngestor_PusherClient
+		cancel       func()
+	)
+	f := func() func() {
+		var (
+			err error
+			ctx context.Context
+		)
+		ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+		pusherClient, err = client.Pusher(ctx)
+		if err != nil {
+			cancel()
+			return nil
+		}
+		return cancel // when the cancel func escapes the linter is happy
 	}
-	b, err := e.Marshal()
-	Expect(err).ToNot(HaveOccurred())
-	return b
+	Eventually(f).ShouldNot(BeNil())
+
+	return func() {
+		cancel()
+		conn.Close()
+	}, pusherClient
 }
 
-func connectToGRPC(conf *config.Config) (*grpc.ClientConn, plumbing.DopplerClient) {
-	tlsCfg, err := plumbing.NewClientMutualTLSConfig(conf.GRPC.CertFile, conf.GRPC.KeyFile, conf.GRPC.CAFile, "doppler")
+func dopplerIngressV2Client(addr string) (func(), loggregator_v2.DopplerIngress_SenderClient) {
+	creds, err := plumbing.NewClientCredentials(
+		testservers.Cert("doppler.crt"),
+		testservers.Cert("doppler.key"),
+		testservers.Cert("loggregator-ca.crt"),
+		"doppler",
+	)
 	Expect(err).ToNot(HaveOccurred())
-	creds := credentials.NewTLS(tlsCfg)
-	out, err := grpc.Dial(localIPAddress+":5678", grpc.WithTransportCredentials(creds))
+
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(creds))
 	Expect(err).ToNot(HaveOccurred())
-	return out, plumbing.NewDopplerClient(out)
+	client := loggregator_v2.NewDopplerIngressClient(conn)
+
+	var (
+		senderClient loggregator_v2.DopplerIngress_SenderClient
+		cancel       func()
+	)
+	f := func() func() {
+		var (
+			err error
+			ctx context.Context
+		)
+		ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+		senderClient, err = client.Sender(ctx)
+		if err != nil {
+			cancel()
+			return nil
+		}
+		return cancel // when the cancel func escapes the linter is happy
+	}
+	Eventually(f).ShouldNot(BeNil())
+
+	return func() {
+		cancel()
+		conn.Close()
+	}, senderClient
 }
 
-func fetchDopplerConfig(path string) *config.Config {
-	conf, err := config.ParseConfig(path)
-	Expect(err).ToNot(HaveOccurred())
-	return conf
-}
-
-func SendAppLog(appID string, message string, connection net.Conn) error {
+func sendAppLog(appID string, message string, client plumbing.DopplerIngestor_PusherClient) error {
 	logMessage := factories.NewLogMessage(events.LogMessage_OUT, message, appID, "APP")
 
-	return SendEvent(logMessage, connection)
+	return sendEvent(logMessage, client)
 }
 
-func SendEvent(event events.Event, connection net.Conn) error {
-	signedEnvelope := MarshalEvent(event, "secret")
+func sendEvent(event events.Event, client plumbing.DopplerIngestor_PusherClient) error {
+	log := marshalEvent(event, "secret")
 
-	_, err := connection.Write(signedEnvelope)
+	err := client.Send(&plumbing.EnvelopeData{
+		Payload: log,
+	})
 	return err
 }
 
-func MarshalEvent(event events.Event, secret string) []byte {
+func marshalEvent(event events.Event, secret string) []byte {
 	envelope, _ := emitter.Wrap(event, "origin")
-	envelopeBytes := MarshalProtoBuf(envelope)
 
-	return signature.SignMessage(envelopeBytes, []byte(secret))
+	return marshalProtoBuf(envelope)
 }
 
-func MarshalProtoBuf(pb proto.Message) []byte {
+func marshalProtoBuf(pb proto.Message) []byte {
 	marshalledProtoBuf, err := proto.Marshal(pb)
 	Expect(err).NotTo(HaveOccurred())
 
 	return marshalledProtoBuf
 }
 
-func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.Conn, <-chan struct{}) {
-	connectionDroppedChannel := make(chan struct{}, 1)
-
-	var ws *websocket.Conn
-
-	ip := "127.0.0.1"
-	fullURL := "ws://" + ip + ":" + port + path
-
-	Eventually(func() error {
-		var err error
-		ws, _, err = websocket.DefaultDialer.Dial(fullURL, http.Header{})
-		return err
-	}, 5, 1).ShouldNot(HaveOccurred(), fmt.Sprintf("Unable to connect to server at %s.", fullURL))
-
-	ws.SetPingHandler(func(message string) error {
-		ws.WriteControl(websocket.PongMessage, []byte(message), time.Time{})
-		return nil
-	})
-
-	go func() {
-		for {
-			_, data, err := ws.ReadMessage()
-			if err != nil {
-				close(connectionDroppedChannel)
-				close(receivedChan)
-				return
-			}
-
-			receivedChan <- data
-		}
-
-	}()
-
-	return ws, connectionDroppedChannel
-}
-
-func DecodeProtoBufEnvelope(actual []byte) *events.Envelope {
+func decodeProtoBufEnvelope(actual []byte) *events.Envelope {
 	var receivedEnvelope events.Envelope
 	err := proto.Unmarshal(actual, &receivedEnvelope)
 	Expect(err).NotTo(HaveOccurred())
 	return &receivedEnvelope
 }
 
-func DecodeProtoBufLogMessage(actual []byte) *events.LogMessage {
-	receivedEnvelope := DecodeProtoBufEnvelope(actual)
+func decodeProtoBufLogMessage(actual []byte) *events.LogMessage {
+	receivedEnvelope := decodeProtoBufEnvelope(actual)
 	return receivedEnvelope.GetLogMessage()
 }
 
-func DecodeProtoBufCounterEvent(actual []byte) *events.CounterEvent {
-	receivedEnvelope := DecodeProtoBufEnvelope(actual)
-	return receivedEnvelope.GetCounterEvent()
-}
-
-func AppKey(appID string) string {
-	return fmt.Sprintf("/loggregator/v2/services/%s", appID)
-}
-
-func DrainKey(appID string, drainURL string) string {
-	hash := sha1.Sum([]byte(drainURL))
-	return fmt.Sprintf("%s/%x", AppKey(appID), hash)
-}
-
-func AddETCDNode(etcdAdapter storeadapter.StoreAdapter, key string, value string) {
-	node := storeadapter.StoreNode{
-		Key:   key,
-		Value: []byte(value),
-		TTL:   uint64(20),
-	}
-	etcdAdapter.Create(node)
-	recvNode, err := etcdAdapter.Get(key)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(string(recvNode.Value)).To(Equal(value))
-}
-
-func UnmarshalMessage(messageBytes []byte) events.Envelope {
+func unmarshalMessage(messageBytes []byte) events.Envelope {
 	var envelope events.Envelope
 	err := proto.Unmarshal(messageBytes, &envelope)
 	Expect(err).NotTo(HaveOccurred())
 	return envelope
 }
 
-func StartHTTPSServer(pathToHTTPEchoServer string) *gexec.Session {
-	command := exec.Command(pathToHTTPEchoServer, "-cert", "../fixtures/server.crt", "-key", "../fixtures/server.key")
-	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
+type tcpServer struct {
+	mu    sync.Mutex
+	_data bytes.Buffer
 
-	return session
+	listener net.Listener
+	port     int
 }
 
-func StartUnencryptedTCPServer(pathToTCPEchoServer string, syslogDrainAddress string) *gexec.Session {
-	command := exec.Command(pathToTCPEchoServer, "-address", syslogDrainAddress)
-	drainSession, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
+func (s *tcpServer) start() {
+	go func() {
+		defer GinkgoRecover()
 
-	return drainSession
+		for {
+			conn, err := s.listener.Accept()
+			if err != nil {
+				return
+			}
+
+			go func(conn net.Conn) {
+				defer GinkgoRecover()
+
+				for {
+					data := make([]byte, 1024)
+					_, err := conn.Read(data)
+					if err != nil {
+						return
+					}
+
+					s.mu.Lock()
+					s._data.Write(data)
+					s.mu.Unlock()
+				}
+			}(conn)
+		}
+	}()
 }
 
-func StartEncryptedTCPServer(pathToTCPEchoServer string, syslogDrainAddress string) *gexec.Session {
-	command := exec.Command(pathToTCPEchoServer, "-address", syslogDrainAddress, "-ssl", "-cert", "../fixtures/server.crt", "-key", "../fixtures/server.key")
-	drainSession, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-
-	return drainSession
+func (s *tcpServer) readLine() (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s._data.ReadString('\n')
 }
 
-func DialTLS(address, cert, key, ca string) (*tls.Conn, error) {
-	tlsConfig, err := plumbing.NewClientMutualTLSConfig(
-		"../fixtures/client.crt",
-		"../fixtures/client.key",
-		"../fixtures/loggregator-ca.crt",
-		"doppler",
+func (s *tcpServer) close() {
+	s.listener.Close()
+}
+
+func startUnencryptedTCPServer(syslogDrainAddress string) (*tcpServer, error) {
+	lis, err := net.Listen("tcp", syslogDrainAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	server := &tcpServer{
+		listener: lis,
+		port:     lis.Addr().(*net.TCPAddr).Port,
+	}
+	server.start()
+
+	return server, nil
+}
+
+func startEncryptedTCPServer(syslogDrainAddress string) (*tcpServer, error) {
+	lis, err := net.Listen("tcp", syslogDrainAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	tlsConfig, err := plumbing.NewServerTLSConfig(
+		testservers.Cert("localhost.crt"),
+		testservers.Cert("localhost.key"),
 	)
 	Expect(err).NotTo(HaveOccurred())
-	return tls.Dial("tcp", address, tlsConfig)
+	lis = tls.NewListener(lis, tlsConfig)
+
+	server := &tcpServer{
+		listener: lis,
+		port:     lis.Addr().(*net.TCPAddr).Port,
+	}
+	server.start()
+
+	return server, nil
 }
 
-func SendAppLogTCP(appID string, message string, connection net.Conn) error {
-	logMessage := factories.NewLogMessage(events.LogMessage_OUT, message, appID, "APP")
-
-	return SendEventTCP(logMessage, connection)
-}
-
-func SendEventTCP(event events.Event, conn net.Conn) error {
-	envelope, err := emitter.Wrap(event, "origin")
+func etcdAdapter(url string) *etcdstoreadapter.ETCDStoreAdapter {
+	pool, err := workpool.NewWorkPool(10)
 	Expect(err).NotTo(HaveOccurred())
-
-	bytes, err := proto.Marshal(envelope)
-	if err != nil {
-		return err
+	options := &etcdstoreadapter.ETCDOptions{
+		ClusterUrls: []string{url},
 	}
+	etcdAdapter, err := etcdstoreadapter.New(options, pool)
+	Expect(err).ToNot(HaveOccurred())
+	return etcdAdapter
+}
 
-	err = binary.Write(conn, binary.LittleEndian, uint32(len(bytes)))
-	if err != nil {
-		return err
+func buildV1PrimerLogMessage() []byte {
+	e := &events.Envelope{
+		Origin:    proto.String("primer"),
+		EventType: events.Envelope_LogMessage.Enum(),
+		LogMessage: &events.LogMessage{
+			Message:     []byte("primer"),
+			MessageType: events.LogMessage_OUT.Enum(),
+			Timestamp:   proto.Int64(time.Now().UnixNano()),
+			AppId:       proto.String("some-test-app-id"),
+		},
 	}
+	b, err := proto.Marshal(e)
+	Expect(err).ToNot(HaveOccurred())
+	return b
+}
 
-	_, err = conn.Write(bytes)
-	return err
+func buildV2PrimerLogMessage() *loggregator_v2.Envelope {
+	return &loggregator_v2.Envelope{
+		SourceId: "primer",
+		Message: &loggregator_v2.Envelope_Log{
+			Log: &loggregator_v2.Log{
+				Payload: []byte("primer"),
+			},
+		},
+	}
+}
+
+func primePumpV1(ingressClient plumbing.DopplerIngestor_PusherClient, subscribeClient plumbing.Doppler_SubscribeClient) {
+	message := buildV1PrimerLogMessage()
+
+	// emit a bunch of primer messages
+	go func() {
+		for i := 0; i < 20; i++ {
+			err := ingressClient.Send(&plumbing.EnvelopeData{
+				Payload: message,
+			})
+			if err != nil {
+				return
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+	}()
+
+	// wait for a single message to come through
+	_, err := subscribeClient.Recv()
+	Expect(err).ToNot(HaveOccurred())
+}
+
+func primePumpV2(ingressClient loggregator_v2.DopplerIngress_SenderClient, subscribeClient plumbing.Doppler_SubscribeClient) {
+	message := buildV2PrimerLogMessage()
+
+	// emit a bunch of primer messages
+	go func() {
+		for i := 0; i < 20; i++ {
+			err := ingressClient.Send(message)
+			if err != nil {
+				return
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+	}()
+
+	// wait for a single message to come through
+	_, err := subscribeClient.Recv()
+	Expect(err).ToNot(HaveOccurred())
 }

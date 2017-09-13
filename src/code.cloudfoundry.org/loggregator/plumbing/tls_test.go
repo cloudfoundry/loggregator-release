@@ -199,6 +199,28 @@ var _ = Describe("TLS", func() {
 		})
 	})
 
+	Context("NewServerTLSConfig", func() {
+		It("builds a tls config with certificates set", func() {
+			conf, err := plumbing.NewServerTLSConfig(
+				testservers.Cert("localhost.crt"),
+				testservers.Cert("localhost.key"),
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(conf.Certificates).To(HaveLen(1))
+			Expect(conf.InsecureSkipVerify).To(BeFalse())
+			Expect(conf.MinVersion).To(Equal(uint16(tls.VersionTLS12)))
+		})
+
+		It("checks if cert and key match", func() {
+			_, err := plumbing.NewServerTLSConfig(
+				testservers.Cert("localhost.crt"),
+				testservers.Cert("doppler.key"),
+			)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
 	Context("NewClientCredentials", func() {
 		It("returns transport credentials", func() {
 			creds, err := plumbing.NewClientCredentials(

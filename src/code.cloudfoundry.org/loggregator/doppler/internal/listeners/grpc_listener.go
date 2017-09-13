@@ -58,13 +58,13 @@ func NewGRPCListener(
 	}
 	transportCreds := credentials.NewTLS(tlsConfig)
 
-	log.Printf("Listening for GRPC connections on %d", conf.Port)
 	grpcListener, err := net.Listen("tcp", fmt.Sprintf(":%d", conf.Port))
-
 	if err != nil {
 		log.Printf("Failed to start listener (port=%d) for gRPC: %s", conf.Port, err)
 		return nil, err
 	}
+	log.Printf("grpc bound to: %s", grpcListener.Addr())
+
 	kp := keepalive.EnforcementPolicy{
 		MinTime:             10 * time.Second,
 		PermitWithoutStream: true,
