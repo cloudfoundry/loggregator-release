@@ -46,26 +46,25 @@ type Config struct {
 	EtcdRequireTLS            bool
 	EtcdTLSClientConfig       EtcdTLSClientConfig
 
-	IP                     string
-	ApiHost                string
-	CCTLSClientConfig      CCTLSClientConfig
-	DopplerPort            uint32
-	DopplerAddrs           []string
-	OutgoingDropsondePort  uint32
-	MetronConfig           MetronConfig
-	GRPC                   GRPC
-	SystemDomain           string
-	SkipCertVerify         bool
-	UaaHost                string
-	UaaClient              string
-	UaaClientSecret        string
-	UaaCACert              string
-	MonitorIntervalSeconds uint
-	SecurityEventLog       string
-	PPROFPort              uint32
-	MetricEmitterInterval  string
-	MetricEmitterDuration  time.Duration `json:"-"`
-	HealthAddr             string
+	IP                    string
+	ApiHost               string
+	CCTLSClientConfig     CCTLSClientConfig
+	DopplerPort           uint32
+	DopplerAddrs          []string
+	OutgoingDropsondePort uint32
+	MetronConfig          MetronConfig
+	GRPC                  GRPC
+	SystemDomain          string
+	SkipCertVerify        bool
+	UaaHost               string
+	UaaClient             string
+	UaaClientSecret       string
+	UaaCACert             string
+	SecurityEventLog      string
+	PPROFPort             uint32
+	MetricEmitterInterval string
+	MetricEmitterDuration time.Duration `json:"-"`
+	HealthAddr            string
 }
 
 // ParseConfig reads ands and parses the given filepath to a JSON file.
@@ -101,10 +100,6 @@ func Parse(r io.Reader) (*Config, error) {
 func (c *Config) setDefaults() {
 	if c.EtcdMaxConcurrentRequests < 1 {
 		c.EtcdMaxConcurrentRequests = 10
-	}
-
-	if c.MonitorIntervalSeconds == 0 {
-		c.MonitorIntervalSeconds = 60
 	}
 
 	if c.GRPC.Port == 0 {

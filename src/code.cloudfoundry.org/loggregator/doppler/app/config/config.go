@@ -49,7 +49,6 @@ type Config struct {
 	MessageDrainBufferSize          uint
 	MetricBatchIntervalMilliseconds uint
 	MetronConfig                    MetronConfig
-	MonitorIntervalSeconds          uint
 	WebsocketHost                   string
 	OutgoingPort                    uint32
 	GRPC                            GRPC
@@ -137,10 +136,6 @@ func Parse(confData []byte) (*Config, error) {
 	// leaving them for further team discussion.
 	if config.MetricBatchIntervalMilliseconds == 0 {
 		config.MetricBatchIntervalMilliseconds = 5000
-	}
-
-	if config.MonitorIntervalSeconds == 0 {
-		config.MonitorIntervalSeconds = 60
 	}
 
 	if config.SinkDialTimeoutSeconds == 0 {

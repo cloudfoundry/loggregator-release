@@ -32,7 +32,6 @@ import (
 	"code.cloudfoundry.org/loggregator/dopplerservice"
 	"code.cloudfoundry.org/loggregator/healthendpoint"
 	"code.cloudfoundry.org/loggregator/metricemitter"
-	"code.cloudfoundry.org/loggregator/monitor"
 	"code.cloudfoundry.org/loggregator/plumbing"
 )
 
@@ -58,9 +57,6 @@ func (d *Doppler) Start() {
 	}
 
 	metricClient := setupMetricsEmitter(d.c)
-	monitorInterval := time.Duration(d.c.MonitorIntervalSeconds) * time.Second
-	openFileMonitor := monitor.NewLinuxFD(monitorInterval)
-	uptimeMonitor := monitor.NewUptime(monitorInterval)
 	batcher := initializeMetrics(d.c.MetricBatchIntervalMilliseconds)
 
 	promRegistry := prometheus.NewRegistry()
@@ -202,8 +198,6 @@ func (d *Doppler) Start() {
 	go start(
 		errChan,
 		dropsondeUnmarshallerCollection,
-		openFileMonitor,
-		uptimeMonitor,
 		envelopeBuffer,
 		appStoreWatcher,
 		newAppServiceChan,
@@ -234,8 +228,6 @@ func (d *Doppler) Stop() {
 func start(
 	errChan chan error,
 	dropsondeUnmarshallerCollection *dropsonde_unmarshaller.DropsondeUnmarshallerCollection,
-	openFileMonitor *monitor.LinuxFileDescriptor,
-	uptimeMonitor *monitor.Uptime,
 	envelopeBuffer *diodes.ManyToOneEnvelope,
 	appStoreWatcher *store.AppServiceStoreWatcher,
 	newAppServiceChan <-chan store.AppService,
@@ -287,8 +279,6 @@ func start(
 	go sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
 	go messageRouter.Start(envelopeBuffer)
 	go websocketServer.Start()
-	go uptimeMonitor.Start()
-	go openFileMonitor.Start()
 
 	// The following runs forever. Put all startup functions above here.
 	for err := range errChan {

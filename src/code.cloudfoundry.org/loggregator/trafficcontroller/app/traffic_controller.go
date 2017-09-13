@@ -14,7 +14,6 @@ import (
 
 	"code.cloudfoundry.org/loggregator/dopplerservice"
 	"code.cloudfoundry.org/loggregator/metricemitter"
-	"code.cloudfoundry.org/loggregator/monitor"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"code.cloudfoundry.org/loggregator/profiler"
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/auth"
@@ -81,15 +80,6 @@ func (t *TrafficController) Start() {
 	if err != nil {
 		log.Printf("Error initializing dropsonde: %s", err)
 	}
-
-	monitorInterval := time.Duration(t.conf.MonitorIntervalSeconds) * time.Second
-	uptimeMonitor := monitor.NewUptime(monitorInterval)
-	go uptimeMonitor.Start()
-	defer uptimeMonitor.Stop()
-
-	openFileMonitor := monitor.NewLinuxFD(monitorInterval)
-	go openFileMonitor.Start()
-	defer openFileMonitor.Stop()
 
 	logAuthorizer := auth.NewLogAccessAuthorizer(
 		t.ccHTTPClient,
