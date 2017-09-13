@@ -33,7 +33,7 @@ var _ = Describe("doppler service registration", func() {
 				}
 				return string(registration.Value)
 			}
-			expectedJSON := fmt.Sprintf(`{"version": 1, "endpoints":["udp://127.0.0.1:%d", "ws://127.0.0.1:%d"]}`, config.IncomingUDPPort, config.OutgoingPort)
+			expectedJSON := fmt.Sprintf(`{"version": 1, "endpoints":["ws://127.0.0.1:%d"]}`, config.OutgoingPort)
 			Eventually(f).Should(MatchJSON(expectedJSON))
 
 			dopplerCleanup()

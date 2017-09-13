@@ -76,11 +76,10 @@ func main() {
 	}
 
 	dopplerConfig := &config.Config{
-		Zone:            "a-zone",
-		JobName:         "benchmarker",
-		Index:           "1",
-		IncomingUDPPort: 10000,
-		OutgoingPort:    8282,
+		Zone:         "a-zone",
+		JobName:      "benchmarker",
+		Index:        "1",
+		OutgoingPort: 8282,
 	}
 
 	storeAdapter := connectToEtcd([]string{*etcdURL})

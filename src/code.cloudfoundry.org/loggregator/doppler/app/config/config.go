@@ -37,7 +37,6 @@ type Config struct {
 	DisableAnnounce                 bool
 	BlackListIps                    []iprange.IPRange
 	ContainerMetricTTLSeconds       int
-	IncomingUDPPort                 uint32
 	EtcdMaxConcurrentRequests       int
 	EtcdUrls                        []string
 	EtcdRequireTLS                  bool
@@ -52,7 +51,6 @@ type Config struct {
 	WebsocketHost                   string
 	OutgoingPort                    uint32
 	GRPC                            GRPC
-	SharedSecret                    string
 	SinkDialTimeoutSeconds          int
 	SinkIOTimeoutSeconds            int
 	SinkInactivityTimeoutSeconds    int
@@ -117,9 +115,7 @@ func ParseConfig(configFile string) (*Config, error) {
 }
 
 func Parse(confData []byte) (*Config, error) {
-	config := &Config{
-		IncomingUDPPort: 3456,
-	}
+	config := &Config{}
 
 	err := json.Unmarshal(confData, config)
 	if err != nil {

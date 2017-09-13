@@ -3,18 +3,14 @@ package app
 import (
 	"fmt"
 	"log"
-	"sync"
 	"time"
 
 	gendiodes "code.cloudfoundry.org/diodes"
 	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/dropsonde"
-	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
 	"github.com/cloudfoundry/dropsonde/metric_sender"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/dropsonde/signature"
-	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/prometheus/client_golang/prometheus"
@@ -130,9 +126,6 @@ func (d *Doppler) Start() {
 		storeAdapter = connectToEtcd(d.c)
 	}
 
-	errChan := make(chan error)
-	dropsondeUnmarshallerCollection := dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(d.c.UnmarshallerCount)
-
 	droppedMetric := metricClient.NewCounter("dropped",
 		metricemitter.WithVersion(2, 0),
 		metricemitter.WithTags(map[string]string{"direction": "ingress"}),
@@ -149,15 +142,8 @@ func (d *Doppler) Start() {
 		droppedMetric.Increment(uint64(missed))
 	}))
 
-	udpListener, dropsondeBytesChan := listeners.NewUDPListener(
-		fmt.Sprintf("%s:%d", d.c.IP, d.c.IncomingUDPPort),
-		batcher,
-		"udpListener",
-	)
-
 	grpcRouter := grpcv1.NewRouter()
 	messageRouter := sinkserver.NewMessageRouter(sinkManager, grpcRouter)
-	signatureVerifier := signature.NewVerifier(d.c.SharedSecret)
 	grpcListener, err := listeners.NewGRPCListener(
 		grpcRouter,
 		sinkManager,
@@ -196,19 +182,14 @@ func (d *Doppler) Start() {
 	// Start
 	//------------------------------
 	go start(
-		errChan,
-		dropsondeUnmarshallerCollection,
 		envelopeBuffer,
 		appStoreWatcher,
 		newAppServiceChan,
 		deletedAppServiceChan,
-		dropsondeBytesChan,
-		udpListener,
 		batcher,
 		sinkManager,
 		websocketServer,
 		messageRouter,
-		signatureVerifier,
 		grpcListener,
 		d.c.DisableSyslogDrains,
 	)
@@ -226,23 +207,17 @@ func (d *Doppler) Stop() {
 }
 
 func start(
-	errChan chan error,
-	dropsondeUnmarshallerCollection *dropsonde_unmarshaller.DropsondeUnmarshallerCollection,
 	envelopeBuffer *diodes.ManyToOneEnvelope,
 	appStoreWatcher *store.AppServiceStoreWatcher,
 	newAppServiceChan <-chan store.AppService,
 	deletedAppServiceChan <-chan store.AppService,
-	dropsondeBytesChan <-chan []byte,
-	udpListener *listeners.UDPListener,
 	batcher *metricbatcher.MetricBatcher,
 	sinkManager *sinkmanager.SinkManager,
 	websocketServer *websocketserver.WebsocketServer,
 	messageRouter *sinkserver.MessageRouter,
-	signatureVerifier *signature.Verifier,
 	grpcListener *listeners.GRPCListener,
 	disableSyslogDrains bool,
 ) {
-	dropsondeVerifiedBytesChan := make(chan []byte)
 	go grpcListener.Start()
 
 	go func() {
@@ -251,39 +226,10 @@ func start(
 		}
 	}()
 
-	go udpListener.Start()
-
-	udpEnvelopes := make(chan *events.Envelope)
-	var nopWg sync.WaitGroup
-	dropsondeUnmarshallerCollection.Run(dropsondeVerifiedBytesChan, udpEnvelopes, &nopWg)
-	go func() {
-		for {
-			env := <-udpEnvelopes
-			// metric-documentation-v1: (listeners.receivedEnvelopes) Number of envelopes
-			// received from Metron on Doppler's UDP ingress listener
-			batcher.BatchCounter("listeners.receivedEnvelopes").
-				SetTag("protocol", "udp").
-				SetTag("event_type", env.GetEventType().String()).
-				Increment()
-			envelopeBuffer.Set(env)
-		}
-	}()
-
-	go func() {
-		defer func() {
-			close(dropsondeVerifiedBytesChan)
-		}()
-		signatureVerifier.Run(dropsondeBytesChan, dropsondeVerifiedBytesChan)
-	}()
-
 	go sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
-	go messageRouter.Start(envelopeBuffer)
 	go websocketServer.Start()
 
-	// The following runs forever. Put all startup functions above here.
-	for err := range errChan {
-		log.Printf("Got error %s", err)
-	}
+	messageRouter.Start(envelopeBuffer)
 }
 
 func initializeMetrics(batchIntervalMilliseconds uint) *metricbatcher.MetricBatcher {

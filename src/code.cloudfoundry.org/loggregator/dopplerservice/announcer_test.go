@@ -41,7 +41,6 @@ var _ = XDescribe("Announcer", func() {
 			EtcdMaxConcurrentRequests: 10,
 			EtcdUrls:                  etcdRunner.NodeURLS(),
 			Zone:                      "z1",
-			IncomingUDPPort:           1234,
 			OutgoingPort:              8888,
 		}
 	})

@@ -40,7 +40,6 @@ files:
 - loggregator/src/code.cloudfoundry.org/workpool/*.go # gosub
 - loggregator/src/github.com/beorn7/perks/quantile/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/envelope_extensions/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/envelope_sender/*.go # gosub
@@ -54,7 +53,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metrics/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/runtime_stats/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/dropsonde/signature/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub

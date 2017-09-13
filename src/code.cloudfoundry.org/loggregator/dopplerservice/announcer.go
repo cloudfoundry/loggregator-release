@@ -75,11 +75,10 @@ func AnnounceLegacy(ip string, ttl time.Duration, config *config.Config, storeAd
 }
 
 func buildDopplerMeta(ip string, config *config.Config) ([]byte, error) {
-	udpAddr := fmt.Sprintf("udp://%s:%d", ip, config.IncomingUDPPort)
 	wsAddr := fmt.Sprintf("ws://%s:%d", ip, config.OutgoingPort)
 	dopplerMeta := DopplerMeta{
 		Version:   dopplerMetaVersion,
-		Endpoints: []string{udpAddr, wsAddr},
+		Endpoints: []string{wsAddr},
 	}
 
 	return json.Marshal(dopplerMeta)

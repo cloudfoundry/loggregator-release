@@ -14,11 +14,10 @@ import (
 
 func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int) config.Config {
 	return config.Config{
-		Index:        "42",
-		JobName:      "test-job-name",
-		Zone:         "test-availability-zone",
-		IP:           "127.0.0.1",
-		SharedSecret: "test-shared-secret",
+		Index:   "42",
+		JobName: "test-job-name",
+		Zone:    "test-availability-zone",
+		IP:      "127.0.0.1",
 
 		GRPC: config.GRPC{
 			CertFile: Cert("doppler.crt"),
@@ -72,7 +71,6 @@ func StartDoppler(conf config.Config) (cleanup func(), dp DopplerPorts) {
 	Expect(err).ToNot(HaveOccurred())
 
 	By("waiting for doppler to listen")
-	_ = waitForPortBinding("udp", dopplerSession.Err)
 	dp.GRPC = waitForPortBinding("grpc", dopplerSession.Err)
 	dp.PProf = waitForPortBinding("pprof", dopplerSession.Err)
 	dp.Health = waitForPortBinding("health", dopplerSession.Err)
