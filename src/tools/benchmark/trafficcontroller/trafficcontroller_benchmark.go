@@ -79,7 +79,6 @@ func main() {
 		Zone:         "a-zone",
 		JobName:      "benchmarker",
 		Index:        "1",
-		OutgoingPort: 8282,
 	}
 
 	storeAdapter := connectToEtcd([]string{*etcdURL})

@@ -43,6 +43,7 @@ func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int)
 		SinkInactivityTimeoutSeconds:    120,
 		SinkSkipCertVerify:              true,
 		UnmarshallerCount:               5,
+		OutgoingPort:                    8081,
 	}
 }
 

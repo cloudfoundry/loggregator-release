@@ -49,7 +49,6 @@ type Config struct {
 	MetricBatchIntervalMilliseconds uint
 	MetronConfig                    MetronConfig
 	WebsocketHost                   string
-	OutgoingPort                    uint32
 	GRPC                            GRPC
 	SinkDialTimeoutSeconds          int
 	SinkIOTimeoutSeconds            int
@@ -60,6 +59,11 @@ type Config struct {
 	Zone                            string
 	PPROFPort                       uint32
 	HealthAddr                      string
+
+	// TODO: Deprecated. We left this in during the removal of Dopplers
+	// outgoing websocket server. This is still needed so that
+	// trafficcontroller can find dopplers via etcd.
+	OutgoingPort uint32 `json:"-"`
 }
 
 func (c *Config) validate() (err error) {
@@ -115,7 +119,9 @@ func ParseConfig(configFile string) (*Config, error) {
 }
 
 func Parse(confData []byte) (*Config, error) {
-	config := &Config{}
+	config := &Config{
+		OutgoingPort: 8081,
+	}
 
 	err := json.Unmarshal(confData, config)
 	if err != nil {

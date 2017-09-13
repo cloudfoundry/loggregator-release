@@ -13,7 +13,6 @@ import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/containermetric"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/websocket"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
@@ -513,44 +512,6 @@ var _ = Describe("GroupedSink", func() {
 			Expect(groupedSinks.ContainerMetricsFor("1234")).To(BeNil())
 		})
 
-	})
-
-	Describe("WebsocketSinksFor", func() {
-		It("returns only websocket sinks", func() {
-			appId := "789"
-
-			fakeWriter1 := fakeMessageWriter{RemoteAddress: "1"}
-			fakeWriter2 := fakeMessageWriter{RemoteAddress: "2"}
-
-			sink1 := syslog.NewSyslogSink(appId, &url.URL{Host: "url1"}, 100, DummySyslogWriter{}, dummyErrorHandler, "dropsonde-origin")
-			sink2 := websocket.NewWebsocketSink(appId, &fakeWriter1, 100, time.Second, "origin")
-			sink3 := websocket.NewWebsocketSink(appId, &fakeWriter2, 100, time.Second, "origin")
-
-			groupedSinks.RegisterAppSink(inputChan, sink1)
-			groupedSinks.RegisterAppSink(inputChan, sink2)
-			groupedSinks.RegisterAppSink(inputChan, sink3)
-
-			Expect(groupedSinks.WebsocketSinksFor(appId)).To(ConsistOf(*sink2, *sink3))
-		})
-
-		It("returns only sinks matching the app id", func() {
-			appId := "789"
-			otherAppId := "790"
-
-			fakeWriter := fakeMessageWriter{RemoteAddress: "1"}
-
-			sink1 := websocket.NewWebsocketSink(appId, &fakeWriter, 100, time.Second, "origin")
-			sink2 := websocket.NewWebsocketSink(otherAppId, &fakeWriter, 100, time.Second, "origin")
-
-			groupedSinks.RegisterAppSink(inputChan, sink1)
-			groupedSinks.RegisterAppSink(inputChan, sink2)
-
-			Expect(groupedSinks.WebsocketSinksFor(appId)).To(ConsistOf(*sink1))
-		})
-
-		It("returns an empty array if there are no matching sinks", func() {
-			Expect(groupedSinks.WebsocketSinksFor("empty")).To(BeEmpty())
-		})
 	})
 })
 

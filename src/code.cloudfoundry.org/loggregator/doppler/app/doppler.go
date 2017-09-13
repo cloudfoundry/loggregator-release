@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -23,7 +22,6 @@ import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/blacklist"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/sinkmanager"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/websocketserver"
 	"code.cloudfoundry.org/loggregator/doppler/internal/store"
 	"code.cloudfoundry.org/loggregator/dopplerservice"
 	"code.cloudfoundry.org/loggregator/healthendpoint"
@@ -165,19 +163,6 @@ func (d *Doppler) Start() {
 		store.NewAppServiceCache(),
 	)
 
-	websocketServer, err := websocketserver.New(
-		fmt.Sprintf("%s:%d", d.c.WebsocketHost, d.c.OutgoingPort),
-		sinkManager,
-		time.Duration(d.c.WebsocketWriteTimeoutSeconds)*time.Second,
-		30*time.Second,
-		d.c.MessageDrainBufferSize,
-		dopplerOrigin,
-		batcher,
-	)
-	if err != nil {
-		log.Panicf("Failed to create the websocket server: %s", err)
-	}
-
 	//------------------------------
 	// Start
 	//------------------------------
@@ -188,7 +173,6 @@ func (d *Doppler) Start() {
 		deletedAppServiceChan,
 		batcher,
 		sinkManager,
-		websocketServer,
 		messageRouter,
 		grpcListener,
 		d.c.DisableSyslogDrains,
@@ -213,7 +197,6 @@ func start(
 	deletedAppServiceChan <-chan store.AppService,
 	batcher *metricbatcher.MetricBatcher,
 	sinkManager *sinkmanager.SinkManager,
-	websocketServer *websocketserver.WebsocketServer,
 	messageRouter *sinkserver.MessageRouter,
 	grpcListener *listeners.GRPCListener,
 	disableSyslogDrains bool,
@@ -227,7 +210,6 @@ func start(
 	}()
 
 	go sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
-	go websocketServer.Start()
 
 	messageRouter.Start(envelopeBuffer)
 }

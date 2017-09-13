@@ -7,7 +7,6 @@ import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/containermetric"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/websocket"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/metrics"
 
 	"github.com/cloudfoundry/dropsonde/emitter/fake"
@@ -95,34 +94,6 @@ var _ = Describe("SinkManagerMetrics", func() {
 
 		expected.Event = &events.ValueMetric{
 			Name:  proto.String("messageRouter.numberOfSyslogSinks"),
-			Value: proto.Float64(0),
-			Unit:  proto.String("sinks"),
-		}
-		Eventually(fakeEventEmitter.GetMessages, 2).Should(ContainElement(expected))
-	})
-
-	XIt("emits metrics for websocket sinks", func() {
-		Eventually(fakeEventEmitter.GetMessages).Should(BeEmpty())
-
-		sink = &websocket.WebsocketSink{}
-		sinkManagerMetrics.Inc(sink)
-
-		expected := fake.Message{
-			Origin: "doppler",
-			Event: &events.ValueMetric{
-				Name:  proto.String("messageRouter.numberOfWebsocketSinks"),
-				Value: proto.Float64(1),
-				Unit:  proto.String("sinks"),
-			},
-		}
-		Eventually(fakeEventEmitter.GetMessages, 2).Should(ContainElement(expected))
-
-		fakeEventEmitter.Reset()
-
-		sinkManagerMetrics.Dec(sink)
-
-		expected.Event = &events.ValueMetric{
-			Name:  proto.String("messageRouter.numberOfWebsocketSinks"),
 			Value: proto.Float64(0),
 			Unit:  proto.String("sinks"),
 		}

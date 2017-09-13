@@ -11,7 +11,6 @@ import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/containermetric"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/websocket"
 
 	"github.com/cloudfoundry/sonde-go/events"
 )
@@ -197,17 +196,6 @@ func (group *GroupedSinks) ContainerMetricsFor(appId string) *containermetric.Co
 	return sinksForApp.ContainerMetricsSink("container-metrics-" + appId)
 }
 
-func (group *GroupedSinks) WebsocketSinksFor(appId string) []websocket.WebsocketSink {
-	group.RLock()
-	defer group.RUnlock()
-
-	sinksForApp, ok := group.apps[appId]
-	if !ok || sinksForApp == nil {
-		return nil
-	}
-	return sinksForApp.WebsocketSinks()
-}
-
 func (group *GroupedSinks) CloseAndDelete(sink sinks.Sink) bool {
 	group.Lock()
 	defer group.Unlock()
@@ -366,24 +354,6 @@ func (g *AppGroup) SyslogSinks() []sinks.Sink {
 			continue
 		}
 		results = append(results, wrapper.Sink)
-	}
-
-	return results
-}
-
-func (g *AppGroup) WebsocketSinks() []websocket.WebsocketSink {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	results := []websocket.WebsocketSink{}
-	for _, wrapper := range g.wrappers {
-		if wrapper == nil {
-			continue
-		}
-		sink, ok := wrapper.Sink.(*websocket.WebsocketSink)
-		if ok {
-			results = append(results, *sink)
-		}
 	}
 
 	return results
