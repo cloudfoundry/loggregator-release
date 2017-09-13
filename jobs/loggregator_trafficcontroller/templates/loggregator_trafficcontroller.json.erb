@@ -10,7 +10,7 @@
     end.else do
         paddrs = p("loggregator.doppler.addrs")
         if paddrs && paddrs.size > 0
-            doppler_addrs = addrs.map{|addr| "#{addr}:#{p('doppler.grpc_port')}"}
+            doppler_addrs = paddrs.map{|addr| "#{addr}:#{p('doppler.grpc_port')}"}
         else
             etcd_machines = p("loggregator.etcd.machines").map{|addr| "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"}
             etcd_tls_client_config = {
