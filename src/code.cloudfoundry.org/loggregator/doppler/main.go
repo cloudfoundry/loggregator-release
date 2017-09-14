@@ -28,7 +28,7 @@ func main() {
 		log.Fatalf("Unable to parse config: %s", err)
 	}
 
-	d := app.NewDoppler(conf)
+	d := app.NewLegacyDoppler(conf)
 	d.Start()
 
 	p := profiler.New(conf.PPROFPort)

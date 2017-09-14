@@ -26,16 +26,72 @@ import (
 	"code.cloudfoundry.org/loggregator/plumbing"
 )
 
+// Doppler routes envelopes from producers to any subscribers.
 type Doppler struct {
 	c *Config
 }
 
-func NewDoppler(c *Config) *Doppler {
+// NewLegacyDoppler creates a new Doppler with the given config.
+// Using the config for construction is deprecated and will be removed once
+// syslog and etcd are removed.
+func NewLegacyDoppler(c *Config) *Doppler {
 	return &Doppler{
 		c: c,
 	}
 }
 
+// NewDoppler creates a new Doppler with the given options. Each provided
+// DopplerOption will manipulate the Doppler behavior.
+// NOTE: This construction path does not allow for Syslog drains or announcing
+// via etcd.
+func NewDoppler(grpc GRPC, opts ...DopplerOption) *Doppler {
+	d := &Doppler{
+		c: &Config{
+			GRPC: grpc,
+			MetricBatchIntervalMilliseconds: 5000,
+			MetronConfig: MetronConfig{
+				UDPAddress:  "127.0.0.1:3457",
+				GRPCAddress: "127.0.0.1:3458",
+			},
+			HealthAddr:                   "localhost:14825",
+			MaxRetainedLogMessages:       100,
+			MessageDrainBufferSize:       10000,
+			SinkInactivityTimeoutSeconds: 3600,
+			ContainerMetricTTLSeconds:    120,
+			DisableAnnounce:              true,
+			DisableSyslogDrains:          true,
+		},
+	}
+
+	for _, o := range opts {
+		o(d)
+	}
+
+	return d
+}
+
+// DopplerOption is used to configure a new Doppler.
+type DopplerOption func(*Doppler)
+
+// WithMetricReporting returns a DopplerOption that enables Doppler to emit
+// metrics about itself.
+// This option is experimental.
+func WithMetricReporting() DopplerOption {
+	return func(d *Doppler) {
+		panic("Not yet implemented")
+	}
+}
+
+// WithPersistence turns on recent logs and container metric storage.
+// This option is experimental.
+func WithPersistence() DopplerOption {
+	return func(d *Doppler) {
+		panic("Not yet implemented")
+	}
+}
+
+// Start enables the Doppler to start receiving envelope, accepting
+// subscriptions and routing data.
 func (d *Doppler) Start() {
 	//------------------------------
 	// Monitoring
