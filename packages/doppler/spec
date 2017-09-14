@@ -8,7 +8,6 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/diodes/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/config/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v2/*.go # gosub

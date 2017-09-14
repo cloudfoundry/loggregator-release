@@ -16,7 +16,6 @@ import (
 	"google.golang.org/grpc"
 
 	"code.cloudfoundry.org/loggregator/diodes"
-	"code.cloudfoundry.org/loggregator/doppler/app/config"
 	grpcv1 "code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"
 	"code.cloudfoundry.org/loggregator/doppler/internal/listeners"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver"
@@ -28,10 +27,10 @@ import (
 )
 
 type Doppler struct {
-	c *config.Config
+	c *Config
 }
 
-func NewDoppler(c *config.Config) *Doppler {
+func NewDoppler(c *Config) *Doppler {
 	return &Doppler{
 		c: c,
 	}
@@ -143,7 +142,13 @@ func (d *Doppler) Start() {
 	grpcListener, err := listeners.NewGRPCListener(
 		grpcRouter,
 		sinkManager,
-		d.c.GRPC,
+		listeners.GRPCConfig{
+			Port:         d.c.GRPC.Port,
+			CAFile:       d.c.GRPC.CAFile,
+			CertFile:     d.c.GRPC.CertFile,
+			KeyFile:      d.c.GRPC.KeyFile,
+			CipherSuites: d.c.GRPC.CipherSuites,
+		},
 		envelopeBuffer,
 		batcher,
 		metricClient,
@@ -185,8 +190,8 @@ func (d *Doppler) Start() {
 			Zone:         d.c.Zone,
 			OutgoingPort: d.c.OutgoingPort,
 		}
-		dopplerservice.Announce(d.c.IP, config.HeartbeatInterval, serviceConfig, storeAdapter)
-		dopplerservice.AnnounceLegacy(d.c.IP, config.HeartbeatInterval, serviceConfig, storeAdapter)
+		dopplerservice.Announce(d.c.IP, HeartbeatInterval, serviceConfig, storeAdapter)
+		dopplerservice.AnnounceLegacy(d.c.IP, HeartbeatInterval, serviceConfig, storeAdapter)
 	}
 }
 
@@ -234,7 +239,7 @@ func initializeMetrics(batchIntervalMilliseconds uint) *metricbatcher.MetricBatc
 	return metricBatcher
 }
 
-func connectToEtcd(c *config.Config) storeadapter.StoreAdapter {
+func connectToEtcd(c *Config) storeadapter.StoreAdapter {
 	workPool, err := workpool.NewWorkPool(c.EtcdMaxConcurrentRequests)
 	if err != nil {
 		panic(err)
@@ -258,7 +263,7 @@ func connectToEtcd(c *config.Config) storeadapter.StoreAdapter {
 	return etcdStoreAdapter
 }
 
-func setupMetricsEmitter(c *config.Config) *metricemitter.Client {
+func setupMetricsEmitter(c *Config) *metricemitter.Client {
 	credentials, err := plumbing.NewClientCredentials(
 		c.GRPC.CertFile,
 		c.GRPC.KeyFile,

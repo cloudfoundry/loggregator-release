@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/loggregator/doppler/app"
-	"code.cloudfoundry.org/loggregator/doppler/app/config"
 	"code.cloudfoundry.org/loggregator/profiler"
 	"google.golang.org/grpc/grpclog"
 )
@@ -24,7 +23,7 @@ func main() {
 	)
 	flag.Parse()
 
-	conf, err := config.ParseConfig(*configFile)
+	conf, err := app.ParseConfig(*configFile)
 	if err != nil {
 		log.Fatalf("Unable to parse config: %s", err)
 	}
