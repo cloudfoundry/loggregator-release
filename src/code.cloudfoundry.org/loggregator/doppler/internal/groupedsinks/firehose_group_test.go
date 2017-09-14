@@ -1,24 +1,22 @@
-package firehose_group_test
+package groupedsinks_test
 
 import (
+	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks"
+	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
-
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
-
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"
-
-	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks/firehose_group"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 type fakeSink struct {
-	sinkId string
-	appId  string
+	sinkId         string
+	appId          string
+	shouldRxErrors bool
 }
 
 func (f *fakeSink) AppID() string {
@@ -28,12 +26,12 @@ func (f *fakeSink) AppID() string {
 func (f *fakeSink) Run(<-chan *events.Envelope) {
 }
 
-func (f *fakeSink) Identifier() string {
-	return f.sinkId
+func (f *fakeSink) ShouldReceiveErrors() bool {
+	return f.shouldRxErrors
 }
 
-func (f *fakeSink) ShouldReceiveErrors() bool {
-	return false
+func (f *fakeSink) Identifier() string {
+	return f.sinkId
 }
 
 func (f *fakeSink) GetInstrumentationMetric() sinks.Metric {
@@ -49,7 +47,7 @@ var _ = Describe("FirehoseGroup", func() {
 		sink2 := fakeSink{appId: "firehose-a", sinkId: "sink-b"}
 
 		mc := testhelper.NewMetricClient()
-		group := firehose_group.NewFirehoseGroup(
+		group := groupedsinks.NewFirehoseGroup(
 			&spyMetricBatcher{},
 			mc.NewCounter("sinks.dropped",
 				metricemitter.WithVersion(2, 0),
@@ -88,7 +86,7 @@ var _ = Describe("FirehoseGroup", func() {
 		sink2 := fakeSink{appId: "firehose-a", sinkId: "sink-b"}
 
 		mc := testhelper.NewMetricClient()
-		group := firehose_group.NewFirehoseGroup(
+		group := groupedsinks.NewFirehoseGroup(
 			&spyMetricBatcher{},
 			mc.NewCounter("sinks.dropped",
 				metricemitter.WithVersion(2, 0),
@@ -111,7 +109,7 @@ var _ = Describe("FirehoseGroup", func() {
 	Describe("IsEmpty", func() {
 		It("is true when the group is empty", func() {
 			mc := testhelper.NewMetricClient()
-			group := firehose_group.NewFirehoseGroup(
+			group := groupedsinks.NewFirehoseGroup(
 				&spyMetricBatcher{},
 				mc.NewCounter("sinks.dropped",
 					metricemitter.WithVersion(2, 0),
@@ -122,7 +120,7 @@ var _ = Describe("FirehoseGroup", func() {
 
 		It("is false when the group is not empty", func() {
 			mc := testhelper.NewMetricClient()
-			group := firehose_group.NewFirehoseGroup(
+			group := groupedsinks.NewFirehoseGroup(
 				&spyMetricBatcher{},
 				mc.NewCounter("sinks.dropped",
 					metricemitter.WithVersion(2, 0),
@@ -139,7 +137,7 @@ var _ = Describe("FirehoseGroup", func() {
 	Describe("RemoveSink", func() {
 		It("makes the group empty and returns true when there is one sink to remove", func() {
 			mc := testhelper.NewMetricClient()
-			group := firehose_group.NewFirehoseGroup(
+			group := groupedsinks.NewFirehoseGroup(
 				&spyMetricBatcher{},
 				mc.NewCounter("sinks.dropped",
 					metricemitter.WithVersion(2, 0),
@@ -155,7 +153,7 @@ var _ = Describe("FirehoseGroup", func() {
 
 		It("returns false when the group does not contain the requested sink and does not remove any sinks from the group", func() {
 			mc := testhelper.NewMetricClient()
-			group := firehose_group.NewFirehoseGroup(
+			group := groupedsinks.NewFirehoseGroup(
 				&spyMetricBatcher{},
 				mc.NewCounter("sinks.dropped",
 					metricemitter.WithVersion(2, 0),

@@ -9,7 +9,6 @@ import (
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/containermetric"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
@@ -525,31 +524,6 @@ func (d DummySyslogWriter) Write(p int, b []byte, source, sourceId string, times
 }
 func (d DummySyslogWriter) Close() error { return nil }
 
-type fakeSink struct {
-	sinkId         string
-	appId          string
-	shouldRxErrors bool
-}
-
-func (f *fakeSink) AppID() string {
-	return f.appId
-}
-
-func (f *fakeSink) Run(<-chan *events.Envelope) {
-
-}
-
-func (f *fakeSink) Identifier() string {
-	return f.sinkId
-}
-
-func (f *fakeSink) ShouldReceiveErrors() bool {
-	return f.shouldRxErrors
-}
-func (f *fakeSink) GetInstrumentationMetric() sinks.Metric {
-	return sinks.Metric{Name: "numberOfMessagesLost", Value: 5}
-}
-
 type fakeMessageWriter struct {
 	RemoteAddress string
 }
@@ -577,10 +551,6 @@ func (fake fakeAddr) Network() string {
 func (fake fakeAddr) String() string {
 	return fake.remoteAddress
 }
-
-type spyMetricBatcher struct{}
-
-func (s *spyMetricBatcher) BatchIncrementCounter(name string) {}
 
 type SpyHealthRegistrar struct {
 	mu     sync.Mutex

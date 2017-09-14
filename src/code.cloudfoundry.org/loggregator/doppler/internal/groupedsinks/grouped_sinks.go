@@ -5,8 +5,6 @@ import (
 
 	"code.cloudfoundry.org/loggregator/metricemitter"
 
-	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks/firehose_group"
-	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks/sink_wrapper"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/containermetric"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump"
@@ -20,10 +18,6 @@ type MetricClient interface {
 	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
 }
 
-type MetricBatcher interface {
-	BatchIncrementCounter(name string)
-}
-
 func NewGroupedSinks(b MetricBatcher, mc MetricClient) *GroupedSinks {
 	droppedMetric := mc.NewCounter("sinks.dropped",
 		metricemitter.WithVersion(2, 0),
@@ -34,7 +28,7 @@ func NewGroupedSinks(b MetricBatcher, mc MetricClient) *GroupedSinks {
 
 	return &GroupedSinks{
 		apps:          make(map[string]*AppGroup),
-		firehoses:     make(map[string]firehose_group.FirehoseGroup),
+		firehoses:     make(map[string]FirehoseGroup),
 		batcher:       b,
 		droppedMetric: droppedMetric,
 		errorMetric:   errorMetric,
@@ -45,7 +39,7 @@ type GroupedSinks struct {
 	sync.RWMutex
 
 	apps          map[string]*AppGroup
-	firehoses     map[string]firehose_group.FirehoseGroup
+	firehoses     map[string]FirehoseGroup
 	batcher       MetricBatcher
 	droppedMetric *metricemitter.Counter
 	errorMetric   *metricemitter.Counter
@@ -83,7 +77,7 @@ func (group *GroupedSinks) RegisterFirehoseSink(in chan<- *events.Envelope, sink
 
 	fgroup, ok := group.firehoses[subscriptionId]
 	if !ok || fgroup == nil {
-		fgroup = firehose_group.NewFirehoseGroup(
+		fgroup = NewFirehoseGroup(
 			group.batcher,
 			group.droppedMetric,
 		)
@@ -255,7 +249,7 @@ func (group *GroupedSinks) DeleteAll() {
 
 type AppGroup struct {
 	mu       sync.RWMutex
-	wrappers map[string]*sink_wrapper.SinkWrapper
+	wrappers map[string]*SinkWrapper
 
 	batcher       MetricBatcher
 	droppedMetric *metricemitter.Counter
@@ -268,7 +262,7 @@ func NewAppGroup(
 	errorMetric *metricemitter.Counter,
 ) *AppGroup {
 	return &AppGroup{
-		wrappers:      make(map[string]*sink_wrapper.SinkWrapper),
+		wrappers:      make(map[string]*SinkWrapper),
 		batcher:       batcher,
 		droppedMetric: droppedMetric,
 		errorMetric:   errorMetric,
@@ -283,7 +277,7 @@ func (g *AppGroup) AddSink(sink sinks.Sink, in chan<- *events.Envelope) bool {
 		return false
 	}
 
-	g.wrappers[sink.Identifier()] = &sink_wrapper.SinkWrapper{
+	g.wrappers[sink.Identifier()] = &SinkWrapper{
 		InputChan: in,
 		Sink:      sink,
 	}

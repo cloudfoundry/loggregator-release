@@ -1,4 +1,4 @@
-package sink_wrapper
+package groupedsinks
 
 import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"

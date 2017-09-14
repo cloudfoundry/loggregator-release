@@ -1,10 +1,9 @@
-package firehose_group
+package groupedsinks
 
 import (
 	"math/rand"
 	"sync"
 
-	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks/sink_wrapper"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 
@@ -26,7 +25,7 @@ type FirehoseGroup interface {
 
 type firehoseGroup struct {
 	mu       sync.RWMutex
-	wrappers map[string]*sink_wrapper.SinkWrapper
+	wrappers map[string]*SinkWrapper
 
 	batcher       MetricBatcher
 	droppedMetric *metricemitter.Counter
@@ -37,7 +36,7 @@ func NewFirehoseGroup(
 	droppedMetric *metricemitter.Counter,
 ) *firehoseGroup {
 	return &firehoseGroup{
-		wrappers:      make(map[string]*sink_wrapper.SinkWrapper),
+		wrappers:      make(map[string]*SinkWrapper),
 		batcher:       batcher,
 		droppedMetric: droppedMetric,
 	}
@@ -57,7 +56,7 @@ func (group *firehoseGroup) AddSink(sink sinks.Sink, in chan<- *events.Envelope)
 		return false
 	}
 
-	group.wrappers[sink.Identifier()] = &sink_wrapper.SinkWrapper{
+	group.wrappers[sink.Identifier()] = &SinkWrapper{
 		InputChan: in,
 		Sink:      sink,
 	}
@@ -130,7 +129,7 @@ func (group *firehoseGroup) BroadcastMessage(msg *events.Envelope) {
 }
 
 // randomWrapper needs to be called with read or write lock held.
-func (group *firehoseGroup) randomWrapper() *sink_wrapper.SinkWrapper {
+func (group *firehoseGroup) randomWrapper() *SinkWrapper {
 	var i int
 	if len(group.wrappers) == 0 {
 		return nil
