@@ -12,7 +12,6 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v2/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/iprange/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/listeners/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/sinks/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/sinks/containermetric/*.go # gosub
@@ -21,9 +20,6 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslogwriter/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/blacklist/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/metrics/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/sinkmanager/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/store/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/truncatingbuffer/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub

@@ -1,20 +1,19 @@
-package blacklist_test
+package sinkserver_test
 
 import (
 	"net/url"
 
-	"code.cloudfoundry.org/loggregator/doppler/internal/iprange"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/blacklist"
+	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("UrlBlacklistManager", func() {
-	var urlBlacklistManager *blacklist.URLBlacklistManager
+	var urlBlacklistManager *sinkserver.URLBlacklistManager
 
 	BeforeEach(func() {
-		urlBlacklistManager = blacklist.New([]iprange.IPRange{{Start: "14.15.16.17", End: "14.15.16.20"}})
+		urlBlacklistManager = sinkserver.NewBlackListManager([]sinkserver.IPRange{{Start: "14.15.16.17", End: "14.15.16.20"}})
 	})
 
 	Describe("CheckUrl", func() {

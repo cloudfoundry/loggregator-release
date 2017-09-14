@@ -1,19 +1,17 @@
-package blacklist
+package sinkserver
 
 import (
 	"errors"
 	"log"
 	"net/url"
-
-	"code.cloudfoundry.org/loggregator/doppler/internal/iprange"
 )
 
 type URLBlacklistManager struct {
-	blacklistIPs    []iprange.IPRange
+	blacklistIPs    []IPRange
 	blacklistedURLs []string
 }
 
-func New(blacklistIPs []iprange.IPRange) *URLBlacklistManager {
+func NewBlackListManager(blacklistIPs []IPRange) *URLBlacklistManager {
 	return &URLBlacklistManager{blacklistIPs: blacklistIPs}
 }
 
@@ -23,9 +21,9 @@ func (blacklistManager *URLBlacklistManager) CheckUrl(rawUrl string) (outputURL 
 		return nil, err
 	}
 
-	ipNotBlacklisted, err := iprange.IpOutsideOfRanges(*outputURL, blacklistManager.blacklistIPs)
+	ipNotBlacklisted, err := IpOutsideOfRanges(*outputURL, blacklistManager.blacklistIPs)
 	if err != nil {
-		_, ok := err.(iprange.ResolutionFailure)
+		_, ok := err.(ResolutionFailure)
 		if !ok {
 			return nil, err
 		}

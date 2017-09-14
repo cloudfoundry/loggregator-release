@@ -1,14 +1,13 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"os"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/doppler/internal/iprange"
-
-	"encoding/json"
-	"os"
+	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver"
 )
 
 const HeartbeatInterval = 10 * time.Second
@@ -35,7 +34,7 @@ type GRPC struct {
 type Config struct {
 	DisableSyslogDrains             bool
 	DisableAnnounce                 bool
-	BlackListIps                    []iprange.IPRange
+	BlackListIps                    []sinkserver.IPRange
 	ContainerMetricTTLSeconds       int
 	EtcdMaxConcurrentRequests       int
 	EtcdUrls                        []string
@@ -76,7 +75,7 @@ func (c *Config) validate() (err error) {
 	}
 
 	if c.BlackListIps != nil {
-		err = iprange.ValidateIpAddresses(c.BlackListIps)
+		err = sinkserver.ValidateIpAddresses(c.BlackListIps)
 		if err != nil {
 			return err
 		}

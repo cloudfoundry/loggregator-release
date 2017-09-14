@@ -6,8 +6,6 @@ import (
 	"log"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/doppler/app/config"
-
 	"github.com/cloudfoundry/storeadapter"
 )
 
@@ -20,7 +18,14 @@ const dopplerMetaVersion = 1
 const META_ROOT = "/doppler/meta"
 const LEGACY_ROOT = "/healthstatus/doppler"
 
-func Announce(ip string, ttl time.Duration, config *config.Config, storeAdapter storeadapter.StoreAdapter) chan (chan bool) {
+type Config struct {
+	Index        string
+	JobName      string
+	Zone         string
+	OutgoingPort uint32
+}
+
+func Announce(ip string, ttl time.Duration, config *Config, storeAdapter storeadapter.StoreAdapter) chan (chan bool) {
 	dopplerMetaBytes, err := buildDopplerMeta(ip, config)
 	if err != nil {
 		panic(err)
@@ -52,7 +57,7 @@ func Announce(ip string, ttl time.Duration, config *config.Config, storeAdapter 
 	return stopChan
 }
 
-func AnnounceLegacy(ip string, ttl time.Duration, config *config.Config, storeAdapter storeadapter.StoreAdapter) chan (chan bool) {
+func AnnounceLegacy(ip string, ttl time.Duration, config *Config, storeAdapter storeadapter.StoreAdapter) chan (chan bool) {
 	key := fmt.Sprintf("%s/%s/%s/%s", LEGACY_ROOT, config.Zone, config.JobName, config.Index)
 	status, stopChan, err := storeAdapter.MaintainNode(storeadapter.StoreNode{
 		Key:   key,
@@ -74,7 +79,7 @@ func AnnounceLegacy(ip string, ttl time.Duration, config *config.Config, storeAd
 	return stopChan
 }
 
-func buildDopplerMeta(ip string, config *config.Config) ([]byte, error) {
+func buildDopplerMeta(ip string, config *Config) ([]byte, error) {
 	wsAddr := fmt.Sprintf("ws://%s:%d", ip, config.OutgoingPort)
 	dopplerMeta := DopplerMeta{
 		Version:   dopplerMetaVersion,

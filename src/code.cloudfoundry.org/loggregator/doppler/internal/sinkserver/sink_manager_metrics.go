@@ -1,16 +1,13 @@
-package metrics
+package sinkserver
 
 import (
+	"sync/atomic"
 	"time"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
+	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/containermetric"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
-
-	"sync/atomic"
-
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/containermetric"
-
 	"github.com/cloudfoundry/dropsonde/metrics"
 )
 

@@ -1,4 +1,4 @@
-package sinkmanager
+package sinkserver
 
 import (
 	"fmt"
@@ -13,8 +13,6 @@ import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslogwriter"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/blacklist"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/metrics"
 	"code.cloudfoundry.org/loggregator/doppler/internal/store"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"github.com/cloudfoundry/dropsonde/emitter"
@@ -44,12 +42,12 @@ type SinkManager struct {
 	messageDrainBufferSize uint
 	dropsondeOrigin        string
 
-	metrics        *metrics.SinkManagerMetrics
+	metrics        *SinkManagerMetrics
 	recentLogCount uint32
 
 	doneChannel         chan struct{}
 	errorChannel        chan *events.Envelope
-	urlBlacklistManager *blacklist.URLBlacklistManager
+	urlBlacklistManager *URLBlacklistManager
 	sinks               *groupedsinks.GroupedSinks
 	skipCertVerify      bool
 	sinkTimeout         time.Duration
@@ -61,11 +59,11 @@ type SinkManager struct {
 	stopOnce sync.Once
 }
 
-// New creates a SinkManager.
-func New(
+// NewSinkManager creates a SinkManager.
+func NewSinkManager(
 	maxRetainedLogMessages uint32,
 	skipCertVerify bool,
-	blackListManager *blacklist.URLBlacklistManager,
+	blackListManager *URLBlacklistManager,
 	messageDrainBufferSize uint,
 	dropsondeOrigin string,
 	sinkTimeout time.Duration,
@@ -83,7 +81,7 @@ func New(
 		sinks:                  groupedsinks.NewGroupedSinks(metricBatcher, metricClient),
 		skipCertVerify:         skipCertVerify,
 		recentLogCount:         maxRetainedLogMessages,
-		metrics:                metrics.NewSinkManagerMetrics(),
+		metrics:                NewSinkManagerMetrics(),
 		messageDrainBufferSize: messageDrainBufferSize,
 		dropsondeOrigin:        dropsondeOrigin,
 		sinkTimeout:            sinkTimeout,

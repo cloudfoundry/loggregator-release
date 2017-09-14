@@ -7,11 +7,9 @@ import (
 	"math/rand"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/profiler"
-
 	"code.cloudfoundry.org/loggregator/doppler/app"
 	"code.cloudfoundry.org/loggregator/doppler/app/config"
-
+	"code.cloudfoundry.org/loggregator/profiler"
 	"google.golang.org/grpc/grpclog"
 )
 

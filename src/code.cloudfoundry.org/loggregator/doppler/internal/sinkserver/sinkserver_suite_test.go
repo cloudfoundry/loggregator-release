@@ -6,6 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudfoundry/dropsonde/emitter/fake"
+	"github.com/cloudfoundry/dropsonde/metric_sender"
+	fakeMS "github.com/cloudfoundry/dropsonde/metric_sender/fake"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/gorilla/websocket"
 
 	. "github.com/onsi/ginkgo"
@@ -18,6 +23,21 @@ func TestSinkserver(t *testing.T) {
 
 	RunSpecs(t, "Sinkserver Suite")
 }
+
+var (
+	fakeMetricSender *fakeMS.FakeMetricSender
+	fakeEventEmitter *fake.FakeEventEmitter
+)
+
+var _ = BeforeSuite(func() {
+	fakeEventEmitter = fake.NewFakeEventEmitter("doppler")
+	fakeMetricSender = fakeMS.NewFakeMetricSender()
+	metrics.Initialize(fakeMetricSender, nil)
+
+	sender := metric_sender.NewMetricSender(fakeEventEmitter)
+	batcher := metricbatcher.New(sender, 100*time.Millisecond)
+	metrics.Initialize(sender, batcher)
+})
 
 func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.Conn, chan bool, <-chan bool) {
 	dontKeepAliveChan := make(chan bool, 1)

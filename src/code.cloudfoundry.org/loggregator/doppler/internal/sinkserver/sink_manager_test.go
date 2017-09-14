@@ -1,4 +1,4 @@
-package sinkmanager_test
+package sinkserver_test
 
 import (
 	"net"
@@ -6,17 +6,18 @@ import (
 	"sync"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/doppler/internal/iprange"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslogwriter"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/blacklist"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/sinkmanager"
+	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver"
 	"code.cloudfoundry.org/loggregator/doppler/internal/store"
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	"github.com/cloudfoundry/dropsonde/emitter"
+	"github.com/cloudfoundry/dropsonde/emitter/fake"
 	"github.com/cloudfoundry/dropsonde/factories"
+	fakeMS "github.com/cloudfoundry/dropsonde/metric_sender/fake"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
@@ -25,18 +26,25 @@ import (
 )
 
 var _ = Describe("SinkManager", func() {
-	var blackListManager = blacklist.New(
-		[]iprange.IPRange{{Start: "10.10.10.10", End: "10.10.10.20"}},
+	var (
+		fakeMetricSender *fakeMS.FakeMetricSender
+		fakeEventEmitter *fake.FakeEventEmitter
+		blackListManager = sinkserver.NewBlackListManager(
+			[]sinkserver.IPRange{{Start: "10.10.10.10", End: "10.10.10.20"}},
+		)
+		sinkManager                              *sinkserver.SinkManager
+		sinkManagerDone                          chan struct{}
+		newAppServiceChan, deletedAppServiceChan chan store.AppService
 	)
-	var sinkManager *sinkmanager.SinkManager
-	var sinkManagerDone chan struct{}
-	var newAppServiceChan, deletedAppServiceChan chan store.AppService
 
 	BeforeEach(func() {
+		fakeEventEmitter = fake.NewFakeEventEmitter("doppler")
+		fakeMetricSender = fakeMS.NewFakeMetricSender()
+		metrics.Initialize(fakeMetricSender, nil)
 		fakeMetricSender.Reset()
 
 		health := newSpyHealthRegistrar()
-		sinkManager = sinkmanager.New(1, true, blackListManager, 100,
+		sinkManager = sinkserver.NewSinkManager(1, true, blackListManager, 100,
 			"dropsonde-origin", 1*time.Second, 0, 1*time.Second,
 			1*time.Second, nil, testhelper.NewMetricClient(), health)
 

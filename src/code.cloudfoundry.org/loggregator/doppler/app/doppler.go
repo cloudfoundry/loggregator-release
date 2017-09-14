@@ -20,8 +20,6 @@ import (
 	grpcv1 "code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"
 	"code.cloudfoundry.org/loggregator/doppler/internal/listeners"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/blacklist"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/sinkmanager"
 	"code.cloudfoundry.org/loggregator/doppler/internal/store"
 	"code.cloudfoundry.org/loggregator/dopplerservice"
 	"code.cloudfoundry.org/loggregator/healthendpoint"
@@ -101,10 +99,10 @@ func (d *Doppler) Start() {
 	//------------------------------
 	// Caching
 	//------------------------------
-	sinkManager := sinkmanager.New(
+	sinkManager := sinkserver.NewSinkManager(
 		d.c.MaxRetainedLogMessages,
 		d.c.SinkSkipCertVerify,
-		blacklist.New(d.c.BlackListIps),
+		sinkserver.NewBlackListManager(d.c.BlackListIps),
 		d.c.MessageDrainBufferSize,
 		dopplerOrigin,
 		time.Duration(d.c.SinkInactivityTimeoutSeconds)*time.Second,
@@ -181,8 +179,14 @@ func (d *Doppler) Start() {
 	log.Print("Startup: doppler server started.")
 
 	if !d.c.DisableAnnounce {
-		dopplerservice.Announce(d.c.IP, config.HeartbeatInterval, d.c, storeAdapter)
-		dopplerservice.AnnounceLegacy(d.c.IP, config.HeartbeatInterval, d.c, storeAdapter)
+		serviceConfig := &dopplerservice.Config{
+			Index:        d.c.Index,
+			JobName:      d.c.JobName,
+			Zone:         d.c.Zone,
+			OutgoingPort: d.c.OutgoingPort,
+		}
+		dopplerservice.Announce(d.c.IP, config.HeartbeatInterval, serviceConfig, storeAdapter)
+		dopplerservice.AnnounceLegacy(d.c.IP, config.HeartbeatInterval, serviceConfig, storeAdapter)
 	}
 }
 
@@ -196,7 +200,7 @@ func start(
 	newAppServiceChan <-chan store.AppService,
 	deletedAppServiceChan <-chan store.AppService,
 	batcher *metricbatcher.MetricBatcher,
-	sinkManager *sinkmanager.SinkManager,
+	sinkManager *sinkserver.SinkManager,
 	messageRouter *sinkserver.MessageRouter,
 	grpcListener *listeners.GRPCListener,
 	disableSyslogDrains bool,

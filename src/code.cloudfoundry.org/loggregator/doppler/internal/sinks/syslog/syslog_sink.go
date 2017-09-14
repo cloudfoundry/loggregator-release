@@ -11,7 +11,6 @@ import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/retrystrategy"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslogwriter"
 	"code.cloudfoundry.org/loggregator/doppler/internal/truncatingbuffer"
-
 	"github.com/cloudfoundry/sonde-go/events"
 )
 

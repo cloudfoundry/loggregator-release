@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/loggregator/diodes"
-
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/sonde-go/events"
 )
