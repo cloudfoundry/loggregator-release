@@ -10,8 +10,6 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/config/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks/firehose_group/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks/sink_wrapper/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v2/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/iprange/*.go # gosub
