@@ -4,6 +4,13 @@ import (
 	"sync"
 )
 
+type AppService interface {
+	AppId() string
+	Url() string
+	Hostname() string
+	Id() string
+}
+
 type AppServiceCache interface {
 	Add(appService AppService)
 	Remove(appService AppService)
