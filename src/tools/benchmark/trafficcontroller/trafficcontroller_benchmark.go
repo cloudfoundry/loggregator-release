@@ -12,7 +12,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/doppler/app/config"
 	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"golang.org/x/net/context"
@@ -75,10 +74,10 @@ func main() {
 		log.Fatal("Missing required flag 'etcd'")
 	}
 
-	dopplerConfig := &config.Config{
-		Zone:         "a-zone",
-		JobName:      "benchmarker",
-		Index:        "1",
+	dopplerConfig := &dopplerservice.Config{
+		Zone:    "a-zone",
+		JobName: "benchmarker",
+		Index:   "1",
 	}
 
 	storeAdapter := connectToEtcd([]string{*etcdURL})
