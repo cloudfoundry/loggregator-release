@@ -32,7 +32,7 @@ func StartServer(addr string, gatherer prometheus.Gatherer) net.Listener {
 
 	go func() {
 		log.Printf("Metrics endpoint is listening on %s", lis.Addr().String())
-		log.Fatalf("Metrics server closing: %s", server.Serve(lis))
+		log.Printf("Metrics server closing: %s", server.Serve(lis))
 	}()
 	return lis
 }

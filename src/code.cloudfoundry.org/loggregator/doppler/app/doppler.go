@@ -2,6 +2,7 @@ package app
 
 import (
 	"log"
+	"net"
 	"time"
 
 	gendiodes "code.cloudfoundry.org/diodes"
@@ -28,7 +29,9 @@ import (
 
 // Doppler routes envelopes from producers to any subscribers.
 type Doppler struct {
-	c *Config
+	c              *Config
+	healthListener net.Listener
+	grpcListener   *listeners.GRPCListener
 }
 
 // NewLegacyDoppler creates a new Doppler with the given config.
@@ -107,7 +110,7 @@ func (d *Doppler) Start() {
 	batcher := initializeMetrics(d.c.MetricBatchIntervalMilliseconds)
 
 	promRegistry := prometheus.NewRegistry()
-	healthendpoint.StartServer(d.c.HealthAddr, promRegistry)
+	d.healthListener = healthendpoint.StartServer(d.c.HealthAddr, promRegistry)
 	healthRegistrar := healthendpoint.New(promRegistry, map[string]prometheus.Gauge{
 		// metric-documentation-health: (ingressStreamCount)
 		// Number of open firehose streams
@@ -195,7 +198,7 @@ func (d *Doppler) Start() {
 
 	grpcRouter := grpcv1.NewRouter()
 	messageRouter := sinkserver.NewMessageRouter(sinkManager, grpcRouter)
-	grpcListener, err := listeners.NewGRPCListener(
+	d.grpcListener, err = listeners.NewGRPCListener(
 		grpcRouter,
 		sinkManager,
 		listeners.GRPCConfig{
@@ -233,7 +236,7 @@ func (d *Doppler) Start() {
 		batcher,
 		sinkManager,
 		messageRouter,
-		grpcListener,
+		d.grpcListener,
 		d.c.DisableSyslogDrains,
 	)
 
@@ -253,6 +256,8 @@ func (d *Doppler) Start() {
 
 func (d *Doppler) Stop() {
 	// TODO: Drain
+	d.healthListener.Close()
+	d.grpcListener.Stop()
 }
 
 func start(

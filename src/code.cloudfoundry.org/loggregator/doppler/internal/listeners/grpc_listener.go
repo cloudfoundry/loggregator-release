@@ -1,9 +1,12 @@
+// package listeners glues several gRPC pieces together. There are no unit
+// tests... You have been warned.
 package listeners
 
 import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 	"time"
 
 	"code.cloudfoundry.org/loggregator/diodes"
@@ -20,14 +23,23 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
-// MetricClient creates new CounterMetrics to be emitted periodically.
-type MetricClient interface {
-	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
-}
-
 type GRPCListener struct {
 	listener net.Listener
 	server   *grpc.Server
+
+	mu      sync.Mutex
+	stopped bool
+}
+
+type Batcher interface {
+	BatchCounter(name string) metricbatcher.BatchCounterChainer
+	BatchIncrementCounter(name string)
+	BatchAddCounter(name string, delta uint64)
+}
+
+// MetricClient creates new CounterMetrics to be emitted periodically.
+type MetricClient interface {
+	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
 }
 
 type GRPCConfig struct {
@@ -102,6 +114,19 @@ func NewGRPCListener(
 func (g *GRPCListener) Start() {
 	log.Printf("Starting gRPC server on %s", g.listener.Addr().String())
 	if err := g.server.Serve(g.listener); err != nil {
-		log.Fatalf("Failed to start gRPC server: %s", err)
+		g.mu.Lock()
+		stopped := g.stopped
+		g.mu.Unlock()
+
+		if !stopped {
+			log.Fatalf("Failed to start gRPC server: %s", err)
+		}
 	}
+}
+
+func (g *GRPCListener) Stop() {
+	g.mu.Lock()
+	g.stopped = true
+	g.mu.Unlock()
+	g.server.Stop()
 }
