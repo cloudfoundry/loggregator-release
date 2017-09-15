@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslogwriter"
 	"code.cloudfoundry.org/loggregator/doppler/internal/truncatingbuffer"
 	"github.com/cloudfoundry/sonde-go/events"
 )
@@ -20,14 +19,14 @@ type SyslogSink struct {
 	sentByteCount          *uint64
 	messageDrainBufferSize uint
 	listenerChannel        chan *events.Envelope
-	syslogWriter           syslogwriter.Writer
+	syslogWriter           Writer
 	handleSendError        func(errorMessage, appId string)
 	disconnectChannel      chan struct{}
 	dropsondeOrigin        string
 	disconnectOnce         sync.Once
 }
 
-func NewSyslogSink(appId string, drainURL *url.URL, messageDrainBufferSize uint, syslogWriter syslogwriter.Writer, errorHandler func(string, string), dropsondeOrigin string) *SyslogSink {
+func NewSyslogSink(appId string, drainURL *url.URL, messageDrainBufferSize uint, syslogWriter Writer, errorHandler func(string, string), dropsondeOrigin string) *SyslogSink {
 
 	syslogSink := &SyslogSink{
 		appId:                  appId,

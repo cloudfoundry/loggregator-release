@@ -1,4 +1,4 @@
-package syslogwriter
+package syslog
 
 import (
 	"bytes"

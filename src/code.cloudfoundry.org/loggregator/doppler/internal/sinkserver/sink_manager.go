@@ -10,7 +10,6 @@ import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslogwriter"
 	"code.cloudfoundry.org/loggregator/doppler/internal/store"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"github.com/cloudfoundry/dropsonde/emitter"
@@ -280,7 +279,7 @@ func (sm *SinkManager) listenForErrorMessages() {
 }
 
 func (sm *SinkManager) registerNewSyslogSink(appID string, syslogSinkURL *url.URL, hostname string) {
-	syslogWriter, err := syslogwriter.NewWriter(
+	syslogWriter, err := syslog.NewWriter(
 		syslogSinkURL,
 		appID,
 		hostname,

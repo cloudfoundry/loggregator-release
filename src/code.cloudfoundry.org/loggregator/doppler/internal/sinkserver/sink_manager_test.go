@@ -8,7 +8,6 @@ import (
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslogwriter"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver"
 	"code.cloudfoundry.org/loggregator/doppler/internal/store"
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
@@ -463,7 +462,7 @@ var _ = Describe("SinkManager", func() {
 
 			BeforeEach(func() {
 				url := &url.URL{Scheme: "syslog", Host: "localhost:9998"}
-				writer, _ := syslogwriter.NewSyslogWriter(
+				writer, _ := syslog.NewSyslogWriter(
 					url,
 					"appId",
 					"loggregator",

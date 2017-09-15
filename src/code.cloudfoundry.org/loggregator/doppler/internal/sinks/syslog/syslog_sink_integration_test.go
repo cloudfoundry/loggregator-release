@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslogwriter"
-
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -37,7 +35,7 @@ var _ = Describe("SyslogSinkIntegration", func() {
 				url, _ := url.Parse(server.URL)
 
 				dialer := &net.Dialer{}
-				httpsWriter, err := syslogwriter.NewHttpsWriter(url, appId, "loggregator", true, dialer, 0)
+				httpsWriter, err := syslog.NewHttpsWriter(url, appId, "loggregator", true, dialer, 0)
 				Expect(err).ToNot(HaveOccurred())
 
 				errorHandler := func(errorMsg, appId string) {}

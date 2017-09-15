@@ -1,11 +1,11 @@
-package syslogwriter_test
+package syslog_test
 
 import (
 	"io/ioutil"
 	"log"
 )
 
-//go:generate go-bindata -nocompress -o bindata_test.go -pkg syslogwriter_test -prefix fixtures/ fixtures/
+//go:generate go-bindata -nocompress -o bindata_test.go -pkg syslog_test -prefix fixtures/ fixtures/
 
 func fixture(filename string) string {
 	contents := MustAsset(filename)

@@ -3,7 +3,7 @@
 // Fork needed to set the proper hostname in the write() function
 //
 
-package syslogwriter
+package syslog
 
 import (
 	"crypto/tls"

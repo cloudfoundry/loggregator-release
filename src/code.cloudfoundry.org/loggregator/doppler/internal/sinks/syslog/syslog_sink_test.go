@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
-
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"

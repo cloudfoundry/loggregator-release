@@ -4,7 +4,7 @@
 // fixtures/key.key
 // DO NOT EDIT!
 
-package syslogwriter_test
+package syslog_test
 
 import (
 	"fmt"
