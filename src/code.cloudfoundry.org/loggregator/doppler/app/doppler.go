@@ -6,16 +6,6 @@ import (
 	"time"
 
 	gendiodes "code.cloudfoundry.org/diodes"
-	"code.cloudfoundry.org/workpool"
-	"github.com/cloudfoundry/dropsonde"
-	"github.com/cloudfoundry/dropsonde/metric_sender"
-	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/storeadapter"
-	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
-	"github.com/prometheus/client_golang/prometheus"
-	"google.golang.org/grpc"
-
 	"code.cloudfoundry.org/loggregator/diodes"
 	grpcv1 "code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"
 	"code.cloudfoundry.org/loggregator/doppler/internal/listeners"
@@ -25,6 +15,15 @@ import (
 	"code.cloudfoundry.org/loggregator/healthendpoint"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
+	"code.cloudfoundry.org/workpool"
+	"github.com/cloudfoundry/dropsonde"
+	"github.com/cloudfoundry/dropsonde/metric_sender"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/metrics"
+	"github.com/cloudfoundry/storeadapter"
+	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"github.com/prometheus/client_golang/prometheus"
+	"google.golang.org/grpc"
 )
 
 // Doppler routes envelopes from producers to any subscribers.
@@ -233,19 +232,14 @@ func (d *Doppler) Start() {
 	//------------------------------
 	// Start
 	//------------------------------
-	go start(
-		envelopeBuffer,
-		appStoreWatcher,
-		newAppServiceChan,
-		deletedAppServiceChan,
-		batcher,
-		sinkManager,
-		messageRouter,
-		d.grpcListener,
-		d.c.DisableSyslogDrains,
-	)
+	go d.grpcListener.Start()
 
-	log.Print("Startup: doppler server started.")
+	if !d.c.DisableSyslogDrains {
+		go appStoreWatcher.Run()
+	}
+
+	go sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
+	go messageRouter.Start(envelopeBuffer)
 
 	if !d.c.DisableAnnounce {
 		serviceConfig := &dopplerservice.Config{
@@ -257,45 +251,26 @@ func (d *Doppler) Start() {
 		dopplerservice.Announce(d.c.IP, HeartbeatInterval, serviceConfig, storeAdapter)
 		dopplerservice.AnnounceLegacy(d.c.IP, HeartbeatInterval, serviceConfig, storeAdapter)
 	}
+
+	log.Print("Startup: doppler server started.")
 }
 
+// Addrs stores listener addresses of the Doppler process.
 type Addrs struct {
 	GRPC   string
 	Health string
 }
 
+// Addrs returns a copy of the listeners' addresses.
 func (d *Doppler) Addrs() Addrs {
 	return d.addrs
 }
 
+// Stop does nothing. It is a stub for future drain-and-die work.
 func (d *Doppler) Stop() {
 	// TODO: Drain
 	d.healthListener.Close()
 	d.grpcListener.Stop()
-}
-
-func start(
-	envelopeBuffer *diodes.ManyToOneEnvelope,
-	appStoreWatcher *store.AppServiceStoreWatcher,
-	newAppServiceChan <-chan store.AppService,
-	deletedAppServiceChan <-chan store.AppService,
-	batcher *metricbatcher.MetricBatcher,
-	sinkManager *sinkserver.SinkManager,
-	messageRouter *sinkserver.MessageRouter,
-	grpcListener *listeners.GRPCListener,
-	disableSyslogDrains bool,
-) {
-	go grpcListener.Start()
-
-	go func() {
-		if !disableSyslogDrains {
-			appStoreWatcher.Run()
-		}
-	}()
-
-	go sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
-
-	messageRouter.Start(envelopeBuffer)
 }
 
 func initializeMetrics(batchIntervalMilliseconds uint) *metricbatcher.MetricBatcher {
