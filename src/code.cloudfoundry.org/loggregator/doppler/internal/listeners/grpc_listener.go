@@ -130,3 +130,7 @@ func (g *GRPCListener) Stop() {
 	g.mu.Unlock()
 	g.server.Stop()
 }
+
+func (g *GRPCListener) Addr() string {
+	return g.listener.Addr().String()
+}

@@ -32,6 +32,7 @@ type Doppler struct {
 	c              *Config
 	healthListener net.Listener
 	grpcListener   *listeners.GRPCListener
+	addrs          Addrs
 }
 
 // NewLegacyDoppler creates a new Doppler with the given config.
@@ -111,6 +112,8 @@ func (d *Doppler) Start() {
 
 	promRegistry := prometheus.NewRegistry()
 	d.healthListener = healthendpoint.StartServer(d.c.HealthAddr, promRegistry)
+	d.addrs.Health = d.healthListener.Addr().String()
+
 	healthRegistrar := healthendpoint.New(promRegistry, map[string]prometheus.Gauge{
 		// metric-documentation-health: (ingressStreamCount)
 		// Number of open firehose streams
@@ -217,6 +220,8 @@ func (d *Doppler) Start() {
 		log.Panicf("Failed to create grpcListener: %s", err)
 	}
 
+	d.addrs.GRPC = d.grpcListener.Addr()
+
 	//------------------------------
 	// Egress
 	//------------------------------
@@ -252,6 +257,15 @@ func (d *Doppler) Start() {
 		dopplerservice.Announce(d.c.IP, HeartbeatInterval, serviceConfig, storeAdapter)
 		dopplerservice.AnnounceLegacy(d.c.IP, HeartbeatInterval, serviceConfig, storeAdapter)
 	}
+}
+
+type Addrs struct {
+	GRPC   string
+	Health string
+}
+
+func (d *Doppler) Addrs() Addrs {
+	return d.addrs
 }
 
 func (d *Doppler) Stop() {
