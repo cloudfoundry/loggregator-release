@@ -14,5 +14,5 @@ func TestAnnouncer(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	// Using etcd for service discovery is a deprecated code path
-	// RunSpecs(t, "DopplerService Suite")
+	RunSpecs(t, "DopplerService Suite")
 }
