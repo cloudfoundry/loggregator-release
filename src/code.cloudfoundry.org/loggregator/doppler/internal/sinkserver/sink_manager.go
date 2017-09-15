@@ -9,7 +9,6 @@ import (
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslogwriter"
 	"code.cloudfoundry.org/loggregator/doppler/internal/store"
@@ -316,7 +315,7 @@ func (sm *SinkManager) ensureRecentLogsSinkFor(appID string) {
 		return
 	}
 
-	sink := dump.NewDumpSink(
+	sink := sinks.NewDumpSink(
 		appID,
 		sm.recentLogCount,
 		sm.sinkTimeout,

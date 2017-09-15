@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslogwriter"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver"
@@ -426,11 +425,11 @@ var _ = Describe("SinkManager", func() {
 
 	Describe("UnregisterSink", func() {
 		Context("with a DumpSink", func() {
-			var dumpSink *dump.DumpSink
+			var dumpSink *sinks.DumpSink
 
 			BeforeEach(func() {
 				health := newSpyHealthRegistrar()
-				dumpSink = dump.NewDumpSink("appId", 1, time.Hour, health)
+				dumpSink = sinks.NewDumpSink("appId", 1, time.Hour, health)
 				sinkManager.RegisterSink(dumpSink)
 			})
 
@@ -498,11 +497,11 @@ var _ = Describe("SinkManager", func() {
 		})
 
 		Context("when called twice", func() {
-			var dumpSink *dump.DumpSink
+			var dumpSink *sinks.DumpSink
 
 			BeforeEach(func() {
 				health := newSpyHealthRegistrar()
-				dumpSink = dump.NewDumpSink("appId", 1, time.Hour, health)
+				dumpSink = sinks.NewDumpSink("appId", 1, time.Hour, health)
 				sinkManager.RegisterSink(dumpSink)
 			})
 

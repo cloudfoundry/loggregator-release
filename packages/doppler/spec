@@ -13,7 +13,6 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v2/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/listeners/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/sinks/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/sinks/retrystrategy/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslogwriter/*.go # gosub

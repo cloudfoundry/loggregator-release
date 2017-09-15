@@ -2,7 +2,6 @@ package sinkserver_test
 
 import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver"
 	"github.com/cloudfoundry/dropsonde/emitter/fake"
@@ -34,7 +33,7 @@ var _ = Describe("SinkManagerMetrics", func() {
 		sinkManagerMetrics := sinkserver.NewSinkManagerMetrics()
 		Eventually(fakeEventEmitter.GetMessages).Should(BeEmpty())
 
-		sink = &dump.DumpSink{}
+		sink = &sinks.DumpSink{}
 		sinkManagerMetrics.Inc(sink)
 
 		expected := fake.Message{

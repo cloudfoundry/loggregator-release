@@ -6,13 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
-
 	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
-
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -165,12 +162,12 @@ var _ = Describe("GroupedSink", func() {
 		It("sends message to all registered sinks that match the appId", func() {
 			appId := "123"
 			health := newSpyHealthRegistrar()
-			appSink := dump.NewDumpSink(appId, 10, time.Second, health)
+			appSink := sinks.NewDumpSink(appId, 10, time.Second, health)
 			otherInputChan := make(chan *events.Envelope, 1)
 			groupedSinks.RegisterAppSink(otherInputChan, appSink)
 
 			appId = "789"
-			appSink = dump.NewDumpSink(appId, 10, time.Second, health)
+			appSink = sinks.NewDumpSink(appId, 10, time.Second, health)
 
 			groupedSinks.RegisterAppSink(inputChan, appSink)
 			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "error message", appId, "App"), "origin")
@@ -200,7 +197,7 @@ var _ = Describe("GroupedSink", func() {
 			appId := "789"
 
 			health := newSpyHealthRegistrar()
-			sink1 := dump.NewDumpSink(appId, 10, time.Second, health)
+			sink1 := sinks.NewDumpSink(appId, 10, time.Second, health)
 			sink2 := syslog.NewSyslogSink(appId, &url.URL{Host: "url"}, 100, DummySyslogWriter{}, dummyErrorHandler, "dropsonde-origin")
 
 			groupedSinks.RegisterAppSink(inputChan, sink1)
@@ -386,7 +383,7 @@ var _ = Describe("GroupedSink", func() {
 			target := "789"
 
 			health := newSpyHealthRegistrar()
-			sink1 := dump.NewDumpSink(target, 10, time.Second, health)
+			sink1 := sinks.NewDumpSink(target, 10, time.Second, health)
 			sink2 := syslog.NewSyslogSink(target, &url.URL{Host: "url"}, 100, DummySyslogWriter{}, dummyErrorHandler, "dropsonde-origin")
 
 			groupedSinks.RegisterAppSink(inputChan, sink1)
@@ -432,7 +429,7 @@ var _ = Describe("GroupedSink", func() {
 			sink1 := syslog.NewSyslogSink(appId, &url.URL{Host: "url1"}, 100, DummySyslogWriter{}, dummyErrorHandler, "dropsonde-origin")
 			sink2 := syslog.NewSyslogSink(appId, &url.URL{Host: "url2"}, 100, DummySyslogWriter{}, dummyErrorHandler, "dropsonde-origin")
 			health := newSpyHealthRegistrar()
-			sink3 := dump.NewDumpSink(appId, 5, time.Second, health)
+			sink3 := sinks.NewDumpSink(appId, 5, time.Second, health)
 
 			groupedSinks.RegisterAppSink(inputChan, sink1)
 			groupedSinks.RegisterAppSink(inputChan, sink2)
@@ -446,8 +443,8 @@ var _ = Describe("GroupedSink", func() {
 			otherAppId := "790"
 
 			health := newSpyHealthRegistrar()
-			sink1 := dump.NewDumpSink(appId, 5, time.Second, health)
-			sink2 := dump.NewDumpSink(otherAppId, 5, time.Second, health)
+			sink1 := sinks.NewDumpSink(appId, 5, time.Second, health)
+			sink2 := sinks.NewDumpSink(otherAppId, 5, time.Second, health)
 
 			groupedSinks.RegisterAppSink(inputChan, sink1)
 			groupedSinks.RegisterAppSink(inputChan, sink2)
@@ -476,7 +473,7 @@ var _ = Describe("GroupedSink", func() {
 
 			health := newSpyHealthRegistrar()
 			sink1 := sinks.NewContainerMetricSink(appId, 1*time.Second, time.Second, health)
-			sink2 := dump.NewDumpSink(appId, 5, time.Second, health)
+			sink2 := sinks.NewDumpSink(appId, 5, time.Second, health)
 
 			groupedSinks.RegisterAppSink(inputChan, sink1)
 			groupedSinks.RegisterAppSink(inputChan, sink2)
@@ -501,7 +498,7 @@ var _ = Describe("GroupedSink", func() {
 		It("returns nil if no container metrics sinks are registered", func() {
 			appId := "1234"
 			health := newSpyHealthRegistrar()
-			sink2 := dump.NewDumpSink(appId, 5, time.Second, health)
+			sink2 := sinks.NewDumpSink(appId, 5, time.Second, health)
 			groupedSinks.RegisterAppSink(inputChan, sink2)
 
 			Expect(groupedSinks.ContainerMetricsFor(appId)).To(BeNil())

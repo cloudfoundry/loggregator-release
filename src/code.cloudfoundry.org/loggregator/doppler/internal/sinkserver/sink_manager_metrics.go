@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
 	"github.com/cloudfoundry/dropsonde/metrics"
 )
@@ -52,7 +51,7 @@ func (s *SinkManagerMetrics) run(ticker *time.Ticker) {
 
 func (s *SinkManagerMetrics) Inc(sink sinks.Sink) {
 	switch sink.(type) {
-	case *dump.DumpSink:
+	case *sinks.DumpSink:
 		atomic.AddInt32(&s.dumpSinks, 1)
 	case *syslog.SyslogSink:
 		atomic.AddInt32(&s.syslogSinks, 1)
@@ -63,7 +62,7 @@ func (s *SinkManagerMetrics) Inc(sink sinks.Sink) {
 
 func (s *SinkManagerMetrics) Dec(sink sinks.Sink) {
 	switch sink.(type) {
-	case *dump.DumpSink:
+	case *sinks.DumpSink:
 		atomic.AddInt32(&s.dumpSinks, -1)
 	case *syslog.SyslogSink:
 		atomic.AddInt32(&s.syslogSinks, -1)

@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -165,7 +164,7 @@ func (group *GroupedSinks) DrainsFor(appId string) []sinks.Sink {
 	return sinksForApp.SyslogSinks()
 }
 
-func (group *GroupedSinks) DumpFor(appId string) *dump.DumpSink {
+func (group *GroupedSinks) DumpFor(appId string) *sinks.DumpSink {
 	group.RLock()
 	defer group.RUnlock()
 
@@ -300,11 +299,11 @@ func (g *AppGroup) Sink(id string) sinks.Sink {
 	return g.sink(id)
 }
 
-func (g *AppGroup) RecentLogsSink(id string) *dump.DumpSink {
+func (g *AppGroup) RecentLogsSink(id string) *sinks.DumpSink {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	dump, ok := g.sink(id).(*dump.DumpSink)
+	dump, ok := g.sink(id).(*sinks.DumpSink)
 	if !ok {
 		return nil
 	}
