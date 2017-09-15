@@ -1,4 +1,4 @@
-package retrystrategy
+package sinks
 
 import (
 	"math"

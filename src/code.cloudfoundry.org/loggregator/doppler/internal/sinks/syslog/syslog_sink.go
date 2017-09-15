@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/retrystrategy"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslogwriter"
 	"code.cloudfoundry.org/loggregator/doppler/internal/truncatingbuffer"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -49,7 +48,7 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 	log.Printf("Syslog Sink %s: Running.", syslogIdentifier)
 	defer log.Printf("Syslog Sink %s: Stopped.", syslogIdentifier)
 
-	backoffStrategy := retrystrategy.Exponential()
+	backoffStrategy := sinks.Exponential()
 
 	context := truncatingbuffer.NewLogAllowedContext(s.dropsondeOrigin, syslogIdentifier)
 	buffer := sinks.RunTruncatingBuffer(inputChan, s.messageDrainBufferSize, context, s.disconnectChannel)

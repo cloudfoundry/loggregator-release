@@ -1,10 +1,10 @@
-package retrystrategy_test
+package sinks_test
 
 import (
 	"math/rand"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/retrystrategy"
+	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -35,8 +35,8 @@ var _ = Describe("RetryStrategy", func() {
 
 		It("backs off exponentially with different random seeds starting at 1ms", func() {
 			rand.Seed(1)
-			strategy := retrystrategy.Exponential()
-			otherStrategy := retrystrategy.Exponential()
+			strategy := sinks.Exponential()
+			otherStrategy := sinks.Exponential()
 
 			Expect(strategy(0).String()).To(Equal("1ms"))
 			Expect(otherStrategy(0).String()).To(Equal("1ms"))
@@ -81,7 +81,7 @@ var _ = Describe("RetryStrategy", func() {
 		}
 
 		It("backs off by doubling the wait", func() {
-			strategy := retrystrategy.CappedDouble(1*time.Second, 1*time.Minute)
+			strategy := sinks.CappedDouble(1*time.Second, 1*time.Minute)
 
 			for _, test := range backoffTests {
 				Expect(strategy(test.count)).To(Equal(test.expected))
