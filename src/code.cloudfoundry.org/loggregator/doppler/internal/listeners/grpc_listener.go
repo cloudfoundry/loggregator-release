@@ -14,9 +14,7 @@ import (
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	plumbingv1 "code.cloudfoundry.org/loggregator/plumbing"
 	plumbingv2 "code.cloudfoundry.org/loggregator/plumbing/v2"
-
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
