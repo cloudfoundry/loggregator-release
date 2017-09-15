@@ -1,10 +1,10 @@
-package containermetric_test
+package sinks_test
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestContainermetric(t *testing.T) {

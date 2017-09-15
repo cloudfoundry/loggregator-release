@@ -1,11 +1,10 @@
-package containermetric_test
+package sinks_test
 
 import (
 	"sync"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/containermetric"
-
+	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
@@ -15,7 +14,7 @@ import (
 
 var _ = Describe("Containermetric", func() {
 	var (
-		sink      *containermetric.ContainerMetricSink
+		sink      *sinks.ContainerMetricSink
 		eventChan chan *events.Envelope
 	)
 
@@ -23,7 +22,7 @@ var _ = Describe("Containermetric", func() {
 		eventChan = make(chan *events.Envelope)
 
 		health := newSpyHealthRegistrar()
-		sink = containermetric.NewContainerMetricSink("myApp", 2*time.Second, 2*time.Second, health)
+		sink = sinks.NewContainerMetricSink("myApp", 2*time.Second, 2*time.Second, health)
 		go sink.Run(eventChan)
 	})
 
@@ -113,7 +112,7 @@ var _ = Describe("Containermetric", func() {
 
 	It("closes after a period of inactivity", func() {
 		health := newSpyHealthRegistrar()
-		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, 1*time.Millisecond, health)
+		containerMetricSink := sinks.NewContainerMetricSink("myAppId", 2*time.Second, 1*time.Millisecond, health)
 		containerMetricRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -127,7 +126,7 @@ var _ = Describe("Containermetric", func() {
 
 	It("closes after input chan is closed", func() {
 		health := newSpyHealthRegistrar()
-		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, 10*time.Second, health)
+		containerMetricSink := sinks.NewContainerMetricSink("myAppId", 2*time.Second, 10*time.Second, health)
 		containerMetricRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -144,7 +143,7 @@ var _ = Describe("Containermetric", func() {
 	It("won't return while it is still receiving data", func() {
 		health := newSpyHealthRegistrar()
 		inactivityDuration := 100 * time.Millisecond
-		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, inactivityDuration, health)
+		containerMetricSink := sinks.NewContainerMetricSink("myAppId", 2*time.Second, inactivityDuration, health)
 		containerMetricRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -163,7 +162,7 @@ var _ = Describe("Containermetric", func() {
 	It("increments and decrements the container metric count", func() {
 		health := newSpyHealthRegistrar()
 		inactivityDuration := 100 * time.Millisecond
-		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, inactivityDuration, health)
+		containerMetricSink := sinks.NewContainerMetricSink("myAppId", 2*time.Second, inactivityDuration, health)
 
 		inputChan := make(chan *events.Envelope, 5)
 

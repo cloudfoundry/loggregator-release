@@ -9,7 +9,6 @@ import (
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/containermetric"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslogwriter"
@@ -332,7 +331,7 @@ func (sm *SinkManager) ensureContainerMetricsSinkFor(appID string) {
 		return
 	}
 
-	sink := containermetric.NewContainerMetricSink(
+	sink := sinks.NewContainerMetricSink(
 		appID,
 		sm.metricTTL,
 		sm.sinkTimeout,

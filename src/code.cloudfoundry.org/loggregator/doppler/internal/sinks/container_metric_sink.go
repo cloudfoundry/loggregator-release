@@ -1,4 +1,4 @@
-package containermetric
+package sinks
 
 import (
 	"sync"

@@ -3,13 +3,10 @@ package groupedsinks
 import (
 	"sync"
 
-	"code.cloudfoundry.org/loggregator/metricemitter"
-
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/containermetric"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
-
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
@@ -179,7 +176,7 @@ func (group *GroupedSinks) DumpFor(appId string) *dump.DumpSink {
 	return sinksForApp.RecentLogsSink(appId)
 }
 
-func (group *GroupedSinks) ContainerMetricsFor(appId string) *containermetric.ContainerMetricSink {
+func (group *GroupedSinks) ContainerMetricsFor(appId string) *sinks.ContainerMetricSink {
 	group.RLock()
 	defer group.RUnlock()
 
@@ -314,11 +311,11 @@ func (g *AppGroup) RecentLogsSink(id string) *dump.DumpSink {
 	return dump
 }
 
-func (g *AppGroup) ContainerMetricsSink(id string) *containermetric.ContainerMetricSink {
+func (g *AppGroup) ContainerMetricsSink(id string) *sinks.ContainerMetricSink {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	containerMetrics, ok := g.sink(id).(*containermetric.ContainerMetricSink)
+	containerMetrics, ok := g.sink(id).(*sinks.ContainerMetricSink)
 	if !ok {
 		return nil
 	}

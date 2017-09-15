@@ -9,7 +9,7 @@ import (
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/containermetric"
+	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
 
@@ -475,7 +475,7 @@ var _ = Describe("GroupedSink", func() {
 			appId := "456"
 
 			health := newSpyHealthRegistrar()
-			sink1 := containermetric.NewContainerMetricSink(appId, 1*time.Second, time.Second, health)
+			sink1 := sinks.NewContainerMetricSink(appId, 1*time.Second, time.Second, health)
 			sink2 := dump.NewDumpSink(appId, 5, time.Second, health)
 
 			groupedSinks.RegisterAppSink(inputChan, sink1)
@@ -489,8 +489,8 @@ var _ = Describe("GroupedSink", func() {
 			appId2 := "456"
 
 			health := newSpyHealthRegistrar()
-			sink1 := containermetric.NewContainerMetricSink(appId1, 1*time.Second, time.Second, health)
-			sink2 := containermetric.NewContainerMetricSink(appId2, 1*time.Second, time.Second, health)
+			sink1 := sinks.NewContainerMetricSink(appId1, 1*time.Second, time.Second, health)
+			sink2 := sinks.NewContainerMetricSink(appId2, 1*time.Second, time.Second, health)
 
 			groupedSinks.RegisterAppSink(inputChan, sink1)
 			groupedSinks.RegisterAppSink(inputChan, sink2)
