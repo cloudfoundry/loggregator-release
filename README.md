@@ -26,6 +26,7 @@ overview of Loggregator components and architecture.
   * [Bosh HM forwarder](#bosh-hm-forwarder)
 * [Tools for Testing and Monitoring Loggregator](#tools-for-testing-and-monitoring-loggregator)
   * [Tools](#tools)
+  * [Operator Guidebook](#operator-guidebook)
 * [More Resources and Documentation](#more-resources-and-documentation)
 
 ## Generating TLS Certificates
@@ -121,11 +122,15 @@ from the Bosh Director through the Firehose. For more information see the
 
 ### Tools
 
-Loggregator provides a set of tools written in golang for testing the
-performance and efficacy of your loggregator installation. These tools emit
-logs and metrics in a controlled fashion. For more information see the
-[Loggregator tools README](docs/loggregator-tools.md).
+Loggregator provides a set of tools for testing the
+performance and reliability of your loggregator installation. 
+See the [loggregator tools](http://code.cloudfoundry.org/loggregator-tools) 
+repo for more details. 
 
+### Operator Guidebook
+The [Loggregator Operator Guidebook](./docs/Loggregator%20Operator%20Guide.pdf) provides details for scaling
+and managing Loggregator along with detailed results of capacity 
+planning tests. 
 
 ## More Resources and Documentation
 
