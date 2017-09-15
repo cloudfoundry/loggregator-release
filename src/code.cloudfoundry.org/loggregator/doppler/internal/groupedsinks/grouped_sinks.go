@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
+	"code.cloudfoundry.org/loggregator/doppler/internal/syslog"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"github.com/cloudfoundry/sonde-go/events"
 )

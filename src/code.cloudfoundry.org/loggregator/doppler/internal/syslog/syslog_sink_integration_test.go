@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
+	"code.cloudfoundry.org/loggregator/doppler/internal/syslog"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"

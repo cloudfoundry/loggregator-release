@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver"
 	"code.cloudfoundry.org/loggregator/doppler/internal/store"
+	"code.cloudfoundry.org/loggregator/doppler/internal/syslog"
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/emitter/fake"

@@ -9,8 +9,8 @@ import (
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
 	"code.cloudfoundry.org/loggregator/doppler/internal/store"
+	"code.cloudfoundry.org/loggregator/doppler/internal/syslog"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
+	"code.cloudfoundry.org/loggregator/doppler/internal/syslog"
 
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
