@@ -89,7 +89,8 @@ func NewSinkManager(
 	}
 }
 
-// Start will being monitoring both channels for created or deleted sinks.
+// Start will being monitoring both channels for created or deleted syslog
+// drains bound to application logs.
 func (sm *SinkManager) Start(newAppServiceChan, deletedAppServiceChan <-chan store.AppService) {
 	go sm.listenForNewAppServices(newAppServiceChan)
 	go sm.listenForDeletedAppServices(deletedAppServiceChan)

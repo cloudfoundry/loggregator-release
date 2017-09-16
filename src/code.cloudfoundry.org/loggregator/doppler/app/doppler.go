@@ -161,7 +161,9 @@ func (d *Doppler) Start() {
 	})
 
 	//------------------------------
-	// Caching
+	// In memory store of
+	// - recent logs
+	// - container metrics
 	//------------------------------
 	sinkManager := sinkserver.NewSinkManager(
 		d.c.MaxRetainedLogMessages,
@@ -180,6 +182,7 @@ func (d *Doppler) Start() {
 
 	//------------------------------
 	// Ingress (gRPC v1 and v2)
+	// Egress  (gRPC v1)
 	//------------------------------
 	droppedMetric := metricClient.NewCounter("dropped",
 		metricemitter.WithVersion(2, 0),
@@ -294,30 +297,6 @@ func initV1Metrics(milliseconds uint, udpAddr string) *metricbatcher.MetricBatch
 	return metricBatcher
 }
 
-func connectToEtcd(c *Config) storeadapter.StoreAdapter {
-	workPool, err := workpool.NewWorkPool(c.EtcdMaxConcurrentRequests)
-	if err != nil {
-		panic(err)
-	}
-	options := &etcdstoreadapter.ETCDOptions{
-		ClusterUrls: c.EtcdUrls,
-	}
-	if c.EtcdRequireTLS {
-		options.IsSSL = true
-		options.CertFile = c.EtcdTLSClientConfig.CertFile
-		options.KeyFile = c.EtcdTLSClientConfig.KeyFile
-		options.CAFile = c.EtcdTLSClientConfig.CAFile
-	}
-	etcdStoreAdapter, err := etcdstoreadapter.New(options, workPool)
-	if err != nil {
-		panic(err)
-	}
-	if err = etcdStoreAdapter.Connect(); err != nil {
-		panic(err)
-	}
-	return etcdStoreAdapter
-}
-
 func initV2Metrics(c *Config) *metricemitter.Client {
 	credentials, err := plumbing.NewClientCredentials(
 		c.GRPC.CertFile,
@@ -343,4 +322,28 @@ func initV2Metrics(c *Config) *metricemitter.Client {
 	}
 
 	return metricClient
+}
+
+func connectToEtcd(c *Config) storeadapter.StoreAdapter {
+	workPool, err := workpool.NewWorkPool(c.EtcdMaxConcurrentRequests)
+	if err != nil {
+		panic(err)
+	}
+	options := &etcdstoreadapter.ETCDOptions{
+		ClusterUrls: c.EtcdUrls,
+	}
+	if c.EtcdRequireTLS {
+		options.IsSSL = true
+		options.CertFile = c.EtcdTLSClientConfig.CertFile
+		options.KeyFile = c.EtcdTLSClientConfig.KeyFile
+		options.CAFile = c.EtcdTLSClientConfig.CAFile
+	}
+	etcdStoreAdapter, err := etcdstoreadapter.New(options, workPool)
+	if err != nil {
+		panic(err)
+	}
+	if err = etcdStoreAdapter.Connect(); err != nil {
+		panic(err)
+	}
+	return etcdStoreAdapter
 }
