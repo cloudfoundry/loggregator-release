@@ -96,23 +96,27 @@ func WithPersistence() DopplerOption {
 // Start enables the Doppler to start receiving envelope, accepting
 // subscriptions and routing data.
 func (d *Doppler) Start() {
-	//------------------------------
-	// Monitoring
-	//------------------------------
-	dopplerOrigin := "DopplerServer"
 	log.Printf("Startup: Setting up the doppler server")
-	err := dropsonde.Initialize(d.c.MetronConfig.UDPAddress, dopplerOrigin)
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	metricClient := setupMetricsEmitter(d.c)
-	batcher := initializeMetrics(d.c.MetricBatchIntervalMilliseconds)
+	//------------------------------
+	// v1 Metrics (UDP)
+	//------------------------------
+	metricBatcher := initV1Metrics(
+		d.c.MetricBatchIntervalMilliseconds,
+		d.c.MetronConfig.UDPAddress,
+	)
 
+	//------------------------------
+	// v2 Metrics (gRPC)
+	//------------------------------
+	metricClient := initV2Metrics(d.c)
+
+	//------------------------------
+	// Health
+	//------------------------------
 	promRegistry := prometheus.NewRegistry()
 	d.healthListener = healthendpoint.StartServer(d.c.HealthAddr, promRegistry)
 	d.addrs.Health = d.healthListener.Addr().String()
-
 	healthRegistrar := healthendpoint.New(promRegistry, map[string]prometheus.Gauge{
 		// metric-documentation-health: (ingressStreamCount)
 		// Number of open firehose streams
@@ -164,24 +168,19 @@ func (d *Doppler) Start() {
 		d.c.SinkSkipCertVerify,
 		sinkserver.NewBlackListManager(d.c.BlackListIps),
 		d.c.MessageDrainBufferSize,
-		dopplerOrigin,
+		"DopplerServer",
 		time.Duration(d.c.SinkInactivityTimeoutSeconds)*time.Second,
 		time.Duration(d.c.SinkIOTimeoutSeconds)*time.Second,
 		time.Duration(d.c.ContainerMetricTTLSeconds)*time.Second,
 		time.Duration(d.c.SinkDialTimeoutSeconds)*time.Second,
-		batcher,
+		metricBatcher,
 		metricClient,
 		healthRegistrar,
 	)
 
 	//------------------------------
-	// Ingress
+	// Ingress (gRPC v1 and v2)
 	//------------------------------
-	var storeAdapter storeadapter.StoreAdapter
-	if !d.c.DisableAnnounce || !d.c.DisableSyslogDrains {
-		storeAdapter = connectToEtcd(d.c)
-	}
-
 	droppedMetric := metricClient.NewCounter("dropped",
 		metricemitter.WithVersion(2, 0),
 		metricemitter.WithTags(map[string]string{"direction": "ingress"}),
@@ -191,7 +190,7 @@ func (d *Doppler) Start() {
 		log.Printf("Shed %d envelopes", missed)
 		// metric-documentation-v1: (doppler.shedEnvelopes) Number of envelopes dropped by the
 		// diode inbound from metron
-		batcher.BatchCounter("doppler.shedEnvelopes").Add(uint64(missed))
+		metricBatcher.BatchCounter("doppler.shedEnvelopes").Add(uint64(missed))
 
 		// metric-documentation-v2: (loggregator.doppler.dropped) Number of envelopes dropped by the
 		// diode inbound from metron
@@ -200,6 +199,7 @@ func (d *Doppler) Start() {
 
 	grpcRouter := grpcv1.NewRouter()
 	messageRouter := sinkserver.NewMessageRouter(sinkManager, grpcRouter)
+	var err error
 	d.grpcListener, err = listeners.NewGRPCListener(
 		grpcRouter,
 		sinkManager,
@@ -211,7 +211,7 @@ func (d *Doppler) Start() {
 			CipherSuites: d.c.GRPC.CipherSuites,
 		},
 		envelopeBuffer,
-		batcher,
+		metricBatcher,
 		metricClient,
 		healthRegistrar,
 	)
@@ -222,25 +222,16 @@ func (d *Doppler) Start() {
 	d.addrs.GRPC = d.grpcListener.Addr()
 
 	//------------------------------
-	// Egress
+	// Service Discovery and Syslog Drains (etcd)
 	//------------------------------
+	var storeAdapter storeadapter.StoreAdapter
+	if !d.c.DisableAnnounce || !d.c.DisableSyslogDrains {
+		storeAdapter = connectToEtcd(d.c)
+	}
 	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(
 		storeAdapter,
 		store.NewAppServiceCache(),
 	)
-
-	//------------------------------
-	// Start
-	//------------------------------
-	go d.grpcListener.Start()
-
-	if !d.c.DisableSyslogDrains {
-		go appStoreWatcher.Run()
-	}
-
-	go sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
-	go messageRouter.Start(envelopeBuffer)
-
 	if !d.c.DisableAnnounce {
 		serviceConfig := &dopplerservice.Config{
 			Index:        d.c.Index,
@@ -251,6 +242,16 @@ func (d *Doppler) Start() {
 		dopplerservice.Announce(d.c.IP, HeartbeatInterval, serviceConfig, storeAdapter)
 		dopplerservice.AnnounceLegacy(d.c.IP, HeartbeatInterval, serviceConfig, storeAdapter)
 	}
+	if !d.c.DisableSyslogDrains {
+		go appStoreWatcher.Run()
+	}
+
+	//------------------------------
+	// Start
+	//------------------------------
+	go sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
+	go messageRouter.Start(envelopeBuffer)
+	go d.grpcListener.Start()
 
 	log.Print("Startup: doppler server started.")
 }
@@ -266,19 +267,23 @@ func (d *Doppler) Addrs() Addrs {
 	return d.addrs
 }
 
-// Stop does nothing. It is a stub for future drain-and-die work.
+// Stop closes the gRPC and health listeners.
 func (d *Doppler) Stop() {
 	// TODO: Drain
 	d.healthListener.Close()
 	d.grpcListener.Stop()
 }
 
-func initializeMetrics(batchIntervalMilliseconds uint) *metricbatcher.MetricBatcher {
+func initV1Metrics(milliseconds uint, udpAddr string) *metricbatcher.MetricBatcher {
+	err := dropsonde.Initialize(udpAddr, "DopplerServer")
+	if err != nil {
+		log.Fatal(err)
+	}
 	eventEmitter := dropsonde.AutowiredEmitter()
 	metricSender := metric_sender.NewMetricSender(eventEmitter)
 	metricBatcher := metricbatcher.New(
 		metricSender,
-		time.Duration(batchIntervalMilliseconds)*time.Millisecond,
+		time.Duration(milliseconds)*time.Millisecond,
 	)
 	metricBatcher.AddConsistentlyEmittedMetrics(
 		"doppler.shedEnvelopes",
@@ -313,7 +318,7 @@ func connectToEtcd(c *Config) storeadapter.StoreAdapter {
 	return etcdStoreAdapter
 }
 
-func setupMetricsEmitter(c *Config) *metricemitter.Client {
+func initV2Metrics(c *Config) *metricemitter.Client {
 	credentials, err := plumbing.NewClientCredentials(
 		c.GRPC.CertFile,
 		c.GRPC.KeyFile,
