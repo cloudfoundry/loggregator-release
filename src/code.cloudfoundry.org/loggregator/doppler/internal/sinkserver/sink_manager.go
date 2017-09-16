@@ -34,7 +34,8 @@ type MetricClient interface {
 	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
 }
 
-// SinkManager manages the lifecycle of a syslog sink.
+// SinkManager manages the lifecycle of a syslog sink. It also provides an
+// in memory store of recent logs and container metrics.
 type SinkManager struct {
 	messageDrainBufferSize uint
 	dropsondeOrigin        string
