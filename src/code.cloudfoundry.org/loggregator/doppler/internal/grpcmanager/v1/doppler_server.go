@@ -9,11 +9,9 @@ import (
 	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
-
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-
 	"golang.org/x/net/context"
 )
 
@@ -36,8 +34,8 @@ type DataSetter interface {
 	Set(data []byte)
 }
 
-// DataDumper dumps Envelopes for container metrics and recent logs requests.
-type DataDumper interface {
+// EnvelopeStore returns Envelopes for container metrics and recent logs requests.
+type EnvelopeStore interface {
 	LatestContainerMetrics(appID string) []*events.Envelope
 	RecentLogsFor(appID string) []*events.Envelope
 }
@@ -46,7 +44,7 @@ type DataDumper interface {
 // streams, application streams, container metrics, and recent logs.
 type DopplerServer struct {
 	registrar        Registrar
-	dumper           DataDumper
+	envelopeStore    EnvelopeStore
 	numSubscriptions int64
 	egressMetric     *metricemitter.Counter
 	health           HealthRegistrar
@@ -67,19 +65,20 @@ type MetricClient interface {
 // NewDopplerServer creates a new DopplerServer.
 func NewDopplerServer(
 	registrar Registrar,
-	dumper DataDumper,
+	envelopeStore EnvelopeStore,
 	metricClient MetricClient,
 	health HealthRegistrar,
 	batchInverval time.Duration,
 	batchSize uint,
 ) *DopplerServer {
-	egressMetric := metricClient.NewCounter("egress",
+	egressMetric := metricClient.NewCounter(
+		"egress",
 		metricemitter.WithVersion(2, 0),
 	)
 
 	m := &DopplerServer{
 		registrar:     registrar,
-		dumper:        dumper,
+		envelopeStore: envelopeStore,
 		egressMetric:  egressMetric,
 		health:        health,
 		batchInterval: batchInverval,
@@ -113,7 +112,7 @@ func (m *DopplerServer) BatchSubscribe(req *plumbing.SubscriptionRequest, sender
 
 // ContainerMetrics is called by GRPC on container metrics requests.
 func (m *DopplerServer) ContainerMetrics(ctx context.Context, req *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error) {
-	envelopes := m.dumper.LatestContainerMetrics(req.AppID)
+	envelopes := m.envelopeStore.LatestContainerMetrics(req.AppID)
 	return &plumbing.ContainerMetricsResponse{
 		Payload: marshalEnvelopes(envelopes),
 	}, nil
@@ -121,7 +120,7 @@ func (m *DopplerServer) ContainerMetrics(ctx context.Context, req *plumbing.Cont
 
 // RecentLogs is called by GRPC on recent logs requests.
 func (m *DopplerServer) RecentLogs(ctx context.Context, req *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error) {
-	envelopes := m.dumper.RecentLogsFor(req.AppID)
+	envelopes := m.envelopeStore.RecentLogsFor(req.AppID)
 	return &plumbing.RecentLogsResponse{
 		Payload: marshalEnvelopes(envelopes),
 	}, nil
