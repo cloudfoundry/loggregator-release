@@ -85,6 +85,14 @@ var _ = Describe("WorkerServer", func() {
 		Eventually(clientA.tests).ShouldNot(Receive())
 		Consistently(clientA.tests).ShouldNot(Equal(10))
 	})
+
+	Context("with no connections", func() {
+		It("return an error", func() {
+			handler := api.NewWorkerHandler()
+			err := handler.Run(&sharedapi.Test{})
+			Expect(err).To(HaveOccurred())
+		})
+	})
 })
 
 type fakeClient struct {

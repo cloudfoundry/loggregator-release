@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"sync"
@@ -30,13 +31,17 @@ func NewWorkerHandler() *WorkerHandler {
 }
 
 // Run writes the test information to each websocket connection.
-func (s *WorkerHandler) Run(t *sharedapi.Test) {
+func (s *WorkerHandler) Run(t *sharedapi.Test) error {
 	var conns []*websocket.Conn
 	s.mu.RLock()
 	for conn := range s.conns {
 		conns = append(conns, conn)
 	}
 	s.mu.RUnlock()
+
+	if len(conns) == 0 {
+		return errors.New("you don't have any connections")
+	}
 
 	// Ensure each worker only writes the number of logs to stdout that will
 	// equate to the desired count.
@@ -52,6 +57,7 @@ func (s *WorkerHandler) Run(t *sharedapi.Test) {
 			log.Printf("Failed emit test: %s", err)
 		}
 	}
+	return nil
 }
 
 // ServeHTTP implements http.Handler. It only accepts websocket connections.

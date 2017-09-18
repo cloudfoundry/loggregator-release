@@ -2,6 +2,8 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -10,7 +12,7 @@ import (
 
 // Runner tells the children to run tests.
 type Runner interface {
-	Run(t *sharedapi.Test)
+	Run(t *sharedapi.Test) error
 }
 
 // CreateTestHandler handles HTTP requests (POST only) to initiate tests
@@ -33,20 +35,24 @@ func (h *CreateTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t := &sharedapi.Test{}
-	if err := json.NewDecoder(r.Body).Decode(t); err != nil {
+	t, err := buildTest(r.Body)
+	if err != nil {
 		log.Printf("failed to decode request body: %s", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	r.Body.Close()
 
-	t.ID = time.Now().UnixNano()
+	if !valid(t) {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
-	//Ensure the test is sent to Workers with a start time
-	t.StartTime = time.Now()
-
-	go h.runner.Run(t)
+	err = h.runner.Run(t)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err)
+		return
+	}
 
 	resp, err := json.Marshal(t)
 	if err != nil {
@@ -57,4 +63,28 @@ func (h *CreateTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write(resp)
+}
+
+func buildTest(src io.ReadCloser) (*sharedapi.Test, error) {
+	t := &sharedapi.Test{}
+	err := json.NewDecoder(src).Decode(t)
+	if err != nil {
+		return nil, err
+	}
+	_ = src.Close()
+
+	t.ID = time.Now().UnixNano()
+	// ensure the test is sent to workers with a start time
+	t.StartTime = time.Now()
+	return t, nil
+}
+
+func valid(t *sharedapi.Test) bool {
+	if t.Cycles == 0 {
+		return false
+	}
+	if t.Timeout == 0 {
+		return false
+	}
+	return true
 }
