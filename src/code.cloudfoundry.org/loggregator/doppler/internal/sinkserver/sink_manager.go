@@ -39,22 +39,19 @@ type MetricClient interface {
 type SinkManager struct {
 	messageDrainBufferSize uint
 	dropsondeOrigin        string
-
-	metrics        *SinkManagerMetrics
-	recentLogCount uint32
-
-	doneChannel         chan struct{}
-	errorChannel        chan *events.Envelope
-	urlBlacklistManager *URLBlacklistManager
-	sinks               *groupedsinks.GroupedSinks
-	skipCertVerify      bool
-	sinkTimeout         time.Duration
-	sinkIOTimeout       time.Duration
-	metricTTL           time.Duration
-	dialTimeout         time.Duration
-	health              HealthRegistrar
-
-	stopOnce sync.Once
+	metrics                *SinkManagerMetrics
+	recentLogCount         uint32
+	doneChannel            chan struct{}
+	errorChannel           chan *events.Envelope
+	urlBlacklistManager    *URLBlacklistManager
+	sinks                  *groupedsinks.GroupedSinks
+	skipCertVerify         bool
+	sinkTimeout            time.Duration
+	sinkIOTimeout          time.Duration
+	metricTTL              time.Duration
+	dialTimeout            time.Duration
+	health                 HealthRegistrar
+	stopOnce               sync.Once
 }
 
 // NewSinkManager creates a SinkManager.
@@ -117,6 +114,9 @@ func (sm *SinkManager) SendTo(appID string, msg *events.Envelope) {
 }
 
 // RegisterSink sink adds a new sink for the sink manager to manage.
+//
+// FIXME This method should be private. Nothing calls it except for private
+// functions in this file.
 func (sm *SinkManager) RegisterSink(sink sinks.Sink) bool {
 	inputChan := make(chan *events.Envelope, 128)
 	ok := sm.sinks.RegisterAppSink(inputChan, sink)
@@ -136,6 +136,9 @@ func (sm *SinkManager) RegisterSink(sink sinks.Sink) bool {
 }
 
 // UnregisterSink removes a particular sink from the sink manager.
+//
+// FIXME This method should be private. Nothing calls it except for private
+// functions in this file.
 func (sm *SinkManager) UnregisterSink(sink sinks.Sink) {
 
 	ok := sm.sinks.CloseAndDelete(sink)
@@ -147,41 +150,6 @@ func (sm *SinkManager) UnregisterSink(sink sinks.Sink) {
 	if syslogSink, ok := sink.(*syslog.SyslogSink); ok {
 		syslogSink.Disconnect()
 	}
-}
-
-// IsFirehoseRegistered reports if a sink has been registered with the
-// firehose.
-func (sm *SinkManager) IsFirehoseRegistered(sink sinks.Sink) bool {
-	return sm.sinks.IsFirehoseRegistered(sink)
-}
-
-// RegisterFirehoseSink adds a sink as a recipient of all data within the
-// firehose.
-func (sm *SinkManager) RegisterFirehoseSink(sink sinks.Sink) bool {
-	inputChan := make(chan *events.Envelope, 128)
-	ok := sm.sinks.RegisterFirehoseSink(inputChan, sink)
-	if !ok {
-		return false
-	}
-
-	sm.metrics.IncFirehose()
-
-	go func() {
-		sink.Run(inputChan)
-		sm.UnregisterFirehoseSink(sink)
-	}()
-
-	return true
-}
-
-// UnregisterFirehoseSink removes the sink as a recipient of firehose data.
-func (sm *SinkManager) UnregisterFirehoseSink(sink sinks.Sink) {
-	ok := sm.sinks.CloseAndDeleteFirehose(sink)
-	if !ok {
-		return
-	}
-
-	sm.metrics.DecFirehose()
 }
 
 // RecentLogsFor provides a fixed number of logs for an application ID.
@@ -203,6 +171,9 @@ func (sm *SinkManager) LatestContainerMetrics(appID string) []*events.Envelope {
 }
 
 // SendSyslogErrorToLoggregator reports a given error for an application ID.
+//
+// FIXME This method should be private. Nothing calls it except for private
+// functions in this file.
 func (sm *SinkManager) SendSyslogErrorToLoggregator(errorMsg string, appID string) {
 	log.Printf("SendSyslogError: %s", errorMsg)
 
