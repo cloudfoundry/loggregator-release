@@ -121,6 +121,7 @@ properties:
     description: "Internal hostname used to resolve the address of the Cloud Controller"
   cc.tls_port:
     description: "Port for internal TLS communication"
+    default: 9023
   cc.mutual_tls.ca_cert:
     description: "PEM-encoded CA certificate for secure, mutually authenticated TLS communication"
   loggregator.tls.cc_trafficcontroller.cert:
