@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 	"tools/reliability/server/internal/api"
 )
 
@@ -12,7 +13,7 @@ func main() {
 
 	workerHandler := api.NewWorkerHandler()
 
-	http.Handle("/tests", api.NewCreateTestHandler(workerHandler))
+	http.Handle("/tests", api.NewCreateTestHandler(workerHandler, 5*time.Second))
 	http.Handle("/workers", workerHandler)
 
 	addr := ":" + port

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"time"
 	sharedapi "tools/reliability/api"
 	"tools/reliability/server/internal/api"
 
@@ -19,7 +20,7 @@ import (
 var _ = Describe("CreateTestHandler", func() {
 	It("passes the test to a runner", func() {
 		runner := &spyRunner{}
-		h := api.NewCreateTestHandler(runner)
+		h := api.NewCreateTestHandler(runner, 1*time.Microsecond)
 		recorder := httptest.NewRecorder()
 
 		h.ServeHTTP(recorder, &http.Request{
@@ -30,12 +31,12 @@ var _ = Describe("CreateTestHandler", func() {
 		})
 
 		Expect(recorder.Code).To(Equal(http.StatusCreated))
-		Eventually(runner.called).Should(Equal(int64(1)))
+		Expect(runner.called_).To(Equal(int64(1)))
 	})
 
 	It("responds with the created test", func() {
 		runner := &spyRunner{}
-		h := api.NewCreateTestHandler(runner)
+		h := api.NewCreateTestHandler(runner, 1*time.Microsecond)
 		recorder := httptest.NewRecorder()
 
 		h.ServeHTTP(recorder, &http.Request{
@@ -65,7 +66,7 @@ var _ = Describe("CreateTestHandler", func() {
 
 	DescribeTable("with an invalid test request", func(body string) {
 		runner := &spyRunner{}
-		h := api.NewCreateTestHandler(runner)
+		h := api.NewCreateTestHandler(runner, 1*time.Microsecond)
 		recorder := httptest.NewRecorder()
 
 		h.ServeHTTP(recorder, &http.Request{
@@ -87,7 +88,7 @@ var _ = Describe("CreateTestHandler", func() {
 
 	It("returns MethodNotAllowed on anything but a POST", func() {
 		runner := &spyRunner{}
-		h := api.NewCreateTestHandler(runner)
+		h := api.NewCreateTestHandler(runner, 1*time.Microsecond)
 		recorder := httptest.NewRecorder()
 
 		h.ServeHTTP(recorder, &http.Request{
@@ -98,11 +99,28 @@ var _ = Describe("CreateTestHandler", func() {
 	})
 
 	Context("with an error returned from the runner", func() {
+		It("retries the runner after an error", func() {
+			runner := &spyRunner{
+				err: errors.New("some-error"),
+			}
+			h := api.NewCreateTestHandler(runner, 1*time.Millisecond)
+			recorder := httptest.NewRecorder()
+
+			h.ServeHTTP(recorder, &http.Request{
+				Method: "POST",
+				Body: &requestBody{
+					Reader: strings.NewReader(`{"cycles": 1000, "delay":"1s", "timeout":"60s"}`),
+				},
+			})
+
+			Eventually(runner.called).Should(BeNumerically(">", int64(1)))
+		})
+
 		It("responds with a 500", func() {
 			runner := &spyRunner{
 				err: errors.New("some-error"),
 			}
-			h := api.NewCreateTestHandler(runner)
+			h := api.NewCreateTestHandler(runner, 1*time.Microsecond)
 			recorder := httptest.NewRecorder()
 
 			h.ServeHTTP(recorder, &http.Request{
@@ -116,18 +134,21 @@ var _ = Describe("CreateTestHandler", func() {
 			body, err := ioutil.ReadAll(recorder.Body)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(body).To(Equal([]byte("some-error")))
-			Eventually(runner.called).Should(Equal(int64(1)))
 		})
 	})
 })
 
 type spyRunner struct {
-	called int64
-	err    error
+	called_ int64
+	err     error
+}
+
+func (s *spyRunner) called() int64 {
+	return s.called_
 }
 
 func (s *spyRunner) Run(*sharedapi.Test) error {
-	s.called++
+	s.called_++
 	return s.err
 }
 

@@ -19,12 +19,14 @@ type Runner interface {
 // for the worker cluster. This should be called from a CI.
 type CreateTestHandler struct {
 	runner Runner
+	retry  time.Duration
 }
 
 // NewCreateTestHandler builds a new CreateTestHandler.
-func NewCreateTestHandler(r Runner) *CreateTestHandler {
+func NewCreateTestHandler(r Runner, retry time.Duration) *CreateTestHandler {
 	return &CreateTestHandler{
 		runner: r,
+		retry:  retry,
 	}
 }
 
@@ -47,7 +49,7 @@ func (h *CreateTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.runner.Run(t)
+	err = h.attemptRun(t)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -63,6 +65,22 @@ func (h *CreateTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write(resp)
+}
+
+func (h *CreateTestHandler) attemptRun(t *sharedapi.Test) error {
+	timeout := time.After(h.retry)
+	var err error
+	for {
+		select {
+		case <-timeout:
+			return err
+		default:
+			err = h.runner.Run(t)
+			if err == nil {
+				return nil
+			}
+		}
+	}
 }
 
 func buildTest(src io.ReadCloser) (*sharedapi.Test, error) {
