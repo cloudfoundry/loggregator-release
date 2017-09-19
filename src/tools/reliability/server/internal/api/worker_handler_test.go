@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+// TODO: use github.com/posener/wstest
 var _ = Describe("WorkerServer", func() {
 	It("forwards tests to a client", func() {
 		handler := api.NewWorkerHandler()
