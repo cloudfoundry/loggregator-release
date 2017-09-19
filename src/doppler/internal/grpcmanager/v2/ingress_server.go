@@ -24,7 +24,7 @@ type DataSetter interface {
 type IngressServer struct {
 	envelopeBuffer DataSetter
 	batcher        Batcher
-	ingressMetric  *metricemitter.CounterMetric
+	ingressMetric  *metricemitter.Counter
 }
 
 func NewIngressServer(
@@ -32,7 +32,7 @@ func NewIngressServer(
 	batcher Batcher,
 	metricClient metricemitter.MetricClient,
 ) *IngressServer {
-	ingressMetric := metricClient.NewCounterMetric("ingress",
+	ingressMetric := metricClient.NewCounter("ingress",
 		metricemitter.WithVersion(2, 0),
 	)
 

@@ -12,11 +12,11 @@ type DataSetter interface {
 
 type Receiver struct {
 	dataSetter    DataSetter
-	ingressMetric *metricemitter.CounterMetric
+	ingressMetric *metricemitter.Counter
 }
 
 func NewReceiver(dataSetter DataSetter, metricClient metricemitter.MetricClient) *Receiver {
-	ingressMetric := metricClient.NewCounterMetric("ingress",
+	ingressMetric := metricClient.NewCounter("ingress",
 		metricemitter.WithVersion(2, 0),
 	)
 

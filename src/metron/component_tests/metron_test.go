@@ -137,7 +137,7 @@ var _ = Describe("Metron", func() {
 			"Message": Equal(&v2.Envelope_Log{
 				Log: &v2.Log{Payload: []byte("some-message")},
 			}),
-			"Tags": Equal(map[string]*v2.Value{
+			"DeprecatedTags": Equal(map[string]*v2.Value{
 				"auto-tag-1": {
 					Data: &v2.Value_Text{"auto-tag-value-1"},
 				},

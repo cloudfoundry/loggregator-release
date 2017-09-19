@@ -137,19 +137,30 @@ var _ = Describe("Counteraggregator", func() {
 		Expect(receivedEnvelope).To(HaveLen(1))
 		Expect(receivedEnvelope[0].GetCounter().GetTotal()).To(Equal(uint64(10)))
 	})
+
+	It("keeps the delta as part of the message", func() {
+		mockWriter := newMockWriter()
+		close(mockWriter.WriteOutput.Ret0)
+
+		aggregator := egress.NewCounterAggregator(mockWriter)
+		aggregator.Write(buildCounterEnvelope(10, "name-1", "origin-1"))
+
+		var receivedEnvelopes []*plumbing.Envelope
+		Expect(mockWriter.WriteInput.Msg).To(Receive(&receivedEnvelopes))
+		Expect(receivedEnvelopes).To(HaveLen(1))
+		Expect(receivedEnvelopes[0].GetCounter().GetDelta()).To(Equal(uint64(10)))
+	})
 })
 
 func buildCounterEnvelope(delta uint64, name, origin string) []*plumbing.Envelope {
 	return []*plumbing.Envelope{{
 		Message: &plumbing.Envelope_Counter{
 			Counter: &plumbing.Counter{
-				Name: name,
-				Value: &plumbing.Counter_Delta{
-					Delta: delta,
-				},
+				Name:  name,
+				Delta: delta,
 			},
 		},
-		Tags: map[string]*plumbing.Value{
+		DeprecatedTags: map[string]*plumbing.Value{
 			"origin": {Data: &plumbing.Value_Text{origin}},
 		},
 	}}
@@ -159,13 +170,11 @@ func buildCounterEnvelopeWithTotal(total uint64, name, origin string) []*plumbin
 	return []*plumbing.Envelope{{
 		Message: &plumbing.Envelope_Counter{
 			Counter: &plumbing.Counter{
-				Name: name,
-				Value: &plumbing.Counter_Total{
-					Total: total,
-				},
+				Name:  name,
+				Total: total,
 			},
 		},
-		Tags: map[string]*plumbing.Value{
+		DeprecatedTags: map[string]*plumbing.Value{
 			"origin": {Data: &plumbing.Value_Text{origin}},
 		},
 	}}

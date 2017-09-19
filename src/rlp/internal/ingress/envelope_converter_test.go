@@ -20,7 +20,7 @@ var _ = Describe("Converter", func() {
 		v2e, err := c.Convert(envelopeBytes)
 
 		Expect(err).ToNot(HaveOccurred())
-		Expect(v2e.GetTags()["origin"].GetText()).To(Equal("some-origin"))
+		Expect(v2e.GetDeprecatedTags()["origin"].GetText()).To(Equal("some-origin"))
 	})
 
 	It("returns an error when unmarshalling fails", func() {

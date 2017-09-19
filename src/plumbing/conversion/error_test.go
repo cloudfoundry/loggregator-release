@@ -29,7 +29,7 @@ var _ = Describe("HTTP", func() {
 			}
 
 			expectedV2Envelope := &v2.Envelope{
-				Tags: map[string]*v2.Value{
+				DeprecatedTags: map[string]*v2.Value{
 					"__v1_type":  {&v2.Value_Text{"Error"}},
 					"source":     {&v2.Value_Text{"test-source"}},
 					"code":       {&v2.Value_Integer{12345}},

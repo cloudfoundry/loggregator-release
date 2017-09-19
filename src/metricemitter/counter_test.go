@@ -2,6 +2,7 @@ package metricemitter_test
 
 import (
 	"errors"
+
 	"metricemitter"
 	v2 "plumbing/v2"
 
@@ -9,10 +10,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("CounterMetric", func() {
+var _ = Describe("Counter", func() {
 	Context("WithEnvelope", func() {
 		It("decrements it value on success", func() {
-			metric := metricemitter.NewCounterMetric("name", "source-id")
+			metric := metricemitter.NewCounter("name", "source-id")
 
 			metric.Increment(10)
 
@@ -25,7 +26,7 @@ var _ = Describe("CounterMetric", func() {
 		})
 
 		It("does not decrement the value on failure", func() {
-			metric := metricemitter.NewCounterMetric("name", "source-id")
+			metric := metricemitter.NewCounter("name", "source-id")
 
 			metric.Increment(10)
 

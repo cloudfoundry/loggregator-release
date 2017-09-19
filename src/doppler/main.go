@@ -103,7 +103,7 @@ func main() {
 	var wg sync.WaitGroup
 	dropsondeUnmarshallerCollection := dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(conf.UnmarshallerCount)
 
-	droppedMetric := metricClient.NewCounterMetric("dropped",
+	droppedMetric := metricClient.NewCounter("dropped",
 		metricemitter.WithVersion(2, 0),
 		metricemitter.WithTags(map[string]string{"direction": "ingress"}),
 	)

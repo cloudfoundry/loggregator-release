@@ -51,7 +51,7 @@ type GRPCConnector struct {
 	consumerStates []unsafe.Pointer
 	bufferSize     int
 	batcher        MetaMetricBatcher
-	ingressMetric  *metricemitter.CounterMetric
+	ingressMetric  *metricemitter.Counter
 }
 
 // NewGRPCConnector creates a new GRPCConnector.
@@ -62,7 +62,7 @@ func NewGRPCConnector(
 	batcher MetaMetricBatcher,
 	m metricemitter.MetricClient,
 ) *GRPCConnector {
-	ingressMetric := m.NewCounterMetric(
+	ingressMetric := m.NewCounter(
 		"ingress",
 		metricemitter.WithTags(map[string]string{
 			"protocol": "grpc",

@@ -21,8 +21,8 @@ type Transponder struct {
 	tags          map[string]string
 	batchSize     int
 	batchInterval time.Duration
-	droppedMetric *metricemitter.CounterMetric
-	egressMetric  *metricemitter.CounterMetric
+	droppedMetric *metricemitter.Counter
+	egressMetric  *metricemitter.Counter
 }
 
 func NewTransponder(
@@ -33,12 +33,12 @@ func NewTransponder(
 	batchInterval time.Duration,
 	metricClient metricemitter.MetricClient,
 ) *Transponder {
-	droppedMetric := metricClient.NewCounterMetric("dropped",
+	droppedMetric := metricClient.NewCounter("dropped",
 		metricemitter.WithVersion(2, 0),
 		metricemitter.WithTags(map[string]string{"direction": "egress"}),
 	)
 
-	egressMetric := metricClient.NewCounterMetric("dropped",
+	egressMetric := metricClient.NewCounter("dropped",
 		metricemitter.WithVersion(2, 0),
 	)
 
@@ -99,12 +99,12 @@ func (t *Transponder) batchReady(batch []*plumbing.Envelope, lastSent time.Time)
 }
 
 func (t *Transponder) addTags(e *plumbing.Envelope) {
-	if e.Tags == nil {
-		e.Tags = make(map[string]*plumbing.Value)
+	if e.DeprecatedTags == nil {
+		e.DeprecatedTags = make(map[string]*plumbing.Value)
 	}
 	for k, v := range t.tags {
-		if _, ok := e.Tags[k]; !ok {
-			e.Tags[k] = &plumbing.Value{
+		if _, ok := e.DeprecatedTags[k]; !ok {
+			e.DeprecatedTags[k] = &plumbing.Value{
 				Data: &plumbing.Value_Text{
 					Text: v,
 				},

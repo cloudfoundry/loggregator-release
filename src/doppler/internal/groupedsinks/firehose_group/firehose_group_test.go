@@ -50,7 +50,7 @@ var _ = Describe("FirehoseGroup", func() {
 		mc := testhelper.NewMetricClient()
 		group := firehose_group.NewFirehoseGroup(
 			&spyMetricBatcher{},
-			mc.NewCounterMetric("sinks.dropped",
+			mc.NewCounter("sinks.dropped",
 				metricemitter.WithVersion(2, 0),
 			),
 		)
@@ -89,7 +89,7 @@ var _ = Describe("FirehoseGroup", func() {
 		mc := testhelper.NewMetricClient()
 		group := firehose_group.NewFirehoseGroup(
 			&spyMetricBatcher{},
-			mc.NewCounterMetric("sinks.dropped",
+			mc.NewCounter("sinks.dropped",
 				metricemitter.WithVersion(2, 0),
 			),
 		)
@@ -112,7 +112,7 @@ var _ = Describe("FirehoseGroup", func() {
 			mc := testhelper.NewMetricClient()
 			group := firehose_group.NewFirehoseGroup(
 				&spyMetricBatcher{},
-				mc.NewCounterMetric("sinks.dropped",
+				mc.NewCounter("sinks.dropped",
 					metricemitter.WithVersion(2, 0),
 				),
 			)
@@ -123,7 +123,7 @@ var _ = Describe("FirehoseGroup", func() {
 			mc := testhelper.NewMetricClient()
 			group := firehose_group.NewFirehoseGroup(
 				&spyMetricBatcher{},
-				mc.NewCounterMetric("sinks.dropped",
+				mc.NewCounter("sinks.dropped",
 					metricemitter.WithVersion(2, 0),
 				),
 			)
@@ -140,7 +140,7 @@ var _ = Describe("FirehoseGroup", func() {
 			mc := testhelper.NewMetricClient()
 			group := firehose_group.NewFirehoseGroup(
 				&spyMetricBatcher{},
-				mc.NewCounterMetric("sinks.dropped",
+				mc.NewCounter("sinks.dropped",
 					metricemitter.WithVersion(2, 0),
 				),
 			)
@@ -156,7 +156,7 @@ var _ = Describe("FirehoseGroup", func() {
 			mc := testhelper.NewMetricClient()
 			group := firehose_group.NewFirehoseGroup(
 				&spyMetricBatcher{},
-				mc.NewCounterMetric("sinks.dropped",
+				mc.NewCounter("sinks.dropped",
 					metricemitter.WithVersion(2, 0),
 				),
 			)

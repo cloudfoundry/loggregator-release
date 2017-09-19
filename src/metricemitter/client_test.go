@@ -1,11 +1,13 @@
 package metricemitter_test
 
 import (
-	"metricemitter"
+	"log"
 	"net"
 	"time"
 
 	v2 "plumbing/v2"
+
+	"metricemitter"
 
 	"google.golang.org/grpc"
 
@@ -37,9 +39,11 @@ var _ = Describe("Emitter Client", func() {
 		)
 		Expect(err).ToNot(HaveOccurred())
 
-		client.NewCounterMetric("some-name")
+		client.NewGauge("some-name", "some-unit")
 		Eventually(grpcServer.senders).Should(HaveLen(1))
-		Eventually(grpcServer.envelopes).Should(HaveLen(1))
+		Eventually(func() int {
+			return len(grpcServer.envelopes)
+		}).Should(BeNumerically(">=", 1))
 
 		grpcServer.stop()
 
@@ -65,7 +69,7 @@ var _ = Describe("Emitter Client", func() {
 		)
 		Expect(err).ToNot(HaveOccurred())
 
-		client.NewCounterMetric("some-name")
+		client.NewCounter("some-name")
 		Eventually(grpcServer.senders).Should(HaveLen(1))
 	})
 
@@ -82,7 +86,7 @@ var _ = Describe("Emitter Client", func() {
 			)
 			Expect(err).ToNot(HaveOccurred())
 
-			client.NewCounterMetric("some-name")
+			client.NewCounter("some-name")
 			Eventually(grpcServer.senders).Should(HaveLen(1))
 
 			var env *v2.Envelope
@@ -112,7 +116,7 @@ var _ = Describe("Emitter Client", func() {
 			)
 			Expect(err).ToNot(HaveOccurred())
 
-			client.NewCounterMetric("some-name",
+			client.NewCounter("some-name",
 				metricemitter.WithVersion(2, 0),
 				metricemitter.WithTags(map[string]string{
 					"unicorn": "another-unicorn",
@@ -126,7 +130,7 @@ var _ = Describe("Emitter Client", func() {
 			}
 
 			Eventually(grpcServer.envelopes).Should(Receive(&env))
-			Expect(env.Tags).To(Equal(map[string]*v2.Value{
+			Expect(env.DeprecatedTags).To(Equal(map[string]*v2.Value{
 				//client tags
 				"origin":     text("a-origin"),
 				"deployment": text("a-deployment"),
@@ -150,7 +154,7 @@ var _ = Describe("Emitter Client", func() {
 				)
 				Expect(err).ToNot(HaveOccurred())
 
-				metric := client.NewCounterMetric("some-name")
+				metric := client.NewCounter("some-name")
 				Eventually(grpcServer.senders).Should(HaveLen(1))
 
 				metric.Increment(5)
@@ -188,7 +192,9 @@ func newgRPCServerWithAddr(addr string) *SpyIngressServer {
 	}
 
 	v2.RegisterIngressServer(s, spyIngressServer)
-	go s.Serve(lis)
+	go func() {
+		log.Println(s.Serve(lis))
+	}()
 
 	return spyIngressServer
 }
@@ -210,8 +216,6 @@ func (s *SpyIngressServer) Sender(sender v2.Ingress_SenderServer) error {
 		}
 		s.envelopes <- e
 	}
-
-	return nil
 }
 
 func (s *SpyIngressServer) BatchSender(sender v2.Ingress_BatchSenderServer) error {

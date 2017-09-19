@@ -19,7 +19,7 @@ var _ = Describe("LogMessage", func() {
 				Timestamp:  99,
 				SourceId:   "uuid",
 				InstanceId: "test-source-instance",
-				Tags: map[string]*v2.Value{
+				DeprecatedTags: map[string]*v2.Value{
 					"source_type": {&v2.Value_Text{"test-source-type"}},
 				},
 				Message: &v2.Envelope_Log{
@@ -70,7 +70,7 @@ var _ = Describe("LogMessage", func() {
 			expectedV2Envelope := &v2.Envelope{
 				SourceId:   "uuid",
 				InstanceId: "test-source-instance",
-				Tags: map[string]*v2.Value{
+				DeprecatedTags: map[string]*v2.Value{
 					"__v1_type":   {&v2.Value_Text{"LogMessage"}},
 					"source_type": {&v2.Value_Text{"test-source-type"}},
 					"origin":      {&v2.Value_Text{"some-origin"}},

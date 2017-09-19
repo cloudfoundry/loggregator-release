@@ -135,7 +135,7 @@ func createLogEnvelopeV2(message, appID string) *v2.Envelope {
 	return &v2.Envelope{
 		SourceId:  appID,
 		Timestamp: time.Now().UnixNano(),
-		Tags: map[string]*v2.Value{
+		DeprecatedTags: map[string]*v2.Value{
 			"origin": &v2.Value{
 				Data: &v2.Value_Text{
 					Text: helpers.OriginName,

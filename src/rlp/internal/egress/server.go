@@ -20,16 +20,16 @@ type Receiver interface {
 
 type Server struct {
 	receiver      Receiver
-	egressMetric  *metricemitter.CounterMetric
-	droppedMetric *metricemitter.CounterMetric
+	egressMetric  *metricemitter.Counter
+	droppedMetric *metricemitter.Counter
 }
 
 func NewServer(r Receiver, m metricemitter.MetricClient) *Server {
-	egressMetric := m.NewCounterMetric("egress",
+	egressMetric := m.NewCounter("egress",
 		metricemitter.WithVersion(2, 0),
 	)
 
-	droppedMetric := m.NewCounterMetric("dropped",
+	droppedMetric := m.NewCounter("dropped",
 		metricemitter.WithVersion(2, 0),
 		metricemitter.WithTags(map[string]string{
 			"direction": "egress",
@@ -76,6 +76,11 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 		// consumers.
 		s.egressMetric.Increment(1)
 	}
+}
+
+func (s *Server) BatchedReceiver(*v2.EgressBatchRequest, v2.Egress_BatchedReceiverServer) error {
+	log.Panic("Not implemented...")
+	return nil
 }
 
 func (s *Server) Alert(missed int) {

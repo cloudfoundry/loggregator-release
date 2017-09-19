@@ -31,7 +31,7 @@ var _ = Describe("HTTP", func() {
 						Stop:  100,
 					},
 				},
-				Tags: map[string]*v2.Value{
+				DeprecatedTags: map[string]*v2.Value{
 					"request_id":          ValueText("954f61c4-ac84-44be-9217-cdfa3117fb41"),
 					"peer_type":           ValueText("Client"),
 					"method":              ValueText("GET"),
@@ -126,7 +126,7 @@ var _ = Describe("HTTP", func() {
 						Stop:  100,
 					},
 				},
-				Tags: map[string]*v2.Value{
+				DeprecatedTags: map[string]*v2.Value{
 					"__v1_type":           ValueText("HttpStartStop"),
 					"origin":              ValueText("some-origin"),
 					"request_id":          ValueText("954f61c4-ac84-44be-9217-cdfa3117fb41"),

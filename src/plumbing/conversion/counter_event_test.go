@@ -17,10 +17,8 @@ var _ = Describe("CounterEvent", func() {
 			envelope := &v2.Envelope{
 				Message: &v2.Envelope_Counter{
 					Counter: &v2.Counter{
-						Name: "name",
-						Value: &v2.Counter_Total{
-							Total: 99,
-						},
+						Name:  "name",
+						Total: 99,
 					},
 				},
 			}
@@ -50,10 +48,8 @@ var _ = Describe("CounterEvent", func() {
 			v2Envelope := &v2.Envelope{
 				Message: &v2.Envelope_Counter{
 					Counter: &v2.Counter{
-						Name: "name",
-						Value: &v2.Counter_Total{
-							Total: 99,
-						},
+						Name:  "name",
+						Total: 99,
 					},
 				},
 			}

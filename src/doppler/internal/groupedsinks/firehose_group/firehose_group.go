@@ -28,12 +28,12 @@ type firehoseGroup struct {
 	wrappers map[string]*sink_wrapper.SinkWrapper
 
 	batcher       MetricBatcher
-	droppedMetric *metricemitter.CounterMetric
+	droppedMetric *metricemitter.Counter
 }
 
 func NewFirehoseGroup(
 	batcher MetricBatcher,
-	droppedMetric *metricemitter.CounterMetric,
+	droppedMetric *metricemitter.Counter,
 ) *firehoseGroup {
 	return &firehoseGroup{
 		wrappers:      make(map[string]*sink_wrapper.SinkWrapper),
