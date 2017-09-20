@@ -84,7 +84,7 @@ func (p *Pool) Close(dopplerAddr string) {
 func (p *Pool) connectToDoppler(addr string) {
 	opts := []grpc.DialOption{
 		grpc.WithBalancer(
-			throughputlb.NewThroughputLoadBalancer(100, int64(p.maxRequestsPerConn)),
+			throughputlb.NewThroughputLoadBalancer(100, p.maxRequestsPerConn),
 		),
 	}
 
