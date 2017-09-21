@@ -1,0 +1,5 @@
+---
+applications:
+- name: logspinner
+  buildpack: go_buildpack
+  memory: 64M
