@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Use the traffic controller's port
-lsof -i ':<%= p("loggregator.outgoing_dropsonde_port") %>'
+lsof -i ':<%= p("loggregator.outgoing_dropsonde_port") %>' -s TCP:LISTEN
 
 # http://www.consul.io/docs/agent/checks.html
 if [ $? -ne 0 ]; then
