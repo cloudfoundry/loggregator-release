@@ -1,6 +1,6 @@
 #!/bin/bash
 
-lsof -i ':<%= p("reverse_log_proxy.egress.port") %>'
+lsof -i ':<%= p("reverse_log_proxy.egress.port") %>' -s TCP:LISTEN
 
 # http://www.consul.io/docs/agent/checks.html
 if [ $? -ne 0 ]; then
