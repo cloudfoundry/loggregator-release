@@ -1,4 +1,3 @@
-require "rspec"
 require "json"
 require "yaml"
 require "bosh/template/test"
@@ -41,9 +40,9 @@ RSpec.describe "Doppler json template" do
         }
       }
     }
-    spec = Spec.new(
+    spec = InstanceSpec.new(
       id: "some-id",
-      job_name: "some-job",
+      name: "some-job",
       az: "some-az",
       ip: "10.0.0.1",
     )
@@ -93,38 +92,29 @@ RSpec.describe "Doppler json template" do
   end
 
   it "includes the IP address" do
-    spec = Spec.new(ip: "1.2.3.4")
+    spec = InstanceSpec.new(ip: "1.2.3.4")
     config = render_template({}, spec: spec)
 
     expect(config["IP"]).to eq("1.2.3.4")
   end
 
-  describe "Job" do
-    it "defaults to the job's name" do
-      spec = Spec.new(job_name: "some-name")
-      config = render_template({}, spec: spec)
+  it "defaults to the job's name" do
+    spec = InstanceSpec.new(name: "some-name")
+    config = render_template({}, spec: spec)
 
-      expect(config["JobName"]).to eq("some-name")
-    end
-
-    it "falls back to name otherwise" do
-      spec = Spec.new(job_name: "some-name")
-      config = render_template({}, spec: spec)
-
-      expect(config["JobName"]).to eq("some-name")
-    end
+    expect(config["JobName"]).to eq("some-name")
   end
 
   describe "Index" do
     it "defaults to the spec's id" do
-      spec = Spec.new(id: "some-id")
+      spec = InstanceSpec.new(id: "some-id")
       config = render_template({}, spec: spec)
 
       expect(config["Index"]).to eq("some-id")
     end
 
     it "fails over to index if id is not present" do
-      spec = Spec.new(index: "some-index", id: nil)
+      spec = InstanceSpec.new(index: "some-index", id: nil)
       config = render_template({}, spec: spec)
 
       expect(config["Index"]). to eq("some-index")
@@ -144,7 +134,7 @@ RSpec.describe "Doppler json template" do
     end
 
     it "fails over to the az" do
-      spec = Spec.new(az: "az2")
+      spec = InstanceSpec.new(az: "az2")
       config = render_template({}, spec: spec)
 
       expect(config["Zone"]).to eq("az2")
@@ -252,54 +242,13 @@ RSpec.describe "Doppler json template" do
     end
   end
 
-  def render_template(properties, spec: Spec.new)
+  def render_template(properties, spec: InstanceSpec.new)
     release_path = File.join(File.dirname(__FILE__), '../../../')
-    release = ReleaseDir.new(release_path)
+    release = Bosh::Template::Test::ReleaseDir.new(release_path)
     job = release.job('doppler')
     template = job.template('config/doppler.json')
     rendered = template.render(properties, spec: spec)
 
     JSON.parse(rendered)
-  end
-end
-
-class Spec
-  def initialize(
-    address: 'my.bosh.com',
-    az: 'az1',
-    bootstrap: false,
-    deployment: 'my-deployment',
-    id: 'xxxxxx-xxxxxxxx-xxxxx',
-    index: 0,
-    ip: '192.168.0.0',
-    name: 'me',
-    job_name: 'job-name',
-    networks: {'network1' => {'foo' => 'bar', 'ip' => '192.168.0.0'}}
-  )
-    @address = address
-    @az = az
-    @bootstrap = bootstrap
-    @deployment = deployment
-    @id = id
-    @index = index
-    @ip = ip
-    @name = name
-    @job_name = job_name
-    @networks = networks
-  end
-
-  def to_h
-    {
-      'address' => @address,
-      'az' => @az,
-      'bootstrap' => @bootstrap,
-      'deployment' => @deployment,
-      'id' => @id,
-      'index' => @index,
-      'ip' => @ip,
-      'name' => @name,
-      'networks' => @networks,
-      'job' => {'name' => @job_name}
-    }
   end
 end

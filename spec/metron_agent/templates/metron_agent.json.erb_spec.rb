@@ -1,4 +1,3 @@
-require "rspec"
 require "json"
 require "yaml"
 require "bosh/template/test"
@@ -69,6 +68,13 @@ RSpec.describe "Metron Agent JSON" do
     expect(config).to eq(expected_config)
   end
 
+  it "defaults to the job name of the spec" do
+    spec = InstanceSpec.new(name: "some-name")
+    config = render_template({}, spec: spec)
+
+    expect(config["Job"]).to eq("some-name")
+  end
+
   describe "Index" do
     it "defaults to the spec's ID" do
       spec = InstanceSpec.new(id: "some-id")
@@ -82,15 +88,6 @@ RSpec.describe "Metron Agent JSON" do
       config = render_template({}, spec: spec)
 
       expect(config["Index"]).to eq("0")
-    end
-  end
-
-  describe "Job" do
-    it "defaults to the job name of the spec" do
-      spec = InstanceSpec.new(name: "some-name")
-      config = render_template({}, spec: spec)
-
-      expect(config["Job"]).to eq("some-name")
     end
   end
 
