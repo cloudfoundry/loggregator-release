@@ -4,7 +4,7 @@ require "bosh/template/test"
 
 include Bosh::Template::Test
 
-RSpec.describe "Doppler json template" do
+RSpec.describe "Doppler JSON" do
   it "renders a complete JSON configuration" do
     properties = {
       "doppler" => {
