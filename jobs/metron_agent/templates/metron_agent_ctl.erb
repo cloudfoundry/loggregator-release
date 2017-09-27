@@ -19,10 +19,6 @@ case $1 in
       killall -3 metron
     set -e
 
-    <% if p("syslog_daemon_config.enable") %>
-    /var/vcap/packages/metron_agent/syslog_daemon_config/setup_syslog_forwarder.sh /var/vcap/jobs/metron_agent/config
-    <% end %>
-
     chown -R vcap:vcap $LOG_DIR
 
     chpst -u vcap:vcap /var/vcap/packages/metron_agent/metron \

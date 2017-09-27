@@ -31,25 +31,3 @@ Metron by the
 The up-to-date Metron configuration can be found [in the metron spec
 file](../jobs/metron_agent/spec). You can see a list of available
 configurable properties, their defaults and descriptions in that file.
-
-## Configuring Rsyslog (Deprecated)
-
-Previous versions of Loggregator supported rsyslog, which was configured as
-part of Metron. This feature is now deprecated in favor of
-[syslog-release](https://github.com/cloudfoundry/syslog-release). The table
-below maps old Metron properties for rsyslog to the new syslog-release
-properties.
-
-In the table below, all Metron properties have the prefix
-`syslog_daemon_config`, e.g., `syslog_daemon_config.enable`. All
-syslog-release properties have the prefix `syslog`, e.g., `syslog.address`.
-
-| Metron Property     | Syslog Release Property |
-|---------------------|-------------------------|
-| enable              | N/A                     |
-| address             | address                 |
-| port                | port                    |
-| transport           | transport               |
-| fallback_addresses  | fallback_addresses      |
-| custom_rule         | custom_rule             |
-| max_message_size    | N/A                     |

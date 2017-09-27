@@ -11,7 +11,6 @@ provides:
 templates:
   metron_agent_ctl.erb: bin/metron_agent_ctl
   metron_agent.json.erb: config/metron_agent.json
-  syslog_forwarder.conf.erb: config/syslog_forwarder.conf
   metron_agent.crt.erb: config/certs/metron_agent.crt
   metron_agent.key.erb: config/certs/metron_agent.key
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
@@ -21,28 +20,6 @@ packages:
 - metron_agent
 
 properties:
-  syslog_daemon_config.enable:
-    description: "Enable or disable rsyslog configuration for forwarding syslog messages into metron"
-    default: true
-  syslog_daemon_config.address:
-    description: "IP address for syslog aggregator"
-    default: ""
-  syslog_daemon_config.port:
-    description: "Port of syslog aggregator"
-    default: ""
-  syslog_daemon_config.transport:
-    description: "Transport to be used when forwarding logs (tcp|udp)."
-    default: "udp"
-  syslog_daemon_config.fallback_addresses:
-    description: "Addresses of fallback servers to be used if the primary syslog server is down. Only tcp or relp are supported. Each list entry should consist of \"address\", \"transport\" and \"port\" keys. "
-    default: []
-  syslog_daemon_config.custom_rule:
-    description: "Custom rule for syslog forward daemon"
-    default: ""
-  syslog_daemon_config.max_message_size:
-    description: maximum message size to be sent
-    default: 4k
-
   metron_agent.disable_udp:
     description: "Disable incoming UDP"
     default: false

@@ -4,7 +4,6 @@ dependencies:
 - golang1.8.3-windows
 files:
 - loggregator/src/exiter.ps1
-- loggregator/src/code.cloudfoundry.org/loggregator/metron/syslog_daemon_config/*
 - loggregator/src/code.cloudfoundry.org/batching/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/diodes/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/diodes/*.go # gosub
