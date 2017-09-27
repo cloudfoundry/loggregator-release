@@ -173,7 +173,7 @@ function run_integration {
 function run_all {
     check_output run_cleaners
     check_output run_build
-    check_output run_multiplatform
+    # check_output run_multiplatform
     check_output run_unit $@
     check_output run_integration $@
 }
