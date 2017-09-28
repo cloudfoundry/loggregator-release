@@ -120,12 +120,19 @@ var _ = Describe("Router", func() {
 
 			streamForAppB = newSpyDataSetter()
 
+			subscriptionRequestForAppA := &plumbing.SubscriptionRequest{
+				Filter: &plumbing.Filter{
+					AppID: "some-app-id",
+				},
+			}
 			subscriptionRequestForAppB = &plumbing.SubscriptionRequest{
 				Filter: &plumbing.Filter{
 					AppID: "some-other-app-id",
 				},
 			}
 			// Streams without type filters
+			router.Register(subscriptionRequestForAppA, streamsForAppA[0])
+			router.Register(subscriptionRequestForAppA, streamsForAppA[1])
 			cleanupForAppB = router.Register(subscriptionRequestForAppB, streamForAppB)
 		})
 
