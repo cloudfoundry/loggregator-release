@@ -85,7 +85,10 @@ func NewGRPCListener(
 		MinTime:             10 * time.Second,
 		PermitWithoutStream: true,
 	}
-	grpcServer := grpc.NewServer(grpc.Creds(transportCreds), grpc.KeepaliveEnforcementPolicy(kp))
+	grpcServer := grpc.NewServer(
+		grpc.Creds(transportCreds),
+		grpc.KeepaliveEnforcementPolicy(kp),
+	)
 
 	// v1 ingress
 	plumbingv1.RegisterDopplerIngestorServer(
