@@ -11,11 +11,6 @@ import (
 
 type shardID string
 
-type Router struct {
-	lock          sync.RWMutex
-	subscriptions map[filter]map[shardID][]DataSetter
-}
-
 type filterType uint8
 
 const (
@@ -29,12 +24,25 @@ type filter struct {
 	envelopeType filterType
 }
 
+// Router routes envelopes to particular buffers (called DataSetter here). In
+// effect, the Router implements pub-sub. After a buffer has been registered
+// with the Register method, calls to SendTo will ensure a particular envelope
+// is sent to all registered buffers.
+type Router struct {
+	lock          sync.RWMutex
+	subscriptions map[filter]map[shardID][]DataSetter
+}
+
+// NewRouter is the constructor for Router.
 func NewRouter() *Router {
 	return &Router{
 		subscriptions: make(map[filter]map[shardID][]DataSetter),
 	}
 }
 
+// Register stores a request with its corresponding DataSetter. Callers should
+// invoke the cleanup function once a registered request should no longer
+// receive envelopes.
 func (r *Router) Register(req *plumbing.SubscriptionRequest, dataSetter DataSetter) (cleanup func()) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
@@ -44,6 +52,7 @@ func (r *Router) Register(req *plumbing.SubscriptionRequest, dataSetter DataSett
 	return r.buildCleanup(req, dataSetter)
 }
 
+// SendTo sends an envelope for an application to all registered DataSetters.
 func (r *Router) SendTo(appID string, envelope *events.Envelope) {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
