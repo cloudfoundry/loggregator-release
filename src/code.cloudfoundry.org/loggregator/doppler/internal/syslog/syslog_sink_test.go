@@ -3,7 +3,6 @@ package syslog_test
 import (
 	"errors"
 	"fmt"
-	"net"
 	"net/url"
 	"sync"
 	"time"
@@ -28,7 +27,6 @@ var _ = Describe("SyslogSink", func() {
 		errorChannel          chan *events.Envelope
 		errorHandler          func(string, string)
 		inputChan             chan *events.Envelope
-		dialer                *net.Dialer
 		drainURL              string
 	)
 
@@ -37,7 +35,6 @@ var _ = Describe("SyslogSink", func() {
 		sysLogger = NewSyslogWriterRecorder()
 		errorChannel = make(chan *events.Envelope, 10)
 		inputChan = make(chan *events.Envelope)
-		dialer = &net.Dialer{}
 		drainURL = "syslog://using-fake"
 
 		errorHandler = func(errorMsg, appId string) {

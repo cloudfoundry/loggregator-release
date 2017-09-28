@@ -17,19 +17,17 @@ import (
 
 var _ = Describe("WebsocketHandler", func() {
 	var (
-		handler            http.Handler
-		fakeResponseWriter *httptest.ResponseRecorder
-		messagesChan       chan []byte
-		testServer         *httptest.Server
-		handlerDone        chan struct{}
-		mockSender         *testhelper.SpyMetricClient
-		egressMetric       *metricemitter.Counter
+		handler      http.Handler
+		messagesChan chan []byte
+		testServer   *httptest.Server
+		handlerDone  chan struct{}
+		mockSender   *testhelper.SpyMetricClient
+		egressMetric *metricemitter.Counter
 
 		keepAliveTimeout time.Duration
 	)
 
 	BeforeEach(func() {
-		fakeResponseWriter = httptest.NewRecorder()
 		messagesChan = make(chan []byte, 10)
 		mockSender = testhelper.NewMetricClient()
 		egressMetric = mockSender.NewCounter("egress")

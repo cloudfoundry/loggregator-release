@@ -88,6 +88,8 @@ func (i IngressServer) BatchSender(s plumbing.DopplerIngress_BatchSenderServer) 
 	}
 }
 
+// TODO Remove the Sender method onces we are certain all Metrons are using
+// the BstchSender method
 func (i IngressServer) Sender(s plumbing.DopplerIngress_SenderServer) error {
 	i.health.Inc("ingressStreamCount")
 	defer i.health.Dec("ingressStreamCount")

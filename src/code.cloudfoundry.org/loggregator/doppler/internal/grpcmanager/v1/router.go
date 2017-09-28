@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/loggregator/plumbing"
-
 	"github.com/cloudfoundry/sonde-go/events"
 )
 

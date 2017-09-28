@@ -12,7 +12,6 @@ import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/syslog"
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	"github.com/cloudfoundry/dropsonde/emitter"
-	"github.com/cloudfoundry/dropsonde/emitter/fake"
 	"github.com/cloudfoundry/dropsonde/factories"
 	fakeMS "github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	"github.com/cloudfoundry/dropsonde/metrics"
@@ -26,7 +25,6 @@ import (
 var _ = Describe("SinkManager", func() {
 	var (
 		fakeMetricSender *fakeMS.FakeMetricSender
-		fakeEventEmitter *fake.FakeEventEmitter
 		blackListManager = sinkserver.NewBlackListManager(
 			[]sinkserver.IPRange{{Start: "10.10.10.10", End: "10.10.10.20"}},
 		)
@@ -36,7 +34,6 @@ var _ = Describe("SinkManager", func() {
 	)
 
 	BeforeEach(func() {
-		fakeEventEmitter = fake.NewFakeEventEmitter("doppler")
 		fakeMetricSender = fakeMS.NewFakeMetricSender()
 		metrics.Initialize(fakeMetricSender, nil)
 		fakeMetricSender.Reset()
