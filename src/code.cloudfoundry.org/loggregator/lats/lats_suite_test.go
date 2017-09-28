@@ -9,21 +9,16 @@ import (
 	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	latsConfig "code.cloudfoundry.org/loggregator/lats/config"
-	"code.cloudfoundry.org/loggregator/lats/helpers"
 )
-
-var config *latsConfig.TestConfig
 
 func TestLats(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	config = latsConfig.Load()
+	config = Load()
 
 	BeforeSuite(func() {
 		config.SaveMetronConfig()
-		helpers.Initialize(config)
+		Initialize(config)
 		setupMetron()
 	})
 
@@ -36,7 +31,7 @@ func setupMetron() {
 
 func createCounterEvent() *events.Envelope {
 	return &events.Envelope{
-		Origin:    proto.String(helpers.OriginName),
+		Origin:    proto.String(OriginName),
 		EventType: events.Envelope_CounterEvent.Enum(),
 		Timestamp: proto.Int64(time.Now().UnixNano()),
 		CounterEvent: &events.CounterEvent{
@@ -50,7 +45,7 @@ func createCounterEvent() *events.Envelope {
 
 func createValueMetric() *events.Envelope {
 	return &events.Envelope{
-		Origin:    proto.String(helpers.OriginName),
+		Origin:    proto.String(OriginName),
 		EventType: events.Envelope_ValueMetric.Enum(),
 		Timestamp: proto.Int64(time.Now().UnixNano()),
 		ValueMetric: &events.ValueMetric{
@@ -64,7 +59,7 @@ func createValueMetric() *events.Envelope {
 
 func createContainerMetric(appId string) *events.Envelope {
 	return &events.Envelope{
-		Origin:    proto.String(helpers.OriginName),
+		Origin:    proto.String(OriginName),
 		EventType: events.Envelope_ContainerMetric.Enum(),
 		Timestamp: proto.Int64(time.Now().UnixNano()),
 		ContainerMetric: &events.ContainerMetric{

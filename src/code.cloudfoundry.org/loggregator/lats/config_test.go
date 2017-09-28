@@ -1,4 +1,4 @@
-package config
+package lats_test
 
 import (
 	"encoding/json"

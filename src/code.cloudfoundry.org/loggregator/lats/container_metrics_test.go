@@ -1,24 +1,20 @@
 package lats_test
 
 import (
-	"code.cloudfoundry.org/loggregator/lats/helpers"
-
 	"code.cloudfoundry.org/loggregator/plumbing/conversion"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
-
+	"github.com/cloudfoundry/sonde-go/events"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/cloudfoundry/sonde-go/events"
 )
 
 var _ = Describe("Container Metrics Endpoint", func() {
 	It("can receive container metrics", func() {
 		envelope := createContainerMetric("test-id")
-		helpers.EmitToMetronV1(envelope)
+		EmitToMetronV1(envelope)
 
 		f := func() []*events.ContainerMetric {
-			return helpers.RequestContainerMetrics("test-id")
+			return RequestContainerMetrics("test-id")
 		}
 		Eventually(f).Should(ContainElement(envelope.ContainerMetric))
 	})
@@ -27,10 +23,10 @@ var _ = Describe("Container Metrics Endpoint", func() {
 		It("can receive container metrics", func() {
 			envelope := createContainerMetric("test-id")
 			v2Env := conversion.ToV2(envelope, false)
-			helpers.EmitToMetronV2(v2Env)
+			EmitToMetronV2(v2Env)
 
 			f := func() []*v2.Envelope {
-				return helpers.ReadContainerFromRLP("test-id", false)
+				return ReadContainerFromRLP("test-id", false)
 			}
 			Eventually(f).Should(ContainElement(v2Env))
 		})
@@ -38,10 +34,10 @@ var _ = Describe("Container Metrics Endpoint", func() {
 		It("can receive container metrics with preferred tags", func() {
 			envelope := createContainerMetric("test-id")
 			v2Env := conversion.ToV2(envelope, true)
-			helpers.EmitToMetronV2(v2Env)
+			EmitToMetronV2(v2Env)
 
 			f := func() []*v2.Envelope {
-				return helpers.ReadContainerFromRLP("test-id", true)
+				return ReadContainerFromRLP("test-id", true)
 			}
 			Eventually(f).Should(ContainElement(v2Env))
 		})

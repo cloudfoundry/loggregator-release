@@ -1,4 +1,4 @@
-package helpers
+package lats_test
 
 import (
 	"context"
@@ -10,18 +10,12 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/loggregator/plumbing"
-
-	"google.golang.org/grpc"
-
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
-
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
-
-	. "code.cloudfoundry.org/loggregator/lats/config"
-
 	. "github.com/onsi/gomega"
+	"google.golang.org/grpc"
 )
 
 const (

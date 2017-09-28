@@ -1,4 +1,4 @@
-package helpers
+package lats_test
 
 type TestDebugPrinter struct {
 	dump string

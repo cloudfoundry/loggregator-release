@@ -8,14 +8,14 @@ import (
 	gendiodes "code.cloudfoundry.org/diodes"
 	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/doppler/internal/server"
-	grpcv1 "code.cloudfoundry.org/loggregator/doppler/internal/server/v1"
+	"code.cloudfoundry.org/loggregator/doppler/internal/server/v1"
 	"code.cloudfoundry.org/loggregator/doppler/internal/server/v2"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver"
 	"code.cloudfoundry.org/loggregator/doppler/internal/store"
 	"code.cloudfoundry.org/loggregator/dopplerservice"
 	"code.cloudfoundry.org/loggregator/healthendpoint"
 	"code.cloudfoundry.org/loggregator/metricemitter"
-	plumbingv1 "code.cloudfoundry.org/loggregator/plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing"
 	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/metric_sender"
@@ -162,13 +162,13 @@ func (d *Doppler) Start() {
 		droppedMetric.Increment(uint64(missed))
 	}))
 
-	v1Ingress := grpcv1.NewIngestorServer(
+	v1Ingress := v1.NewIngestorServer(
 		v1Buf,
 		metricBatcher,
 		healthRegistrar,
 	)
-	grpcRouter := grpcv1.NewRouter()
-	v1Egress := grpcv1.NewDopplerServer(
+	grpcRouter := v1.NewRouter()
+	v1Egress := v1.NewDopplerServer(
 		grpcRouter,
 		sinkManager,
 		metricClient,
@@ -183,11 +183,11 @@ func (d *Doppler) Start() {
 		healthRegistrar,
 	)
 
-	var opts []plumbingv1.ConfigOption
+	var opts []plumbing.ConfigOption
 	if len(d.c.GRPC.CipherSuites) > 0 {
-		opts = append(opts, plumbingv1.WithCipherSuites(d.c.GRPC.CipherSuites))
+		opts = append(opts, plumbing.WithCipherSuites(d.c.GRPC.CipherSuites))
 	}
-	tlsConfig, err := plumbingv1.NewServerMutualTLSConfig(
+	tlsConfig, err := plumbing.NewServerMutualTLSConfig(
 		d.c.GRPC.CertFile,
 		d.c.GRPC.KeyFile,
 		d.c.GRPC.CAFile,
@@ -289,7 +289,7 @@ func initV1Metrics(milliseconds uint, udpAddr string) *metricbatcher.MetricBatch
 }
 
 func initV2Metrics(c *Config) *metricemitter.Client {
-	credentials, err := plumbingv1.NewClientCredentials(
+	credentials, err := plumbing.NewClientCredentials(
 		c.GRPC.CertFile,
 		c.GRPC.KeyFile,
 		c.GRPC.CAFile,

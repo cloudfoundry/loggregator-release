@@ -6,8 +6,6 @@ files:
 - loggregator/src/github.com/onsi/ginkgo/ginkgo/**/*.go
 - loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/lats/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/lats/config/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/lats/helpers/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/conversion/*.go # gosub

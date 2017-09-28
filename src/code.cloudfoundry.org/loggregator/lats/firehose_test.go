@@ -6,8 +6,6 @@ import (
 	"sort"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/lats/helpers"
-
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -32,7 +30,7 @@ var _ = Describe("Firehose", func() {
 	var emitControlMessages = func() {
 		for i := 0; i < 20; i++ {
 			time.Sleep(10 * time.Millisecond)
-			helpers.EmitToMetronV1(buildValueMetric("controlValue", 0))
+			EmitToMetronV1(buildValueMetric("controlValue", 0))
 		}
 	}
 
@@ -53,7 +51,7 @@ var _ = Describe("Firehose", func() {
 			case <-timer.C:
 				return envelopes
 			case e := <-msgs:
-				if e.GetOrigin() == helpers.OriginName && e.ValueMetric.GetName() == "mainValue" {
+				if e.GetOrigin() == OriginName && e.ValueMetric.GetName() == "mainValue" {
 					envelopes = append(envelopes, e)
 				}
 			}
@@ -76,7 +74,7 @@ var _ = Describe("Firehose", func() {
 	var emitMetrics = func(count int) {
 		for i := 0; i < count; i++ {
 			time.Sleep(10 * time.Millisecond)
-			helpers.EmitToMetronV1(buildValueMetric("mainValue", float64(i)))
+			EmitToMetronV1(buildValueMetric("mainValue", float64(i)))
 		}
 	}
 
@@ -93,7 +91,7 @@ var _ = Describe("Firehose", func() {
 			JustBeforeEach(func() {
 				for i := 0; i < count; i++ {
 					time.Sleep(10 * time.Millisecond)
-					helpers.EmitToMetronV1(buildValueMetric("mainValue", float64(i)))
+					EmitToMetronV1(buildValueMetric("mainValue", float64(i)))
 				}
 			})
 
@@ -110,7 +108,7 @@ var _ = Describe("Firehose", func() {
 				})
 
 				BeforeEach(func() {
-					reader, _ = helpers.SetUpConsumer()
+					reader, _ = SetUpConsumer()
 					msgs, errs = reader.Firehose(generateSubID(), "")
 					go readFromErrors(errs)
 				})
@@ -149,11 +147,11 @@ var _ = Describe("Firehose", func() {
 						case <-t.C:
 							return envelopes1, envelopes2
 						case e := <-msgs1:
-							if e.GetOrigin() == helpers.OriginName && e.ValueMetric.GetName() == "mainValue" {
+							if e.GetOrigin() == OriginName && e.ValueMetric.GetName() == "mainValue" {
 								envelopes1 = append(envelopes1, e)
 							}
 						case e := <-msgs2:
-							if e.GetOrigin() == helpers.OriginName && e.ValueMetric.GetName() == "mainValue" {
+							if e.GetOrigin() == OriginName && e.ValueMetric.GetName() == "mainValue" {
 								envelopes2 = append(envelopes2, e)
 							}
 						}
@@ -163,7 +161,7 @@ var _ = Describe("Firehose", func() {
 				Context("single subscription ID", func() {
 					BeforeEach(func() {
 						subID := generateSubID()
-						reader, _ = helpers.SetUpConsumer()
+						reader, _ = SetUpConsumer()
 						msgs1, errs1 = reader.Firehose(subID, "")
 						msgs2, errs2 = reader.Firehose(subID, "")
 						go readFromErrors(errs1)
@@ -192,7 +190,7 @@ var _ = Describe("Firehose", func() {
 						BeforeEach(func() {
 							subID1 := generateSubID()
 							subID2 := generateSubID()
-							reader, _ = helpers.SetUpConsumer()
+							reader, _ = SetUpConsumer()
 							msgs1, errs1 = reader.Firehose(subID1, "")
 							msgs2, errs2 = reader.Firehose(subID2, "")
 							go readFromErrors(errs1)
@@ -247,20 +245,20 @@ var _ = Describe("Firehose", func() {
 										envelopesB2,
 									}
 								case e := <-msgsA1:
-									if e.GetOrigin() == helpers.OriginName && e.ValueMetric.GetName() == "mainValue" {
+									if e.GetOrigin() == OriginName && e.ValueMetric.GetName() == "mainValue" {
 										envelopesA1 = append(envelopesA1, e)
 									}
 								case e := <-msgsA2:
-									if e.GetOrigin() == helpers.OriginName && e.ValueMetric.GetName() == "mainValue" {
+									if e.GetOrigin() == OriginName && e.ValueMetric.GetName() == "mainValue" {
 										envelopesA2 = append(envelopesA2, e)
 									}
 
 								case e := <-msgsB1:
-									if e.GetOrigin() == helpers.OriginName && e.ValueMetric.GetName() == "mainValue" {
+									if e.GetOrigin() == OriginName && e.ValueMetric.GetName() == "mainValue" {
 										envelopesB1 = append(envelopesB1, e)
 									}
 								case e := <-msgsB2:
-									if e.GetOrigin() == helpers.OriginName && e.ValueMetric.GetName() == "mainValue" {
+									if e.GetOrigin() == OriginName && e.ValueMetric.GetName() == "mainValue" {
 										envelopesB2 = append(envelopesB2, e)
 									}
 								}
@@ -268,7 +266,7 @@ var _ = Describe("Firehose", func() {
 						}
 
 						BeforeEach(func() {
-							reader, _ = helpers.SetUpConsumer()
+							reader, _ = SetUpConsumer()
 
 							subIDa := generateSubID()
 							msgsA1, errsA1 = reader.Firehose(subIDa, "")
@@ -322,7 +320,7 @@ var _ = Describe("Firehose", func() {
 	Describe("subscription reconnect", func() {
 		It("gets all of the messages after reconnect", func() {
 			By("establishing first consumer")
-			consumer, _ := helpers.SetUpConsumer()
+			consumer, _ := SetUpConsumer()
 			subscriptionID := generateSubID()
 			msgs, errs := consumer.FirehoseWithoutReconnect(subscriptionID, "")
 			go readFromErrors(errs)
@@ -333,7 +331,7 @@ var _ = Describe("Firehose", func() {
 			consumer.Close()
 
 			By("establishing second consumer with the same subscription id")
-			consumer, _ = helpers.SetUpConsumer()
+			consumer, _ = SetUpConsumer()
 			msgs, errs = consumer.FirehoseWithoutReconnect(subscriptionID, "")
 			go readFromErrors(errs)
 
