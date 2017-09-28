@@ -1,12 +1,11 @@
 package v2
 
 import (
+	"code.cloudfoundry.org/loggregator/doppler/internal/server/v1"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing/conversion"
 	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
-
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/cloudfoundry/sonde-go/events"
 )
 
 type HealthRegistrar interface {
@@ -22,15 +21,11 @@ type Batcher interface {
 	BatchCounter(name string) metricbatcher.BatchCounterChainer
 }
 
-type DataSetter interface {
-	Set(data *events.Envelope)
-}
-
 type IngressServer struct {
-	envelopeBuffer DataSetter
-	batcher        Batcher
-	ingressMetric  *metricemitter.Counter
-	health         HealthRegistrar
+	buf           v1.EnvelopeBuffer
+	batcher       Batcher
+	ingressMetric *metricemitter.Counter
+	health        HealthRegistrar
 }
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
@@ -39,7 +34,7 @@ type MetricClient interface {
 }
 
 func NewIngressServer(
-	envelopeBuffer DataSetter,
+	buf v1.EnvelopeBuffer,
 	batcher Batcher,
 	metricClient MetricClient,
 	health HealthRegistrar,
@@ -49,10 +44,10 @@ func NewIngressServer(
 	)
 
 	return &IngressServer{
-		envelopeBuffer: envelopeBuffer,
-		batcher:        batcher,
-		ingressMetric:  ingressMetric,
-		health:         health,
+		buf:           buf,
+		batcher:       batcher,
+		ingressMetric: ingressMetric,
+		health:        health,
 	}
 }
 
@@ -73,7 +68,7 @@ func (i IngressServer) BatchSender(s plumbing.DopplerIngress_BatchSenderServer) 
 					continue
 				}
 
-				i.envelopeBuffer.Set(v1e)
+				i.buf.Set(v1e)
 
 				// metric-documentation-v1: (listeners.totalReceivedMessageCount)
 				// Total number of messages received by doppler.
@@ -106,7 +101,7 @@ func (i IngressServer) Sender(s plumbing.DopplerIngress_SenderServer) error {
 				continue
 			}
 
-			i.envelopeBuffer.Set(v1e)
+			i.buf.Set(v1e)
 
 			// metric-documentation-v1: (listeners.totalReceivedMessageCount)
 			// Total number of messages received by doppler.

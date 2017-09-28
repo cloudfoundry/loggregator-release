@@ -1,4 +1,4 @@
-package listeners_test
+package server_test
 
 import (
 	"log"
@@ -12,5 +12,5 @@ import (
 func TestListeners(t *testing.T) {
 	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Listeners Suite")
+	RunSpecs(t, "Doppler Server Suite")
 }

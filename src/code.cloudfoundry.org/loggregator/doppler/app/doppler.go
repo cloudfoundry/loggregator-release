@@ -7,14 +7,15 @@ import (
 
 	gendiodes "code.cloudfoundry.org/diodes"
 	"code.cloudfoundry.org/loggregator/diodes"
-	grpcv1 "code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"
-	"code.cloudfoundry.org/loggregator/doppler/internal/listeners"
+	"code.cloudfoundry.org/loggregator/doppler/internal/server"
+	grpcv1 "code.cloudfoundry.org/loggregator/doppler/internal/server/v1"
+	"code.cloudfoundry.org/loggregator/doppler/internal/server/v2"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver"
 	"code.cloudfoundry.org/loggregator/doppler/internal/store"
 	"code.cloudfoundry.org/loggregator/dopplerservice"
 	"code.cloudfoundry.org/loggregator/healthendpoint"
 	"code.cloudfoundry.org/loggregator/metricemitter"
-	"code.cloudfoundry.org/loggregator/plumbing"
+	plumbingv1 "code.cloudfoundry.org/loggregator/plumbing"
 	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/metric_sender"
@@ -24,13 +25,15 @@ import (
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 )
 
 // Doppler routes envelopes from producers to any subscribers.
 type Doppler struct {
 	c              *Config
 	healthListener net.Listener
-	grpcListener   *listeners.GRPCListener
+	server         *server.Server
 	addrs          Addrs
 }
 
@@ -117,48 +120,7 @@ func (d *Doppler) Start() {
 	promRegistry := prometheus.NewRegistry()
 	d.healthListener = healthendpoint.StartServer(d.c.HealthAddr, promRegistry)
 	d.addrs.Health = d.healthListener.Addr().String()
-	healthRegistrar := healthendpoint.New(promRegistry, map[string]prometheus.Gauge{
-		// metric-documentation-health: (ingressStreamCount)
-		// Number of open firehose streams
-		"ingressStreamCount": prometheus.NewGauge(
-			prometheus.GaugeOpts{
-				Namespace: "loggregator",
-				Subsystem: "doppler",
-				Name:      "ingressStreamCount",
-				Help:      "Number of open ingress streams",
-			},
-		),
-		// metric-documentation-health: (subscriptionCount)
-		// Number of open subscriptions
-		"subscriptionCount": prometheus.NewGauge(
-			prometheus.GaugeOpts{
-				Namespace: "loggregator",
-				Subsystem: "doppler",
-				Name:      "subscriptionCount",
-				Help:      "Number of open subscriptions",
-			},
-		),
-		// metric-documentation-health: (recentLogCacheCount)
-		// Number of recent log caches
-		"recentLogCacheCount": prometheus.NewGauge(
-			prometheus.GaugeOpts{
-				Namespace: "loggregator",
-				Subsystem: "doppler",
-				Name:      "recentLogCacheCount",
-				Help:      "Number of recent log caches",
-			},
-		),
-		// metric-documentation-health: (containerMetricCacheCount)
-		// Number of container metric caches
-		"containerMetricCacheCount": prometheus.NewGauge(
-			prometheus.GaugeOpts{
-				Namespace: "loggregator",
-				Subsystem: "doppler",
-				Name:      "containerMetricCacheCount",
-				Help:      "Number of container metric caches",
-			},
-		),
-	})
+	healthRegistrar := initHealthRegistrar(promRegistry)
 
 	//------------------------------
 	// In memory store of
@@ -189,7 +151,7 @@ func (d *Doppler) Start() {
 		metricemitter.WithTags(map[string]string{"direction": "ingress"}),
 	)
 
-	envelopeBuffer := diodes.NewManyToOneEnvelope(10000, gendiodes.AlertFunc(func(missed int) {
+	v1Buf := diodes.NewManyToOneEnvelope(10000, gendiodes.AlertFunc(func(missed int) {
 		log.Printf("Shed %d envelopes", missed)
 		// metric-documentation-v1: (doppler.shedEnvelopes) Number of envelopes dropped by the
 		// diode inbound from metron
@@ -200,29 +162,57 @@ func (d *Doppler) Start() {
 		droppedMetric.Increment(uint64(missed))
 	}))
 
+	v1Ingress := grpcv1.NewIngestorServer(
+		v1Buf,
+		metricBatcher,
+		healthRegistrar,
+	)
 	grpcRouter := grpcv1.NewRouter()
-	messageRouter := sinkserver.NewMessageRouter(sinkManager, grpcRouter)
-	var err error
-	d.grpcListener, err = listeners.NewGRPCListener(
+	v1Egress := grpcv1.NewDopplerServer(
 		grpcRouter,
 		sinkManager,
-		listeners.GRPCConfig{
-			Port:         d.c.GRPC.Port,
-			CAFile:       d.c.GRPC.CAFile,
-			CertFile:     d.c.GRPC.CertFile,
-			KeyFile:      d.c.GRPC.KeyFile,
-			CipherSuites: d.c.GRPC.CipherSuites,
-		},
-		envelopeBuffer,
+		metricClient,
+		healthRegistrar,
+		time.Second,
+		100,
+	)
+	v2Ingress := v2.NewIngressServer(
+		v1Buf,
 		metricBatcher,
 		metricClient,
 		healthRegistrar,
 	)
+
+	var opts []plumbingv1.ConfigOption
+	if len(d.c.GRPC.CipherSuites) > 0 {
+		opts = append(opts, plumbingv1.WithCipherSuites(d.c.GRPC.CipherSuites))
+	}
+	tlsConfig, err := plumbingv1.NewServerMutualTLSConfig(
+		d.c.GRPC.CertFile,
+		d.c.GRPC.KeyFile,
+		d.c.GRPC.CAFile,
+		opts...,
+	)
 	if err != nil {
-		log.Panicf("Failed to create grpcListener: %s", err)
+		log.Panicf("Failed to create Doppler server: %s", err)
+	}
+	srv, err := server.NewServer(
+		d.c.GRPC.Port,
+		v1Ingress,
+		v1Egress,
+		v2Ingress,
+		grpc.Creds(credentials.NewTLS(tlsConfig)),
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             10 * time.Second,
+			PermitWithoutStream: true,
+		}),
+	)
+	if err != nil {
+		log.Panicf("Failed to create Doppler server: %s", err)
 	}
 
-	d.addrs.GRPC = d.grpcListener.Addr()
+	d.server = srv
+	d.addrs.GRPC = d.server.Addr()
 
 	//------------------------------
 	// Service Discovery and Syslog Drains (etcd)
@@ -253,8 +243,9 @@ func (d *Doppler) Start() {
 	// Start
 	//------------------------------
 	go sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
-	go messageRouter.Start(envelopeBuffer)
-	go d.grpcListener.Start()
+	messageRouter := sinkserver.NewMessageRouter(sinkManager, grpcRouter)
+	go messageRouter.Start(v1Buf)
+	go d.server.Start()
 
 	log.Print("Startup: doppler server started.")
 }
@@ -274,7 +265,7 @@ func (d *Doppler) Addrs() Addrs {
 func (d *Doppler) Stop() {
 	// TODO: Drain
 	d.healthListener.Close()
-	d.grpcListener.Stop()
+	d.server.Stop()
 }
 
 func initV1Metrics(milliseconds uint, udpAddr string) *metricbatcher.MetricBatcher {
@@ -298,7 +289,7 @@ func initV1Metrics(milliseconds uint, udpAddr string) *metricbatcher.MetricBatch
 }
 
 func initV2Metrics(c *Config) *metricemitter.Client {
-	credentials, err := plumbing.NewClientCredentials(
+	credentials, err := plumbingv1.NewClientCredentials(
 		c.GRPC.CertFile,
 		c.GRPC.KeyFile,
 		c.GRPC.CAFile,
@@ -346,4 +337,50 @@ func connectToEtcd(c *Config) storeadapter.StoreAdapter {
 		panic(err)
 	}
 	return etcdStoreAdapter
+}
+
+func initHealthRegistrar(r prometheus.Registerer) *healthendpoint.Registrar {
+	return healthendpoint.New(r, map[string]prometheus.Gauge{
+		// metric-documentation-health: (ingressStreamCount)
+		// Number of open firehose streams
+		"ingressStreamCount": prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: "loggregator",
+				Subsystem: "doppler",
+				Name:      "ingressStreamCount",
+				Help:      "Number of open ingress streams",
+			},
+		),
+		// metric-documentation-health: (subscriptionCount)
+		// Number of open subscriptions
+		"subscriptionCount": prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: "loggregator",
+				Subsystem: "doppler",
+				Name:      "subscriptionCount",
+				Help:      "Number of open subscriptions",
+			},
+		),
+		// metric-documentation-health: (recentLogCacheCount)
+		// Number of recent log caches
+		"recentLogCacheCount": prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: "loggregator",
+				Subsystem: "doppler",
+				Name:      "recentLogCacheCount",
+				Help:      "Number of recent log caches",
+			},
+		),
+		// metric-documentation-health: (containerMetricCacheCount)
+		// Number of container metric caches
+		"containerMetricCacheCount": prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: "loggregator",
+				Subsystem: "doppler",
+				Name:      "containerMetricCacheCount",
+				Help:      "Number of container metric caches",
+			},
+		),
+	})
+
 }

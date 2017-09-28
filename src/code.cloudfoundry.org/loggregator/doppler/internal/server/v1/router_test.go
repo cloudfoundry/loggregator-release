@@ -3,7 +3,7 @@ package v1_test
 import (
 	"code.cloudfoundry.org/loggregator/plumbing"
 
-	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"
+	"code.cloudfoundry.org/loggregator/doppler/internal/server/v1"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"

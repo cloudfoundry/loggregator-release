@@ -4,7 +4,7 @@ import (
 	"io"
 	"sync"
 
-	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v2"
+	"code.cloudfoundry.org/loggregator/doppler/internal/server/v2"
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
 

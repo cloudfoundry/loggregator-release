@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc"
 
 	"code.cloudfoundry.org/loggregator/diodes"
-	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"
+	"code.cloudfoundry.org/loggregator/doppler/internal/server/v1"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 

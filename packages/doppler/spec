@@ -9,9 +9,9 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v2/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/listeners/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/server/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/server/v1/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/server/v2/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/sinks/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/store/*.go # gosub

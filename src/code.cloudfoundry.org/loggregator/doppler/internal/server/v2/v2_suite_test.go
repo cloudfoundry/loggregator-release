@@ -9,5 +9,5 @@ import (
 
 func TestV2(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "V2 Suite")
+	RunSpecs(t, "Doppler Server v2 Suite")
 }

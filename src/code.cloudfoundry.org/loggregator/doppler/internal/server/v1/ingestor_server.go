@@ -8,14 +8,13 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/loggregator/plumbing"
-
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
 
 type IngestorServer struct {
-	sender  MessageSender
+	buf     EnvelopeBuffer
 	batcher Batcher
 	health  HealthRegistrar
 }
@@ -24,22 +23,22 @@ type Batcher interface {
 	BatchCounter(name string) metricbatcher.BatchCounterChainer
 }
 
-type MessageSender interface {
-	Set(*events.Envelope)
-}
-
 type IngestorGRPCServer interface {
 	plumbing.DopplerIngestor_PusherServer
 }
 
+type EnvelopeBuffer interface {
+	Set(e *events.Envelope)
+}
+
 func NewIngestorServer(
-	sender MessageSender,
+	buf EnvelopeBuffer,
 	batcher Batcher,
 	health HealthRegistrar,
 ) *IngestorServer {
 
 	return &IngestorServer{
-		sender:  sender,
+		buf:     buf,
 		batcher: batcher,
 		health:  health,
 	}
@@ -78,7 +77,7 @@ func (i *IngestorServer) Pusher(pusher plumbing.DopplerIngestor_PusherServer) er
 			SetTag("protocol", "grpc").
 			SetTag("event_type", env.GetEventType().String()).
 			Increment()
-		i.sender.Set(env)
+		i.buf.Set(env)
 
 		// metric-documentation-v1: (listeners.totalReceivedMessageCount) Total
 		// number of messages received by doppler.
