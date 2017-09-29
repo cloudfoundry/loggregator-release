@@ -93,7 +93,8 @@ function run_multiplatform {
     print_checkpoint "Running Multi-Platform Checks"
     sed -n -e '/^properties:/,$p' jobs/metron_agent/spec > /tmp/a
     sed -n -e '/^properties:/,$p' jobs/metron_agent_windows/spec > /tmp/b
-    diff /tmp/a /tmp/b
+    sed '/# WINDOWS ONLY START/,/# WINDOWS ONLY END/d' /tmp/b > /tmp/c
+    diff /tmp/a /tmp/c
     return $?
 }
 
@@ -173,7 +174,7 @@ function run_integration {
 function run_all {
     check_output run_cleaners
     check_output run_build
-    # check_output run_multiplatform
+    check_output run_multiplatform
     check_output run_unit $@
     check_output run_integration $@
 }

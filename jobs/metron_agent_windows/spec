@@ -19,6 +19,7 @@ packages:
 - metron_agent_windows
 
 properties:
+# WINDOWS ONLY START
   syslog_daemon_config.enable:
     description: "Enable or disable rsyslog configuration for forwarding syslog messages into metron"
     default: true
@@ -40,7 +41,7 @@ properties:
   syslog_daemon_config.max_message_size:
     description: maximum message size to be sent
     default: 4k
-
+# WINDOWS ONLY END
   metron_agent.disable_udp:
     description: "Disable incoming UDP"
     default: false
