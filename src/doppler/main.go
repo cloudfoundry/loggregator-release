@@ -47,6 +47,7 @@ func main() {
 	//------------------------------
 	// MAIN
 	//------------------------------
+	grpc.EnableTracing = false // prevents memory leak in tracing logic
 	rand.Seed(time.Now().UnixNano())
 
 	configFile := flag.String(

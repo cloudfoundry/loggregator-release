@@ -38,6 +38,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/runtime_stats"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -53,6 +54,7 @@ var (
 )
 
 func main() {
+	grpc.EnableTracing = false // prevents memory leak in tracing logic
 	flag.Parse()
 
 	conf, err := config.ParseConfig(*configFile)
