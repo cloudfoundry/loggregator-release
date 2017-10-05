@@ -136,7 +136,7 @@ function run_unit {
     fi
 
     pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator
-        local not_unit_tests="integration_tests,component_tests,lats"
+        local not_unit_tests="integration_tests,lats"
         print_checkpoint "Running Unit Tests"
         # TODO: remove build_etcd once announcer unit tests no longer depend on it
         build_etcd
@@ -164,8 +164,7 @@ function run_integration {
             --randomizeAllSpecs \
             --slowSpecThreshold 20 \
             $@ \
-            integration_tests \
-            $(find . -name component_tests -type d)
+            integration_tests
         exit_code=$?
    popd
    return $exit_code
