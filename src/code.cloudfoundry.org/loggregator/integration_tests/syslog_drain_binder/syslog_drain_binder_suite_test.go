@@ -1,4 +1,4 @@
-package component_test
+package syslog_drain_binder_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 
 func TestComponentTests(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Syslog Drain Binder ComponentTests Suite")
+	RunSpecs(t, "Syslog Drain Binder Suite")
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {
