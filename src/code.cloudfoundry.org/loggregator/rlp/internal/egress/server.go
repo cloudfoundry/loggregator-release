@@ -83,10 +83,10 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 	s.health.Inc("subscriptionCount")
 	defer s.health.Dec("subscriptionCount")
 
-	if r.GetFilter() != nil &&
-		r.GetFilter().SourceId == "" &&
-		r.GetFilter().Message != nil {
-		return errors.New("invalid request: cannot have type filter without source id")
+	if r.GetLegacySelector() != nil &&
+		r.GetLegacySelector().SourceId == "" &&
+		r.GetLegacySelector().Message != nil {
+		return errors.New("invalid request: cannot have type legacy selector without source id")
 	}
 
 	ctx, cancel := context.WithCancel(srv.Context())
@@ -133,10 +133,10 @@ func (s *Server) BatchedReceiver(r *v2.EgressBatchRequest, srv v2.Egress_Batched
 	s.health.Inc("subscriptionCount")
 	defer s.health.Dec("subscriptionCount")
 
-	if r.GetFilter() != nil &&
-		r.GetFilter().SourceId == "" &&
-		r.GetFilter().Message != nil {
-		return errors.New("invalid request: cannot have type filter without source id")
+	if r.GetLegacySelector() != nil &&
+		r.GetLegacySelector().SourceId == "" &&
+		r.GetLegacySelector().Message != nil {
+		return errors.New("invalid request: cannot have type legacy selector without source id")
 	}
 
 	ctx, cancel := context.WithCancel(srv.Context())
@@ -155,7 +155,7 @@ func (s *Server) BatchedReceiver(r *v2.EgressBatchRequest, srv v2.Egress_Batched
 
 	rx, err := s.receiver.Receive(ctx, &v2.EgressRequest{
 		ShardId:          r.GetShardId(),
-		Filter:           r.GetFilter(),
+		LegacySelector:   r.GetLegacySelector(),
 		UsePreferredTags: r.GetUsePreferredTags(),
 	})
 	// TODO Add coverage for this error case

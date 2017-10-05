@@ -52,10 +52,10 @@ func main() {
 	client := v2.NewEgressClient(conn)
 	receiver, err := client.Receiver(context.TODO(), &v2.EgressRequest{
 		ShardId: buildShardId(),
-		Filter: &v2.Filter{
+		LegacySelector: &v2.Selector{
 			SourceId: *appID,
-			Message: &v2.Filter_Log{
-				Log: &v2.LogFilter{},
+			Message: &v2.Selector_Log{
+				Log: &v2.LogSelector{},
 			},
 		},
 		UsePreferredTags: true,

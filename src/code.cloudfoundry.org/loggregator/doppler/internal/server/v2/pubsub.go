@@ -4,8 +4,11 @@ import (
 	"math/rand"
 
 	"code.cloudfoundry.org/go-pubsub"
+	"code.cloudfoundry.org/go-pubsub/pubsub-gen/setters"
 	"code.cloudfoundry.org/loggregator/plumbing/v2"
 )
+
+//go:generate ./generate.sh
 
 // PubSub provides a means for callers to subscribe to envelope streams.
 type PubSub struct {
@@ -42,7 +45,7 @@ func WithRand(int63n func(int64) int64) PubSubOption {
 // subscribers with the same shard ID, Publish will publish the envelope to
 // only one of those subscribers.
 func (p *PubSub) Publish(e *loggregator_v2.Envelope) {
-	p.pubsub.Publish(e, noopTraverser)
+	p.pubsub.Publish(e, envelopeTraverserTraverse)
 }
 
 // Subscribe associates a request with a data setter which will be invoked by
@@ -52,22 +55,53 @@ func (p *PubSub) Subscribe(
 	req *loggregator_v2.EgressBatchRequest,
 	setter DataSetter,
 ) (unsubscribe func()) {
-
-	return p.pubsub.Subscribe(subscription{setter}.set,
-		pubsub.WithShardID(req.ShardId),
-	)
-}
-
-type subscription struct {
-	DataSetter
-}
-
-func (s subscription) set(data interface{}) {
-	s.DataSetter.Set(data.(*loggregator_v2.Envelope))
-}
-
-func noopTraverser(interface{}) pubsub.Paths {
-	return func(int, interface{}) (path uint64, nextTraverser pubsub.TreeTraverser, ok bool) {
-		return 0, nil, false
+	if len(req.GetSelectors()) < 1 {
+		return p.pubsub.Subscribe(
+			subscription(setter),
+			pubsub.WithShardID(req.GetShardId()),
+		)
 	}
+
+	var unsubscribes []func()
+	for _, s := range req.GetSelectors() {
+		unsubscribes = append(unsubscribes, p.pubsub.Subscribe(
+			subscription(setter),
+			pubsub.WithShardID(req.GetShardId()),
+			pubsub.WithPath(envelopeTraverserCreatePath(buildFilter(s))),
+		))
+	}
+
+	return func() {
+		for _, u := range unsubscribes {
+			u()
+		}
+	}
+}
+
+func subscription(d DataSetter) pubsub.Subscription {
+	return func(data interface{}) {
+		e := data.(*loggregator_v2.Envelope)
+		d.Set(e)
+	}
+}
+
+func buildFilter(s *loggregator_v2.Selector) *EnvelopeFilter {
+	f := &EnvelopeFilter{}
+
+	if s.GetSourceId() != "" {
+		f.SourceId = setters.String(s.GetSourceId())
+	}
+
+	switch s.Message.(type) {
+	case *loggregator_v2.Selector_Log:
+		f.Message_Envelope_Log = &Envelope_LogFilter{}
+	case *loggregator_v2.Selector_Counter:
+		f.Message_Envelope_Counter = &Envelope_CounterFilter{}
+	case *loggregator_v2.Selector_Gauge:
+		f.Message_Envelope_Gauge = &Envelope_GaugeFilter{}
+	case *loggregator_v2.Selector_Timer:
+		f.Message_Envelope_Timer = &Envelope_TimerFilter{}
+	}
+
+	return f
 }

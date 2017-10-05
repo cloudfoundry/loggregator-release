@@ -14,11 +14,11 @@ func NewRequestConverter() RequestConverter {
 func (r requestConverter) Convert(v2req *v2.EgressRequest) *plumbing.SubscriptionRequest {
 	return &plumbing.SubscriptionRequest{
 		ShardID: v2req.ShardId,
-		Filter:  r.convertFilter(v2req.GetFilter()),
+		Filter:  r.convertFilter(v2req.GetLegacySelector()),
 	}
 }
 
-func (r requestConverter) convertFilter(v2filter *v2.Filter) *plumbing.Filter {
+func (r requestConverter) convertFilter(v2filter *v2.Selector) *plumbing.Filter {
 	if v2filter == nil {
 		return nil
 	}
@@ -28,7 +28,7 @@ func (r requestConverter) convertFilter(v2filter *v2.Filter) *plumbing.Filter {
 	}
 
 	switch v2filter.GetMessage().(type) {
-	case *v2.Filter_Log:
+	case *v2.Selector_Log:
 		f.Message = &plumbing.Filter_Log{
 			Log: &plumbing.LogFilter{},
 		}

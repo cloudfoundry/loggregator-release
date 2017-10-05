@@ -20,11 +20,11 @@ import (
 
 var _ = Describe("Server", func() {
 	Describe("Receiver()", func() {
-		It("returns an error for a request that has type filter but not a source ID", func() {
+		It("returns an error for a request that has type legacy selector but not a source ID", func() {
 			req := &v2.EgressRequest{
-				Filter: &v2.Filter{
-					Message: &v2.Filter_Log{
-						Log: &v2.LogFilter{},
+				LegacySelector: &v2.Selector{
+					Message: &v2.Selector_Log{
+						Log: &v2.LogSelector{},
 					},
 				},
 			}
@@ -41,7 +41,7 @@ var _ = Describe("Server", func() {
 
 			err := server.Receiver(req, receiverServer)
 
-			Expect(err).To(MatchError("invalid request: cannot have type filter without source id"))
+			Expect(err).To(MatchError("invalid request: cannot have type legacy selector without source id"))
 		})
 
 		It("errors when the sender cannot send the envelope", func() {
@@ -202,11 +202,11 @@ var _ = Describe("Server", func() {
 	})
 
 	Describe("BatchedReceiver()", func() {
-		It("returns an error for a request that has type filter but not a source ID", func() {
+		It("returns an error for a request that has type legacy selector but not a source ID", func() {
 			req := &v2.EgressBatchRequest{
-				Filter: &v2.Filter{
-					Message: &v2.Filter_Log{
-						Log: &v2.LogFilter{},
+				LegacySelector: &v2.Selector{
+					Message: &v2.Selector_Log{
+						Log: &v2.LogSelector{},
 					},
 				},
 			}
@@ -221,7 +221,7 @@ var _ = Describe("Server", func() {
 
 			err := server.BatchedReceiver(req, &spyBatchedReceiverServer{})
 
-			Expect(err).To(MatchError("invalid request: cannot have type filter without source id"))
+			Expect(err).To(MatchError("invalid request: cannot have type legacy selector without source id"))
 		})
 
 		It("errors when the sender cannot send the envelope", func() {

@@ -7,6 +7,7 @@ files:
 - loggregator/src/code.cloudfoundry.org/diodes/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/go-pubsub/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/go-pubsub/internal/node/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/go-pubsub/pubsub-gen/setters/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/diodes/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/*.go # gosub

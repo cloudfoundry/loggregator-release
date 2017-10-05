@@ -47,10 +47,10 @@ var _ = Describe("Receiver", func() {
 	It("subscribes to data", func() {
 		req := &v2.EgressRequest{
 			ShardId: "some-id",
-			Filter: &v2.Filter{
+			LegacySelector: &v2.Selector{
 				SourceId: "some-source-id",
-				Message: &v2.Filter_Log{
-					Log: &v2.LogFilter{},
+				Message: &v2.Selector_Log{
+					Log: &v2.LogSelector{},
 				},
 			},
 		}

@@ -15,8 +15,11 @@ It has these top-level messages:
 	SenderResponse
 	EgressRequest
 	EgressBatchRequest
-	Filter
-	LogFilter
+	Selector
+	LogSelector
+	GaugeSelector
+	CounterSelector
+	TimerSelector
 	ContainerMetricRequest
 	QueryResponse
 	Envelope
@@ -27,6 +30,7 @@ It has these top-level messages:
 	Gauge
 	GaugeValue
 	Timer
+	Event
 	IngressResponse
 	BatchSenderResponse
 */

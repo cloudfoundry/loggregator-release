@@ -19,7 +19,7 @@ var _ = Describe("RequestConverter", func() {
 
 	It("sets the appID", func() {
 		req := c.Convert(&v2.EgressRequest{
-			Filter: &v2.Filter{
+			LegacySelector: &v2.Selector{
 				SourceId: "some-id",
 			},
 		})
@@ -37,9 +37,9 @@ var _ = Describe("RequestConverter", func() {
 
 	It("sets a LogFilter", func() {
 		req := c.Convert(&v2.EgressRequest{
-			Filter: &v2.Filter{
-				Message: &v2.Filter_Log{
-					Log: &v2.LogFilter{},
+			LegacySelector: &v2.Selector{
+				Message: &v2.Selector_Log{
+					Log: &v2.LogSelector{},
 				},
 			},
 		})

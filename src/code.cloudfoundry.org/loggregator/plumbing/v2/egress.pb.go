@@ -18,8 +18,15 @@ var _ = fmt.Errorf
 var _ = math.Inf
 
 type EgressRequest struct {
-	ShardId string  `protobuf:"bytes,1,opt,name=shard_id,json=shardId" json:"shard_id,omitempty"`
-	Filter  *Filter `protobuf:"bytes,2,opt,name=filter" json:"filter,omitempty"`
+	// shard_id instructs Loggregator to shard envelopes between other
+	// subscriptions with the same shard_id. Loggregator will do its best to
+	// split the load evenly between subscriptions with the same shard_id.
+	ShardId string `protobuf:"bytes,1,opt,name=shard_id,json=shardId" json:"shard_id,omitempty"`
+	// TODO: This can be removed once selector has been around long enough.
+	LegacySelector *Selector `protobuf:"bytes,2,opt,name=legacy_selector,json=legacySelector" json:"legacy_selector,omitempty"`
+	// selector is the preferred (over legacy_selector) mechanism to select
+	// what envelope types the subscription wants.
+	Selectors []*Selector `protobuf:"bytes,4,rep,name=selectors" json:"selectors,omitempty"`
 	// TODO: This can be removed once the envelope.deprecated_tags is removed.
 	UsePreferredTags bool `protobuf:"varint,3,opt,name=use_preferred_tags,json=usePreferredTags" json:"use_preferred_tags,omitempty"`
 }
@@ -36,9 +43,16 @@ func (m *EgressRequest) GetShardId() string {
 	return ""
 }
 
-func (m *EgressRequest) GetFilter() *Filter {
+func (m *EgressRequest) GetLegacySelector() *Selector {
 	if m != nil {
-		return m.Filter
+		return m.LegacySelector
+	}
+	return nil
+}
+
+func (m *EgressRequest) GetSelectors() []*Selector {
+	if m != nil {
+		return m.Selectors
 	}
 	return nil
 }
@@ -51,8 +65,15 @@ func (m *EgressRequest) GetUsePreferredTags() bool {
 }
 
 type EgressBatchRequest struct {
-	ShardId string  `protobuf:"bytes,1,opt,name=shard_id,json=shardId" json:"shard_id,omitempty"`
-	Filter  *Filter `protobuf:"bytes,2,opt,name=filter" json:"filter,omitempty"`
+	// shard_id instructs Loggregator to shard envelopes between other
+	// subscriptions with the same shard_id. Loggregator will do its best to
+	// split the load evenly between subscriptions with the same shard_id.
+	ShardId string `protobuf:"bytes,1,opt,name=shard_id,json=shardId" json:"shard_id,omitempty"`
+	// TODO: This can be removed once selector has been around long enough.
+	LegacySelector *Selector `protobuf:"bytes,2,opt,name=legacy_selector,json=legacySelector" json:"legacy_selector,omitempty"`
+	// selector is the preferred (over legacy_selector) mechanism to select
+	// what envelope types the subscription wants.
+	Selectors []*Selector `protobuf:"bytes,4,rep,name=selectors" json:"selectors,omitempty"`
 	// TODO: This can be removed once the envelope.deprecated_tags is removed.
 	UsePreferredTags bool `protobuf:"varint,3,opt,name=use_preferred_tags,json=usePreferredTags" json:"use_preferred_tags,omitempty"`
 }
@@ -69,9 +90,16 @@ func (m *EgressBatchRequest) GetShardId() string {
 	return ""
 }
 
-func (m *EgressBatchRequest) GetFilter() *Filter {
+func (m *EgressBatchRequest) GetLegacySelector() *Selector {
 	if m != nil {
-		return m.Filter
+		return m.LegacySelector
+	}
+	return nil
+}
+
+func (m *EgressBatchRequest) GetSelectors() []*Selector {
+	if m != nil {
+		return m.Selectors
 	}
 	return nil
 }
@@ -83,95 +111,190 @@ func (m *EgressBatchRequest) GetUsePreferredTags() bool {
 	return false
 }
 
-type Filter struct {
+// Selector instructs Loggregator to only send envelopes that match the given
+// criteria.
+type Selector struct {
 	SourceId string `protobuf:"bytes,1,opt,name=source_id,json=sourceId" json:"source_id,omitempty"`
 	// Types that are valid to be assigned to Message:
-	//	*Filter_Log
-	Message isFilter_Message `protobuf_oneof:"Message"`
+	//	*Selector_Log
+	//	*Selector_Counter
+	//	*Selector_Gauge
+	//	*Selector_Timer
+	Message isSelector_Message `protobuf_oneof:"Message"`
 }
 
-func (m *Filter) Reset()                    { *m = Filter{} }
-func (m *Filter) String() string            { return proto.CompactTextString(m) }
-func (*Filter) ProtoMessage()               {}
-func (*Filter) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{2} }
+func (m *Selector) Reset()                    { *m = Selector{} }
+func (m *Selector) String() string            { return proto.CompactTextString(m) }
+func (*Selector) ProtoMessage()               {}
+func (*Selector) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{2} }
 
-type isFilter_Message interface {
-	isFilter_Message()
+type isSelector_Message interface {
+	isSelector_Message()
 }
 
-type Filter_Log struct {
-	Log *LogFilter `protobuf:"bytes,2,opt,name=log,oneof"`
+type Selector_Log struct {
+	Log *LogSelector `protobuf:"bytes,2,opt,name=log,oneof"`
+}
+type Selector_Counter struct {
+	Counter *CounterSelector `protobuf:"bytes,3,opt,name=counter,oneof"`
+}
+type Selector_Gauge struct {
+	Gauge *GaugeSelector `protobuf:"bytes,4,opt,name=gauge,oneof"`
+}
+type Selector_Timer struct {
+	Timer *TimerSelector `protobuf:"bytes,5,opt,name=timer,oneof"`
 }
 
-func (*Filter_Log) isFilter_Message() {}
+func (*Selector_Log) isSelector_Message()     {}
+func (*Selector_Counter) isSelector_Message() {}
+func (*Selector_Gauge) isSelector_Message()   {}
+func (*Selector_Timer) isSelector_Message()   {}
 
-func (m *Filter) GetMessage() isFilter_Message {
+func (m *Selector) GetMessage() isSelector_Message {
 	if m != nil {
 		return m.Message
 	}
 	return nil
 }
 
-func (m *Filter) GetSourceId() string {
+func (m *Selector) GetSourceId() string {
 	if m != nil {
 		return m.SourceId
 	}
 	return ""
 }
 
-func (m *Filter) GetLog() *LogFilter {
-	if x, ok := m.GetMessage().(*Filter_Log); ok {
+func (m *Selector) GetLog() *LogSelector {
+	if x, ok := m.GetMessage().(*Selector_Log); ok {
 		return x.Log
 	}
 	return nil
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*Filter) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _Filter_OneofMarshaler, _Filter_OneofUnmarshaler, _Filter_OneofSizer, []interface{}{
-		(*Filter_Log)(nil),
-	}
-}
-
-func _Filter_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*Filter)
-	// Message
-	switch x := m.Message.(type) {
-	case *Filter_Log:
-		b.EncodeVarint(2<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Log); err != nil {
-			return err
-		}
-	case nil:
-	default:
-		return fmt.Errorf("Filter.Message has unexpected type %T", x)
+func (m *Selector) GetCounter() *CounterSelector {
+	if x, ok := m.GetMessage().(*Selector_Counter); ok {
+		return x.Counter
 	}
 	return nil
 }
 
-func _Filter_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*Filter)
+func (m *Selector) GetGauge() *GaugeSelector {
+	if x, ok := m.GetMessage().(*Selector_Gauge); ok {
+		return x.Gauge
+	}
+	return nil
+}
+
+func (m *Selector) GetTimer() *TimerSelector {
+	if x, ok := m.GetMessage().(*Selector_Timer); ok {
+		return x.Timer
+	}
+	return nil
+}
+
+// XXX_OneofFuncs is for the internal use of the proto package.
+func (*Selector) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
+	return _Selector_OneofMarshaler, _Selector_OneofUnmarshaler, _Selector_OneofSizer, []interface{}{
+		(*Selector_Log)(nil),
+		(*Selector_Counter)(nil),
+		(*Selector_Gauge)(nil),
+		(*Selector_Timer)(nil),
+	}
+}
+
+func _Selector_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
+	m := msg.(*Selector)
+	// Message
+	switch x := m.Message.(type) {
+	case *Selector_Log:
+		b.EncodeVarint(2<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.Log); err != nil {
+			return err
+		}
+	case *Selector_Counter:
+		b.EncodeVarint(3<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.Counter); err != nil {
+			return err
+		}
+	case *Selector_Gauge:
+		b.EncodeVarint(4<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.Gauge); err != nil {
+			return err
+		}
+	case *Selector_Timer:
+		b.EncodeVarint(5<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.Timer); err != nil {
+			return err
+		}
+	case nil:
+	default:
+		return fmt.Errorf("Selector.Message has unexpected type %T", x)
+	}
+	return nil
+}
+
+func _Selector_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
+	m := msg.(*Selector)
 	switch tag {
 	case 2: // Message.log
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(LogFilter)
+		msg := new(LogSelector)
 		err := b.DecodeMessage(msg)
-		m.Message = &Filter_Log{msg}
+		m.Message = &Selector_Log{msg}
+		return true, err
+	case 3: // Message.counter
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(CounterSelector)
+		err := b.DecodeMessage(msg)
+		m.Message = &Selector_Counter{msg}
+		return true, err
+	case 4: // Message.gauge
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(GaugeSelector)
+		err := b.DecodeMessage(msg)
+		m.Message = &Selector_Gauge{msg}
+		return true, err
+	case 5: // Message.timer
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(TimerSelector)
+		err := b.DecodeMessage(msg)
+		m.Message = &Selector_Timer{msg}
 		return true, err
 	default:
 		return false, nil
 	}
 }
 
-func _Filter_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*Filter)
+func _Selector_OneofSizer(msg proto.Message) (n int) {
+	m := msg.(*Selector)
 	// Message
 	switch x := m.Message.(type) {
-	case *Filter_Log:
+	case *Selector_Log:
 		s := proto.Size(x.Log)
 		n += proto.SizeVarint(2<<3 | proto.WireBytes)
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case *Selector_Counter:
+		s := proto.Size(x.Counter)
+		n += proto.SizeVarint(3<<3 | proto.WireBytes)
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case *Selector_Gauge:
+		s := proto.Size(x.Gauge)
+		n += proto.SizeVarint(4<<3 | proto.WireBytes)
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case *Selector_Timer:
+		s := proto.Size(x.Timer)
+		n += proto.SizeVarint(5<<3 | proto.WireBytes)
 		n += proto.SizeVarint(uint64(s))
 		n += s
 	case nil:
@@ -181,19 +304,54 @@ func _Filter_OneofSizer(msg proto.Message) (n int) {
 	return n
 }
 
-type LogFilter struct {
+// LogSelector instructs Loggregator to egress Log envelopes to the given
+// subscription.
+type LogSelector struct {
 }
 
-func (m *LogFilter) Reset()                    { *m = LogFilter{} }
-func (m *LogFilter) String() string            { return proto.CompactTextString(m) }
-func (*LogFilter) ProtoMessage()               {}
-func (*LogFilter) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{3} }
+func (m *LogSelector) Reset()                    { *m = LogSelector{} }
+func (m *LogSelector) String() string            { return proto.CompactTextString(m) }
+func (*LogSelector) ProtoMessage()               {}
+func (*LogSelector) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{3} }
+
+// GaugeSelector instructs Loggregator to egress Gauge envelopes to the
+// given subscription.
+type GaugeSelector struct {
+}
+
+func (m *GaugeSelector) Reset()                    { *m = GaugeSelector{} }
+func (m *GaugeSelector) String() string            { return proto.CompactTextString(m) }
+func (*GaugeSelector) ProtoMessage()               {}
+func (*GaugeSelector) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{4} }
+
+// CounterSelector instructs Loggregator to egress Counter envelopes to the
+// given subscription
+type CounterSelector struct {
+}
+
+func (m *CounterSelector) Reset()                    { *m = CounterSelector{} }
+func (m *CounterSelector) String() string            { return proto.CompactTextString(m) }
+func (*CounterSelector) ProtoMessage()               {}
+func (*CounterSelector) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{5} }
+
+// TimerSelector instructs Loggregator to egress Timer envelopes to the given
+// subscription.
+type TimerSelector struct {
+}
+
+func (m *TimerSelector) Reset()                    { *m = TimerSelector{} }
+func (m *TimerSelector) String() string            { return proto.CompactTextString(m) }
+func (*TimerSelector) ProtoMessage()               {}
+func (*TimerSelector) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{6} }
 
 func init() {
 	proto.RegisterType((*EgressRequest)(nil), "loggregator.v2.EgressRequest")
 	proto.RegisterType((*EgressBatchRequest)(nil), "loggregator.v2.EgressBatchRequest")
-	proto.RegisterType((*Filter)(nil), "loggregator.v2.Filter")
-	proto.RegisterType((*LogFilter)(nil), "loggregator.v2.LogFilter")
+	proto.RegisterType((*Selector)(nil), "loggregator.v2.Selector")
+	proto.RegisterType((*LogSelector)(nil), "loggregator.v2.LogSelector")
+	proto.RegisterType((*GaugeSelector)(nil), "loggregator.v2.GaugeSelector")
+	proto.RegisterType((*CounterSelector)(nil), "loggregator.v2.CounterSelector")
+	proto.RegisterType((*TimerSelector)(nil), "loggregator.v2.TimerSelector")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -358,24 +516,31 @@ var _Egress_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("egress.proto", fileDescriptor1) }
 
 var fileDescriptor1 = []byte{
-	// 303 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x92, 0xdf, 0x4a, 0xc3, 0x30,
-	0x14, 0x87, 0x17, 0x07, 0x5d, 0x7b, 0xa6, 0x53, 0x72, 0x21, 0xdd, 0x64, 0x30, 0x7a, 0xb5, 0x0b,
-	0x2d, 0x32, 0xdf, 0x60, 0xe0, 0x9f, 0x81, 0x82, 0x04, 0x2f, 0xbc, 0x2b, 0xb1, 0x39, 0xcb, 0x0a,
-	0xc5, 0xd4, 0x24, 0xed, 0x33, 0x78, 0xe3, 0x93, 0xf8, 0x92, 0xb2, 0xa4, 0x4e, 0x37, 0xf5, 0xda,
-	0xcb, 0xe4, 0x77, 0xce, 0xc7, 0x97, 0x73, 0x02, 0xfb, 0x28, 0x35, 0x1a, 0x93, 0x56, 0x5a, 0x59,
-	0x45, 0x07, 0xa5, 0x92, 0x52, 0xa3, 0xe4, 0x56, 0xe9, 0xb4, 0x99, 0x8d, 0x06, 0xf8, 0xdc, 0x60,
-	0xa9, 0x2a, 0xf4, 0x79, 0xf2, 0x4a, 0xe0, 0xe0, 0xd2, 0x35, 0x30, 0x7c, 0xa9, 0xd1, 0x58, 0x3a,
-	0x84, 0xd0, 0xac, 0xb8, 0x16, 0x59, 0x21, 0x62, 0x32, 0x21, 0xd3, 0x88, 0xf5, 0xdc, 0x79, 0x21,
-	0x68, 0x0a, 0xc1, 0xb2, 0x28, 0x2d, 0xea, 0x78, 0x6f, 0x42, 0xa6, 0xfd, 0xd9, 0x71, 0xba, 0x4d,
-	0x4f, 0xaf, 0x5c, 0xca, 0xda, 0x2a, 0x7a, 0x0a, 0xb4, 0x36, 0x98, 0x55, 0x1a, 0x97, 0xa8, 0x35,
-	0x8a, 0xcc, 0x72, 0x69, 0xe2, 0xee, 0x84, 0x4c, 0x43, 0x76, 0x54, 0x1b, 0xbc, 0xff, 0x0c, 0x1e,
-	0xb8, 0x34, 0xc9, 0x1b, 0x01, 0xea, 0x55, 0xe6, 0xdc, 0xe6, 0xab, 0x7f, 0xf7, 0xc9, 0x20, 0xf0,
-	0xfd, 0xf4, 0x04, 0x22, 0xa3, 0x6a, 0x9d, 0xe3, 0x97, 0x43, 0xe8, 0x2f, 0x16, 0x82, 0x9e, 0x41,
-	0xb7, 0x54, 0xb2, 0x35, 0x18, 0xee, 0x1a, 0xdc, 0x2a, 0xe9, 0x21, 0x37, 0x1d, 0xb6, 0xae, 0x9b,
-	0x47, 0xd0, 0xbb, 0x43, 0x63, 0xb8, 0xc4, 0xa4, 0x0f, 0xd1, 0x26, 0x9e, 0xbd, 0x13, 0x08, 0xfc,
-	0xeb, 0xe9, 0x35, 0x84, 0x0c, 0x73, 0x2c, 0x1a, 0xd4, 0x74, 0xbc, 0x0b, 0xdc, 0x5a, 0xd6, 0x28,
-	0xfe, 0x11, 0xb7, 0xeb, 0x4d, 0x3a, 0xe7, 0x84, 0x3e, 0xc2, 0xa1, 0x1b, 0x25, 0x8a, 0x0d, 0x2f,
-	0xf9, 0x9d, 0xf7, 0x7d, 0xe2, 0xa3, 0xf1, 0x5f, 0x50, 0x57, 0xb5, 0x26, 0x3f, 0x05, 0xee, 0xf7,
-	0x5c, 0x7c, 0x04, 0x00, 0x00, 0xff, 0xff, 0x25, 0xf7, 0xac, 0x98, 0x6d, 0x02, 0x00, 0x00,
+	// 404 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xdc, 0x93, 0xc1, 0xae, 0xd2, 0x40,
+	0x14, 0x86, 0xef, 0x5c, 0x2e, 0xd0, 0x1e, 0x84, 0xea, 0xac, 0x2a, 0x84, 0xd8, 0x74, 0xc5, 0xc2,
+	0x54, 0x53, 0xa3, 0x1b, 0x57, 0x62, 0x08, 0x92, 0x68, 0x62, 0x2a, 0x0b, 0x77, 0xcd, 0xd8, 0x1e,
+	0x07, 0x92, 0xca, 0xe0, 0xcc, 0x94, 0xc4, 0x97, 0xf0, 0x45, 0x7c, 0x1c, 0x37, 0x3e, 0x8e, 0xe9,
+	0x94, 0x42, 0x5b, 0xd0, 0x07, 0xb8, 0xcb, 0xe9, 0xff, 0x7f, 0xff, 0x39, 0x27, 0x3d, 0x07, 0x1e,
+	0x20, 0x97, 0xa8, 0x54, 0xb0, 0x97, 0x42, 0x0b, 0x3a, 0xca, 0x04, 0xe7, 0x12, 0x39, 0xd3, 0x42,
+	0x06, 0x87, 0x70, 0x3c, 0xc2, 0xdd, 0x01, 0x33, 0xb1, 0xc7, 0x52, 0xf7, 0x7f, 0x13, 0x18, 0x2e,
+	0x0c, 0x10, 0xe1, 0xf7, 0x1c, 0x95, 0xa6, 0x8f, 0xc1, 0x52, 0x1b, 0x26, 0xd3, 0x78, 0x9b, 0xba,
+	0xc4, 0x23, 0x33, 0x3b, 0xea, 0x9b, 0xf7, 0x2a, 0xa5, 0x6f, 0xc0, 0xc9, 0x90, 0xb3, 0xe4, 0x47,
+	0xac, 0x30, 0xc3, 0x44, 0x0b, 0xe9, 0xde, 0x7a, 0x64, 0x36, 0x08, 0xdd, 0xa0, 0x59, 0x26, 0xf8,
+	0x74, 0xd4, 0xa3, 0x51, 0x09, 0x54, 0x6f, 0xfa, 0x0a, 0xec, 0x8a, 0x55, 0xee, 0x9d, 0xd7, 0xf9,
+	0x2f, 0x7c, 0xb6, 0xd2, 0xa7, 0x40, 0x73, 0x85, 0xf1, 0x5e, 0xe2, 0x57, 0x94, 0x12, 0xd3, 0x58,
+	0x33, 0xae, 0xdc, 0x8e, 0x47, 0x66, 0x56, 0xf4, 0x30, 0x57, 0xf8, 0xb1, 0x12, 0xd6, 0x8c, 0x2b,
+	0xff, 0x0f, 0x01, 0x5a, 0x4e, 0x35, 0x67, 0x3a, 0xd9, 0xdc, 0xa7, 0xd1, 0x7e, 0xde, 0x82, 0x75,
+	0x2a, 0x39, 0x01, 0x5b, 0x89, 0x5c, 0x26, 0x78, 0x9e, 0xc8, 0x2a, 0x3f, 0xac, 0x52, 0xfa, 0x0c,
+	0x3a, 0x99, 0xe0, 0xc7, 0x31, 0x26, 0xed, 0x4e, 0xde, 0x0b, 0x5e, 0xc5, 0xbc, 0xbb, 0x89, 0x0a,
+	0x27, 0x7d, 0x0d, 0xfd, 0x44, 0xe4, 0x3b, 0x8d, 0xd2, 0x54, 0x1f, 0x84, 0x4f, 0xda, 0xd0, 0xdb,
+	0x52, 0xae, 0x81, 0x15, 0x41, 0x5f, 0x42, 0x97, 0xb3, 0x9c, 0xa3, 0x7b, 0x67, 0xd0, 0x69, 0x1b,
+	0x5d, 0x16, 0x62, 0x0d, 0x2c, 0xdd, 0x05, 0xa6, 0xb7, 0xdf, 0x50, 0xba, 0xdd, 0xeb, 0xd8, 0xba,
+	0x10, 0xeb, 0x98, 0x71, 0xcf, 0x6d, 0xe8, 0x7f, 0x40, 0xa5, 0x18, 0x47, 0x7f, 0x08, 0x83, 0xda,
+	0x2c, 0xbe, 0x03, 0xc3, 0x46, 0x29, 0xff, 0x11, 0x38, 0xad, 0xb6, 0x0b, 0x4f, 0x23, 0x37, 0xfc,
+	0x45, 0xa0, 0x57, 0xee, 0x0b, 0x5d, 0x82, 0x15, 0x61, 0x82, 0xdb, 0x03, 0x4a, 0x7a, 0xd1, 0x4d,
+	0xe3, 0x52, 0xc6, 0x17, 0x7f, 0x77, 0x71, 0xbc, 0x2d, 0xff, 0xe6, 0x39, 0xa1, 0x9f, 0xc1, 0x31,
+	0xcb, 0x87, 0xe9, 0x29, 0xcf, 0xbf, 0x9e, 0x57, 0xdf, 0xd1, 0xf1, 0xf4, 0x5f, 0xa1, 0xc6, 0x55,
+	0x24, 0x7f, 0xe9, 0x99, 0xd3, 0x7d, 0xf1, 0x37, 0x00, 0x00, 0xff, 0xff, 0xe1, 0x96, 0x6f, 0x50,
+	0xea, 0x03, 0x00, 0x00,
 }

@@ -145,10 +145,10 @@ func ReadFromRLP(appID string, usePreferredTags bool) <-chan *v2.Envelope {
 	receiver, err := client.Receiver(context.Background(), &v2.EgressRequest{
 		UsePreferredTags: usePreferredTags,
 		ShardId:          fmt.Sprint("shard-", time.Now().UnixNano()),
-		Filter: &v2.Filter{
+		LegacySelector: &v2.Selector{
 			SourceId: appID,
-			Message: &v2.Filter_Log{
-				Log: &v2.LogFilter{},
+			Message: &v2.Selector_Log{
+				Log: &v2.LogSelector{},
 			},
 		},
 	})
