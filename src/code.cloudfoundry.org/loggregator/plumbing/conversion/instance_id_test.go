@@ -114,11 +114,11 @@ var _ = Describe("Converting Instance IDs", func() {
 				Message: &v2.Envelope_Gauge{
 					Gauge: &v2.Gauge{
 						Metrics: map[string]*v2.GaugeValue{
-							"cpu":          {},
-							"memory":       {},
-							"disk":         {},
-							"memory_quota": {},
-							"disk_quota":   {},
+							"cpu":          {Unit: "percent"},
+							"memory":       {Unit: "percent"},
+							"disk":         {Unit: "percent"},
+							"memory_quota": {Unit: "bytes"},
+							"disk_quota":   {Unit: "bytes"},
 						},
 					},
 				},
@@ -134,11 +134,11 @@ var _ = Describe("Converting Instance IDs", func() {
 				Message: &v2.Envelope_Gauge{
 					Gauge: &v2.Gauge{
 						Metrics: map[string]*v2.GaugeValue{
-							"cpu":          {},
-							"memory":       {},
-							"disk":         {},
-							"memory_quota": {},
-							"disk_quota":   {},
+							"cpu":          {Unit: "percent"},
+							"memory":       {Unit: "percent"},
+							"disk":         {Unit: "percent"},
+							"memory_quota": {Unit: "bytes"},
+							"disk_quota":   {Unit: "bytes"},
 						},
 					},
 				},

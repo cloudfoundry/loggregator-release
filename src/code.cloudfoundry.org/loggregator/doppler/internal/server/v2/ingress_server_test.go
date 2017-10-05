@@ -4,6 +4,7 @@ import (
 	"io"
 	"sync"
 
+	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/doppler/internal/server/v2"
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
@@ -13,9 +14,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Ingress", func() {
+var _ = Describe("IngressServer", func() {
 	var (
-		mockDataSetter  *mockDataSetter
+		v1Buf           *diodes.ManyToOneEnvelope
+		v2Buf           *diodes.ManyToOneEnvelopeV2
 		mockSender      *mockDopplerIngress_SenderServer
 		mockBatchSender *mockBatcherSenderServer
 		healthRegistrar *SpyHealthRegistrar
@@ -24,13 +26,15 @@ var _ = Describe("Ingress", func() {
 	)
 
 	BeforeEach(func() {
-		mockDataSetter = newMockDataSetter()
+		v1Buf = diodes.NewManyToOneEnvelope(5, nil)
+		v2Buf = diodes.NewManyToOneEnvelopeV2(5, nil)
 		mockSender = newMockDopplerIngress_SenderServer()
 		mockBatchSender = newMockBatcherSenderServer()
 		healthRegistrar = newSpyHealthRegistrar()
 
 		ingestor = v2.NewIngressServer(
-			mockDataSetter,
+			v1Buf,
+			v2Buf,
 			SpyBatcher{},
 			testhelper.NewMetricClient(),
 			healthRegistrar,
@@ -62,10 +66,19 @@ var _ = Describe("Ingress", func() {
 		mockBatchSender.RecvOutput.Ret1 <- io.EOF
 
 		ingestor.BatchSender(mockBatchSender)
-		Expect(mockDataSetter.SetCalled).To(HaveLen(2))
+
+		_, ok := v1Buf.TryNext()
+		Expect(ok).To(BeTrue())
+		_, ok = v2Buf.TryNext()
+		Expect(ok).To(BeTrue())
+
+		_, ok = v1Buf.TryNext()
+		Expect(ok).To(BeTrue())
+		_, ok = v2Buf.TryNext()
+		Expect(ok).To(BeTrue())
 	})
 
-	It("writes the v2 envelope as a v1 envelope to data setter", func() {
+	It("writes a single envelope to the data setter", func() {
 		mockSender.RecvOutput.Ret0 <- &plumbing.Envelope{
 			Message: &plumbing.Envelope_Log{
 				Log: &plumbing.Log{
@@ -78,7 +91,11 @@ var _ = Describe("Ingress", func() {
 		mockSender.RecvOutput.Ret1 <- io.EOF
 
 		ingestor.Sender(mockSender)
-		Expect(mockDataSetter.SetCalled).To(HaveLen(1))
+
+		_, ok := v1Buf.TryNext()
+		Expect(ok).To(BeTrue())
+		_, ok = v2Buf.TryNext()
+		Expect(ok).To(BeTrue())
 	})
 
 	It("throws invalid envelopes on the ground", func() {
@@ -88,7 +105,8 @@ var _ = Describe("Ingress", func() {
 		mockSender.RecvOutput.Ret1 <- io.EOF
 
 		ingestor.Sender(mockSender)
-		Expect(mockDataSetter.SetCalled).To(HaveLen(0))
+		_, ok := v1Buf.TryNext()
+		Expect(ok).ToNot(BeTrue())
 	})
 
 	Describe("health monitoring", func() {

@@ -29,6 +29,7 @@ func NewServer(
 	v1Ingress plumbingv1.DopplerIngestorServer,
 	v1Egress plumbingv1.DopplerServer,
 	v2Ingress plumbingv2.DopplerIngressServer,
+	v2Egress plumbingv2.EgressServer,
 	srvOpts ...grpc.ServerOption,
 ) (*Server, error) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
@@ -42,6 +43,7 @@ func NewServer(
 	plumbingv1.RegisterDopplerIngestorServer(grpcServer, v1Ingress)
 	plumbingv1.RegisterDopplerServer(grpcServer, v1Egress)
 	plumbingv2.RegisterDopplerIngressServer(grpcServer, v2Ingress)
+	plumbingv2.RegisterEgressServer(grpcServer, v2Egress)
 
 	s := &Server{
 		listener:   lis,
@@ -73,7 +75,7 @@ func (g *Server) Stop() {
 	g.grpcServer.Stop()
 }
 
-// Addr provides the adress of the listener.
+// Addr provides the address of the listener.
 func (g *Server) Addr() string {
 	return g.listener.Addr().String()
 }

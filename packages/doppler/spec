@@ -5,6 +5,8 @@ dependencies:
 files:
 - loggregator/src/code.cloudfoundry.org/batching/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/diodes/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/go-pubsub/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/go-pubsub/internal/node/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/diodes/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/*.go # gosub
@@ -21,6 +23,7 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/healthendpoint/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/plumbing/batching/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/conversion/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/profiler/*.go # gosub

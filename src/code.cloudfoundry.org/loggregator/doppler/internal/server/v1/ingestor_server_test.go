@@ -12,13 +12,15 @@ import (
 	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/doppler/internal/server/v1"
 	"code.cloudfoundry.org/loggregator/plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing/conversion"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/sonde-go/events"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("IngestorManager", func() {
+var _ = Describe("IngestorServer", func() {
 	var startGRPCServer = func(ds plumbing.DopplerIngestorServer) (*grpc.Server, string) {
 		lis, err := net.Listen("tcp", ":0")
 		Expect(err).ToNot(HaveOccurred())
@@ -38,7 +40,8 @@ var _ = Describe("IngestorManager", func() {
 	}
 
 	var (
-		outgoingMsgs    *diodes.ManyToOneEnvelope
+		v1Buf           *diodes.ManyToOneEnvelope
+		v2Buf           *diodes.ManyToOneEnvelopeV2
 		manager         *v1.IngestorServer
 		server          *grpc.Server
 		connCloser      io.Closer
@@ -48,14 +51,15 @@ var _ = Describe("IngestorManager", func() {
 
 	BeforeEach(func() {
 		var grpcAddr string
-		outgoingMsgs = diodes.NewManyToOneEnvelope(5, nil)
+		v1Buf = diodes.NewManyToOneEnvelope(5, nil)
+		v2Buf = diodes.NewManyToOneEnvelopeV2(5, nil)
 		mockBatcher := newSpyBatcher()
 		mockChainer := newSpyBatchCounterChainer()
 		mockBatcher.batchCounter = mockChainer
 		mockChainer.setTag = mockChainer
 		healthRegistrar = newSpyHealthRegistrar()
 
-		manager = v1.NewIngestorServer(outgoingMsgs, mockBatcher, healthRegistrar)
+		manager = v1.NewIngestorServer(v1Buf, v2Buf, mockBatcher, healthRegistrar)
 		server, grpcAddr = startGRPCServer(manager)
 		dopplerClient, connCloser = establishClient(grpcAddr)
 	})
@@ -65,14 +69,33 @@ var _ = Describe("IngestorManager", func() {
 		connCloser.Close()
 	})
 
-	It("reads envelopes from ingestor client", func() {
+	It("reads envelopes from ingestor client into the v1 Buffer", func() {
 		pusherClient, err := dopplerClient.Pusher(context.TODO())
 		Expect(err).ToNot(HaveOccurred())
 
 		someEnvelope, data := buildContainerMetric()
 		pusherClient.Send(&plumbing.EnvelopeData{data})
 
-		Eventually(outgoingMsgs.Next).Should(Equal(someEnvelope))
+		f := func() *events.Envelope {
+			env, ok := v1Buf.TryNext()
+			if !ok {
+				return nil
+			}
+
+			return env
+		}
+		Eventually(f).Should(Equal(someEnvelope))
+	})
+
+	It("reads envelopes from ingestor client into the v2 Buffer", func() {
+		pusherClient, err := dopplerClient.Pusher(context.TODO())
+		Expect(err).ToNot(HaveOccurred())
+
+		someEnvelope, data := buildContainerMetric()
+		pusherClient.Send(&plumbing.EnvelopeData{data})
+
+		v2e := conversion.ToV2(someEnvelope, true)
+		Eventually(v2Buf.Next).Should(Equal(v2e))
 	})
 
 	Describe("health monitoring", func() {
@@ -103,14 +126,14 @@ var _ = Describe("IngestorManager", func() {
 			err = pusherClient.Send(&plumbing.EnvelopeData{[]byte("unsupported envelope")})
 			Expect(err).ToNot(HaveOccurred())
 			Consistently(func() bool {
-				_, ok := outgoingMsgs.TryNext()
+				_, ok := v1Buf.TryNext()
 				return ok
 			}).Should(BeFalse())
 
 			err = pusherClient.Send(&plumbing.EnvelopeData{nil})
 			Expect(err).ToNot(HaveOccurred())
 			Consistently(func() bool {
-				_, ok := outgoingMsgs.TryNext()
+				_, ok := v1Buf.TryNext()
 				return ok
 			}).Should(BeFalse())
 		})
@@ -125,7 +148,7 @@ var _ = Describe("IngestorManager", func() {
 				return manager.Pusher(fakeStream)
 			}).Should(Succeed())
 			Consistently(func() bool {
-				_, ok := outgoingMsgs.TryNext()
+				_, ok := v1Buf.TryNext()
 				return ok
 			}).Should(BeFalse())
 		})
@@ -138,7 +161,7 @@ var _ = Describe("IngestorManager", func() {
 
 			go manager.Pusher(fakeStream)
 			Consistently(func() bool {
-				_, ok := outgoingMsgs.TryNext()
+				_, ok := v1Buf.TryNext()
 				return ok
 			}).Should(BeFalse())
 		})

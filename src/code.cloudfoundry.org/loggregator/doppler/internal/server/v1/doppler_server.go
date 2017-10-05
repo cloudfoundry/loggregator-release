@@ -217,6 +217,8 @@ func (m *DopplerServer) sendBatchData(req *plumbing.SubscriptionRequest, sender 
 			}
 
 			batcher.Write(data)
+
+			// TODO Send loggregator.doppler.egress metric
 		}
 	}
 }

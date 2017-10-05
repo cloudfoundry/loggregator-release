@@ -26,7 +26,7 @@ var _ = Describe("Firehose test", func() {
 			defer dopplerCleanup()
 			ingressCleanup, ingressClient := dopplerIngressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer ingressCleanup()
-			egressCleanup, egressClient := dopplerEgressClient(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
+			egressCleanup, egressClient := dopplerEgressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer egressCleanup()
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -73,7 +73,7 @@ var _ = Describe("Firehose test", func() {
 			defer dopplerCleanup()
 			ingressCleanup, ingressClient := dopplerIngressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer ingressCleanup()
-			egressCleanup, egressClient := dopplerEgressClient(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
+			egressCleanup, egressClient := dopplerEgressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer egressCleanup()
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -120,7 +120,7 @@ var _ = Describe("Firehose test", func() {
 			defer dopplerCleanup()
 			ingressCleanup, ingressClient := dopplerIngressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer ingressCleanup()
-			egressCleanup, egressClient := dopplerEgressClient(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
+			egressCleanup, egressClient := dopplerEgressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer egressCleanup()
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -172,7 +172,7 @@ var _ = Describe("Firehose test", func() {
 			defer dopplerCleanup()
 			ingressCleanup, ingressClient := dopplerIngressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer ingressCleanup()
-			egressCleanup, egressClient := dopplerEgressClient(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
+			egressCleanup, egressClient := dopplerEgressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer egressCleanup()
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -220,7 +220,7 @@ var _ = Describe("Firehose test", func() {
 			defer dopplerCleanup()
 			ingressCleanup, ingressClient := dopplerIngressV2Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer ingressCleanup()
-			egressCleanup, egressClient := dopplerEgressClient(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
+			egressCleanup, egressClient := dopplerEgressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer egressCleanup()
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -283,7 +283,7 @@ var _ = Describe("Firehose test", func() {
 			defer dopplerCleanup()
 			ingressCleanup, ingressClient := dopplerIngressV2Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer ingressCleanup()
-			egressCleanup, egressClient := dopplerEgressClient(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
+			egressCleanup, egressClient := dopplerEgressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer egressCleanup()
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

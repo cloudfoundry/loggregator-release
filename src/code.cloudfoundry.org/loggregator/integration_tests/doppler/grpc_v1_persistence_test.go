@@ -27,7 +27,7 @@ var _ = Describe("Persistence", func() {
 			defer dopplerCleanup()
 			ingressCleanup, ingressClient := dopplerIngressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer ingressCleanup()
-			egressCleanup, egressClient := dopplerEgressClient(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
+			egressCleanup, egressClient := dopplerEgressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer egressCleanup()
 
 			containerMetric := factories.NewContainerMetric("some-test-app-id", 0, 1, 2, 3)
@@ -51,7 +51,7 @@ var _ = Describe("Persistence", func() {
 			defer dopplerCleanup()
 			ingressCleanup, ingressClient := dopplerIngressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer ingressCleanup()
-			egressCleanup, egressClient := dopplerEgressClient(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
+			egressCleanup, egressClient := dopplerEgressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer egressCleanup()
 
 			containerMetric := factories.NewContainerMetric("some-test-app-id", 0, 100, 2, 3)
@@ -81,7 +81,7 @@ var _ = Describe("Persistence", func() {
 			defer dopplerCleanup()
 			ingressCleanup, ingressClient := dopplerIngressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer ingressCleanup()
-			egressCleanup, egressClient := dopplerEgressClient(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
+			egressCleanup, egressClient := dopplerEgressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer egressCleanup()
 
 			containerMetric := factories.NewContainerMetric("some-test-app-id", 0, 10, 2, 3)
@@ -109,7 +109,7 @@ var _ = Describe("Persistence", func() {
 			defer dopplerCleanup()
 			ingressCleanup, ingressClient := dopplerIngressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer ingressCleanup()
-			egressCleanup, egressClient := dopplerEgressClient(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
+			egressCleanup, egressClient := dopplerEgressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer egressCleanup()
 
 			logMessage := factories.NewLogMessage(events.LogMessage_OUT, "msg 1", "some-test-app-id", "APP")
@@ -132,7 +132,7 @@ var _ = Describe("Persistence", func() {
 			defer dopplerCleanup()
 			ingressCleanup, ingressClient := dopplerIngressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer ingressCleanup()
-			egressCleanup, egressClient := dopplerEgressClient(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
+			egressCleanup, egressClient := dopplerEgressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer egressCleanup()
 
 			logMessage0 := factories.NewLogMessage(events.LogMessage_OUT, "msg 1", "some-test-app-id", "APP")
@@ -159,7 +159,7 @@ var _ = Describe("Persistence", func() {
 			defer dopplerCleanup()
 			ingressCleanup, ingressClient := dopplerIngressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer ingressCleanup()
-			egressCleanup, egressClient := dopplerEgressClient(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
+			egressCleanup, egressClient := dopplerEgressV1Client(fmt.Sprintf("localhost:%d", dopplerPorts.GRPC))
 			defer egressCleanup()
 
 			for i := 0; i < 15; i++ {

@@ -146,16 +146,22 @@ func (d *Doppler) Start() {
 	// Ingress (gRPC v1 and v2)
 	// Egress  (gRPC v1)
 	//------------------------------
-	droppedMetric := metricClient.NewCounter("dropped",
+	droppedMetric := metricClient.NewCounter(
+		"dropped",
 		metricemitter.WithVersion(2, 0),
 		metricemitter.WithTags(map[string]string{"direction": "ingress"}),
 	)
 
 	v1Buf := diodes.NewManyToOneEnvelope(10000, gendiodes.AlertFunc(func(missed int) {
-		log.Printf("Shed %d envelopes", missed)
+		log.Printf("Shed %d envelopes (v1 buffer)", missed)
+
 		// metric-documentation-v1: (doppler.shedEnvelopes) Number of envelopes dropped by the
 		// diode inbound from metron
 		metricBatcher.BatchCounter("doppler.shedEnvelopes").Add(uint64(missed))
+	}))
+
+	v2Buf := diodes.NewManyToOneEnvelopeV2(10000, gendiodes.AlertFunc(func(missed int) {
+		log.Printf("Dropped %d envelopes (v2 buffer)", missed)
 
 		// metric-documentation-v2: (loggregator.doppler.dropped) Number of envelopes dropped by the
 		// diode inbound from metron
@@ -164,12 +170,13 @@ func (d *Doppler) Start() {
 
 	v1Ingress := v1.NewIngestorServer(
 		v1Buf,
+		v2Buf,
 		metricBatcher,
 		healthRegistrar,
 	)
-	grpcRouter := v1.NewRouter()
+	v1Router := v1.NewRouter()
 	v1Egress := v1.NewDopplerServer(
-		grpcRouter,
+		v1Router,
 		sinkManager,
 		metricClient,
 		healthRegistrar,
@@ -178,9 +185,17 @@ func (d *Doppler) Start() {
 	)
 	v2Ingress := v2.NewIngressServer(
 		v1Buf,
+		v2Buf,
 		metricBatcher,
 		metricClient,
 		healthRegistrar,
+	)
+	v2PubSub := v2.NewPubSub()
+	v2Egress := v2.NewEgressServer(
+		v2PubSub,
+		healthRegistrar,
+		time.Second,
+		100,
 	)
 
 	var opts []plumbing.ConfigOption
@@ -201,6 +216,7 @@ func (d *Doppler) Start() {
 		v1Ingress,
 		v1Egress,
 		v2Ingress,
+		v2Egress,
 		grpc.Creds(credentials.NewTLS(tlsConfig)),
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			MinTime:             10 * time.Second,
@@ -243,8 +259,13 @@ func (d *Doppler) Start() {
 	// Start
 	//------------------------------
 	go sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
-	messageRouter := sinkserver.NewMessageRouter(sinkManager, grpcRouter)
+
+	messageRouter := sinkserver.NewMessageRouter(sinkManager, v1Router)
 	go messageRouter.Start(v1Buf)
+
+	repeater := v2.NewRepeater(v2Buf.Next, v2PubSub.Publish)
+	go repeater.Start()
+
 	go d.server.Start()
 
 	log.Print("Startup: doppler server started.")
@@ -382,5 +403,4 @@ func initHealthRegistrar(r prometheus.Registerer) *healthendpoint.Registrar {
 			},
 		),
 	})
-
 }

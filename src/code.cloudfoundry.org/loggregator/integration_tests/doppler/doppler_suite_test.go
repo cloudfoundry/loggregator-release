@@ -71,7 +71,7 @@ func buildLogMessage() []byte {
 	return b
 }
 
-func dopplerEgressClient(addr string) (func(), plumbing.DopplerClient) {
+func dopplerEgressV1Client(addr string) (func(), plumbing.DopplerClient) {
 	creds, err := plumbing.NewClientCredentials(
 		testservers.Cert("doppler.crt"),
 		testservers.Cert("doppler.key"),
@@ -85,6 +85,22 @@ func dopplerEgressClient(addr string) (func(), plumbing.DopplerClient) {
 	return func() {
 		_ = out.Close()
 	}, plumbing.NewDopplerClient(out)
+}
+
+func dopplerEgressV2Client(addr string) (func(), loggregator_v2.EgressClient) {
+	creds, err := plumbing.NewClientCredentials(
+		testservers.Cert("doppler.crt"),
+		testservers.Cert("doppler.key"),
+		testservers.Cert("loggregator-ca.crt"),
+		"doppler",
+	)
+	Expect(err).ToNot(HaveOccurred())
+
+	out, err := grpc.Dial(addr, grpc.WithTransportCredentials(creds))
+	Expect(err).ToNot(HaveOccurred())
+	return func() {
+		_ = out.Close()
+	}, loggregator_v2.NewEgressClient(out)
 }
 
 func dopplerIngressV1Client(addr string) (func(), plumbing.DopplerIngestor_PusherClient) {

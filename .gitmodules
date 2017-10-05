@@ -115,3 +115,6 @@
 [submodule "src/code.cloudfoundry.org/diodes"]
 	path = src/code.cloudfoundry.org/diodes
 	url = https://github.com/cloudfoundry/diodes
+[submodule "src/code.cloudfoundry.org/go-pubsub"]
+	path = src/code.cloudfoundry.org/go-pubsub
+	url = https://github.com/cloudfoundry-incubator/go-pubsub

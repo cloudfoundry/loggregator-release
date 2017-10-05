@@ -1,13 +1,15 @@
 package v2
 
 import (
-	"code.cloudfoundry.org/loggregator/doppler/internal/server/v1"
+	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing/conversion"
 	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 )
 
+// HealthRegistrar describes the health interface for keeping track of various
+// values.
 type HealthRegistrar interface {
 	Inc(name string)
 	Dec(name string)
@@ -22,7 +24,8 @@ type Batcher interface {
 }
 
 type IngressServer struct {
-	buf           v1.EnvelopeBuffer
+	v1Buf         *diodes.ManyToOneEnvelope
+	v2Buf         *diodes.ManyToOneEnvelopeV2
 	batcher       Batcher
 	ingressMetric *metricemitter.Counter
 	health        HealthRegistrar
@@ -34,7 +37,8 @@ type MetricClient interface {
 }
 
 func NewIngressServer(
-	buf v1.EnvelopeBuffer,
+	v1Buf *diodes.ManyToOneEnvelope,
+	v2Buf *diodes.ManyToOneEnvelopeV2,
 	batcher Batcher,
 	metricClient MetricClient,
 	health HealthRegistrar,
@@ -44,7 +48,8 @@ func NewIngressServer(
 	)
 
 	return &IngressServer{
-		buf:           buf,
+		v1Buf:         v1Buf,
+		v2Buf:         v2Buf,
 		batcher:       batcher,
 		ingressMetric: ingressMetric,
 		health:        health,
@@ -62,13 +67,15 @@ func (i IngressServer) BatchSender(s plumbing.DopplerIngress_BatchSenderServer) 
 		}
 
 		for _, v2e := range v2eBatch.Batch {
+			i.v2Buf.Set(v2e)
 			envelopes := conversion.ToV1(v2e)
+
 			for _, v1e := range envelopes {
 				if v1e == nil || v1e.EventType == nil {
 					continue
 				}
 
-				i.buf.Set(v1e)
+				i.v1Buf.Set(v1e)
 
 				// metric-documentation-v1: (listeners.totalReceivedMessageCount)
 				// Total number of messages received by doppler.
@@ -84,7 +91,7 @@ func (i IngressServer) BatchSender(s plumbing.DopplerIngress_BatchSenderServer) 
 }
 
 // TODO Remove the Sender method onces we are certain all Metrons are using
-// the BstchSender method
+// the BatchSender method
 func (i IngressServer) Sender(s plumbing.DopplerIngress_SenderServer) error {
 	i.health.Inc("ingressStreamCount")
 	defer i.health.Dec("ingressStreamCount")
@@ -95,13 +102,15 @@ func (i IngressServer) Sender(s plumbing.DopplerIngress_SenderServer) error {
 			return err
 		}
 
+		i.v2Buf.Set(v2e)
 		envelopes := conversion.ToV1(v2e)
+
 		for _, v1e := range envelopes {
 			if v1e == nil || v1e.EventType == nil {
 				continue
 			}
 
-			i.buf.Set(v1e)
+			i.v1Buf.Set(v1e)
 
 			// metric-documentation-v1: (listeners.totalReceivedMessageCount)
 			// Total number of messages received by doppler.

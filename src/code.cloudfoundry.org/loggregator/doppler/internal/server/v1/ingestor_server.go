@@ -7,14 +7,17 @@ import (
 	"sync/atomic"
 	"time"
 
+	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing/conversion"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
 
 type IngestorServer struct {
-	buf     EnvelopeBuffer
+	v1Buf   *diodes.ManyToOneEnvelope
+	v2Buf   *diodes.ManyToOneEnvelopeV2
 	batcher Batcher
 	health  HealthRegistrar
 }
@@ -27,18 +30,16 @@ type IngestorGRPCServer interface {
 	plumbing.DopplerIngestor_PusherServer
 }
 
-type EnvelopeBuffer interface {
-	Set(e *events.Envelope)
-}
-
 func NewIngestorServer(
-	buf EnvelopeBuffer,
+	v1Buf *diodes.ManyToOneEnvelope,
+	v2Buf *diodes.ManyToOneEnvelopeV2,
 	batcher Batcher,
 	health HealthRegistrar,
 ) *IngestorServer {
 
 	return &IngestorServer{
-		buf:     buf,
+		v1Buf:   v1Buf,
+		v2Buf:   v2Buf,
 		batcher: batcher,
 		health:  health,
 	}
@@ -77,7 +78,10 @@ func (i *IngestorServer) Pusher(pusher plumbing.DopplerIngestor_PusherServer) er
 			SetTag("protocol", "grpc").
 			SetTag("event_type", env.GetEventType().String()).
 			Increment()
-		i.buf.Set(env)
+
+		v2e := conversion.ToV2(env, true)
+		i.v1Buf.Set(env)
+		i.v2Buf.Set(v2e)
 
 		// metric-documentation-v1: (listeners.totalReceivedMessageCount) Total
 		// number of messages received by doppler.

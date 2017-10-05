@@ -13,10 +13,10 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-// ToV1 converts v2 envelopes down to v1 envelopes. e may be mutated during
-// the conversion and share pointers with the new v1 envelope for efficiency
-// in creating the v1 envelope. As a result the envelope you pass in should no
-// longer be used.
+// ToV1 converts v2 envelopes down to v1 envelopes. The v2 Envelope may be
+// mutated during the conversion and share pointers with the new v1 envelope
+// for efficiency in creating the v1 envelope. As a result the envelope you
+// pass in should no longer be used.
 func ToV1(e *v2.Envelope) []*events.Envelope {
 	var envelopes []*events.Envelope
 	switch (e.Message).(type) {
@@ -215,7 +215,7 @@ func convertGauge(v2e *v2.Envelope) []*events.Envelope {
 }
 
 func extractGaugeValues(metric *v2.GaugeValue) (string, float64, bool) {
-	if metric == nil {
+	if metric == nil || (metric.Unit == "" && metric.Value == 0) {
 		return "", 0, false
 	}
 
@@ -251,7 +251,7 @@ func tryConvertContainerMetric(v2e *v2.Envelope) *events.Envelope {
 	}
 
 	for _, req := range required {
-		if v, ok := gaugeEvent.Metrics[req]; !ok || v == nil {
+		if v, ok := gaugeEvent.Metrics[req]; !ok || v == nil || (v.Unit == "" && v.Value == 0) {
 			return nil
 		}
 	}

@@ -11,7 +11,6 @@ import (
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/cloudfoundry/sonde-go/events"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -151,24 +150,6 @@ func (m *mockBatcher) BatchCounter(name string) metricbatcher.BatchCounterChaine
 	m.BatchCounterCalled <- true
 	m.BatchCounterInput.Name <- name
 	return <-m.BatchCounterOutput.Ret0
-}
-
-type mockDataSetter struct {
-	SetCalled chan bool
-	SetInput  struct {
-		Data chan *events.Envelope
-	}
-}
-
-func newMockDataSetter() *mockDataSetter {
-	m := &mockDataSetter{}
-	m.SetCalled = make(chan bool, 100)
-	m.SetInput.Data = make(chan *events.Envelope, 100)
-	return m
-}
-func (m *mockDataSetter) Set(data *events.Envelope) {
-	m.SetCalled <- true
-	m.SetInput.Data <- data
 }
 
 type mockBatcherSenderServer struct {

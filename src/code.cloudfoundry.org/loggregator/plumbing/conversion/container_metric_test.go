@@ -73,11 +73,11 @@ var _ = Describe("ContainerMetric", func() {
 								Unit:  "",
 								Value: 19,
 							},
-							"cpu":          {},
-							"memory":       {},
-							"disk":         {},
-							"memory_quota": {},
-							"disk_quota":   {},
+							"cpu":          {Unit: "percent"},
+							"memory":       {Unit: "percent"},
+							"disk":         {Unit: "percent"},
+							"memory_quota": {Unit: "bytes"},
+							"disk_quota":   {Unit: "bytes"},
 						},
 					},
 				},
@@ -100,7 +100,7 @@ var _ = Describe("ContainerMetric", func() {
 		})
 
 		DescribeTable("it is resilient to malformed envelopes", func(v2e *v2.Envelope) {
-			Expect(conversion.ToV1(v2e)).To(BeNil())
+			Expect(conversion.ToV1(v2e)).To(HaveLen(0))
 		},
 			Entry("bare envelope", &v2.Envelope{}),
 			Entry("with empty fields", &v2.Envelope{
