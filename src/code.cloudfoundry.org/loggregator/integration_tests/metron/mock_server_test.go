@@ -1,13 +1,11 @@
-package component_test
+package metron_test
 
 import (
 	"net"
 
 	"code.cloudfoundry.org/loggregator/plumbing"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
-
 	"code.cloudfoundry.org/loggregator/testservers"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )

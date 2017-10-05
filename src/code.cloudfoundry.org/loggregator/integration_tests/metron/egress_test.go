@@ -16,8 +16,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("communicating with doppler", func() {
-	It("forwards messages via gRPC", func() {
+var _ = Describe("Metron", func() {
+	It("writes downstream via gRPC", func() {
 		etcdCleanup, etcdClientURL := testservers.StartTestEtcd()
 		defer etcdCleanup()
 		dopplerCleanup, dopplerPorts := testservers.StartDoppler(

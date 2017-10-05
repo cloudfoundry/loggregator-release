@@ -1,15 +1,18 @@
 package metron_test
 
 import (
+	"log"
 	"testing"
 
 	"code.cloudfoundry.org/loggregator/integration_tests/binaries"
+	"google.golang.org/grpc/grpclog"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 func TestMetron(t *testing.T) {
+	grpclog.SetLogger(log.New(GinkgoWriter, "", log.LstdFlags))
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Metron Integration Test Suite")
 }

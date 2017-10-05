@@ -1,4 +1,4 @@
-package component_test
+package metron_test
 
 import (
 	"context"
@@ -8,20 +8,17 @@ import (
 	"strings"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/testservers"
-
 	"code.cloudfoundry.org/loggregator/plumbing"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
-
+	"code.cloudfoundry.org/loggregator/testservers"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 var _ = Describe("Metron", func() {

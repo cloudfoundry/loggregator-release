@@ -1,4 +1,4 @@
-package component_test
+package metron_test
 
 import (
 	"fmt"
