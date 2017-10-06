@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver"
+	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
 )
 
 const HeartbeatInterval = 10 * time.Second
@@ -34,7 +34,7 @@ type GRPC struct {
 type Config struct {
 	DisableSyslogDrains             bool
 	DisableAnnounce                 bool
-	BlackListIps                    []sinkserver.IPRange
+	BlackListIps                    []sinks.IPRange
 	ContainerMetricTTLSeconds       int
 	EtcdMaxConcurrentRequests       int
 	EtcdUrls                        []string
@@ -75,7 +75,7 @@ func (c *Config) validate() (err error) {
 	}
 
 	if c.BlackListIps != nil {
-		err = sinkserver.ValidateIpAddresses(c.BlackListIps)
+		err = sinks.ValidateIpAddresses(c.BlackListIps)
 		if err != nil {
 			return err
 		}

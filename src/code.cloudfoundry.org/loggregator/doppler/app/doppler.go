@@ -10,8 +10,7 @@ import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/server"
 	"code.cloudfoundry.org/loggregator/doppler/internal/server/v1"
 	"code.cloudfoundry.org/loggregator/doppler/internal/server/v2"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver"
-	"code.cloudfoundry.org/loggregator/doppler/internal/store"
+	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
 	"code.cloudfoundry.org/loggregator/dopplerservice"
 	"code.cloudfoundry.org/loggregator/healthendpoint"
 	"code.cloudfoundry.org/loggregator/metricemitter"
@@ -127,10 +126,10 @@ func (d *Doppler) Start() {
 	// - recent logs
 	// - container metrics
 	//------------------------------
-	sinkManager := sinkserver.NewSinkManager(
+	sinkManager := sinks.NewSinkManager(
 		d.c.MaxRetainedLogMessages,
 		d.c.SinkSkipCertVerify,
-		sinkserver.NewBlackListManager(d.c.BlackListIps),
+		sinks.NewBlackListManager(d.c.BlackListIps),
 		d.c.MessageDrainBufferSize,
 		"DopplerServer",
 		time.Duration(d.c.SinkInactivityTimeoutSeconds)*time.Second,
@@ -237,9 +236,9 @@ func (d *Doppler) Start() {
 	if !d.c.DisableAnnounce || !d.c.DisableSyslogDrains {
 		storeAdapter = connectToEtcd(d.c)
 	}
-	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(
+	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := sinks.NewAppServiceStoreWatcher(
 		storeAdapter,
-		store.NewAppServiceCache(),
+		sinks.NewAppServiceCache(),
 	)
 	if !d.c.DisableAnnounce {
 		serviceConfig := &dopplerservice.Config{
@@ -260,7 +259,7 @@ func (d *Doppler) Start() {
 	//------------------------------
 	go sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
 
-	messageRouter := sinkserver.NewMessageRouter(sinkManager, v1Router)
+	messageRouter := sinks.NewMessageRouter(sinkManager, v1Router)
 	go messageRouter.Start(v1Buf)
 
 	repeater := v2.NewRepeater(v2Buf.Next, v2PubSub.Publish)
