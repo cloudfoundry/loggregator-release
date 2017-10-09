@@ -57,7 +57,7 @@ func (p *PubSub) Subscribe(
 ) (unsubscribe func()) {
 	if len(req.GetSelectors()) < 1 {
 		return p.pubsub.Subscribe(
-			subscription(setter),
+			subscription("", setter),
 			pubsub.WithShardID(req.GetShardId()),
 		)
 	}
@@ -65,7 +65,7 @@ func (p *PubSub) Subscribe(
 	var unsubscribes []func()
 	for _, s := range req.GetSelectors() {
 		unsubscribes = append(unsubscribes, p.pubsub.Subscribe(
-			subscription(setter),
+			subscription(s.GetSourceId(), setter),
 			pubsub.WithShardID(req.GetShardId()),
 			pubsub.WithPath(envelopeTraverserCreatePath(buildFilter(s))),
 		))
@@ -78,9 +78,17 @@ func (p *PubSub) Subscribe(
 	}
 }
 
-func subscription(d DataSetter) pubsub.Subscription {
+func subscription(sourceID string, d DataSetter) pubsub.Subscription {
 	return func(data interface{}) {
 		e := data.(*loggregator_v2.Envelope)
+
+		// This is protection against a hash collision.
+		// If we knew of two strings that have the same crc64 hash, then
+		// we could write a test. Until then, this block remains untested.
+		if sourceID != "" && sourceID != e.GetSourceId() {
+			return
+		}
+
 		d.Set(e)
 	}
 }
