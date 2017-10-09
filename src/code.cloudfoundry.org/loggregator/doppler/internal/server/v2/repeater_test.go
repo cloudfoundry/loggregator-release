@@ -18,7 +18,7 @@ var _ = Describe("Repeater", func() {
 		sendFn := func(e *loggregator_v2.Envelope) {
 			sendStream <- e
 		}
-		r := v2.NewRepeater(nextFn, sendFn)
+		r := v2.NewRepeater(sendFn, nextFn)
 
 		go r.Start()
 

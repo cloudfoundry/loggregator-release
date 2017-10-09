@@ -262,7 +262,7 @@ func (d *Doppler) Start() {
 	messageRouter := sinks.NewMessageRouter(sinkManager, v1Router)
 	go messageRouter.Start(v1Buf)
 
-	repeater := v2.NewRepeater(v2Buf.Next, v2PubSub.Publish)
+	repeater := v2.NewRepeater(v2PubSub.Publish, v2Buf.Next)
 	go repeater.Start()
 
 	go d.server.Start()
