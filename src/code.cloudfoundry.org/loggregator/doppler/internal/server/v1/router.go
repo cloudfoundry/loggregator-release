@@ -53,9 +53,6 @@ func (r *Router) Register(req *plumbing.SubscriptionRequest, dataSetter DataSett
 
 // SendTo sends an envelope for an application to all registered DataSetters.
 func (r *Router) SendTo(appID string, envelope *events.Envelope) {
-	r.lock.RLock()
-	defer r.lock.RUnlock()
-
 	data := r.marshal(envelope)
 
 	if data == nil {
@@ -63,6 +60,10 @@ func (r *Router) SendTo(appID string, envelope *events.Envelope) {
 	}
 
 	typedFilters := r.createTypedFilters(appID, envelope)
+
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
 	for _, typedFilter := range typedFilters {
 		for id, setters := range r.subscriptions[typedFilter] {
 			r.writeToShard(id, setters, data)
