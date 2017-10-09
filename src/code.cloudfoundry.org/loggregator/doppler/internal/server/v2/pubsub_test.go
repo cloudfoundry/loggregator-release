@@ -118,6 +118,11 @@ var _ = Describe("PubSub", func() {
 					Timer: &loggregator_v2.TimerSelector{},
 				},
 			}, &loggregator_v2.Envelope_Timer{}),
+			Entry("Event", &loggregator_v2.Selector{
+				Message: &loggregator_v2.Selector_Event{
+					Event: &loggregator_v2.EventSelector{},
+				},
+			}, &loggregator_v2.Envelope_Event{}),
 		)
 
 		It("selects all types with no selector", func() {
@@ -127,7 +132,7 @@ var _ = Describe("PubSub", func() {
 			pubsub.Subscribe(req, setter)
 			publishAllTypes(pubsub, "some-id")
 
-			Expect(setter.envelopes).To(HaveLen(4))
+			Expect(setter.envelopes).To(HaveLen(5))
 		})
 
 		It("selects by source ID", func() {
@@ -142,7 +147,7 @@ var _ = Describe("PubSub", func() {
 			publishAllTypes(pubsub, "a")
 			publishAllTypes(pubsub, "b")
 
-			Expect(setter.envelopes).To(HaveLen(4))
+			Expect(setter.envelopes).To(HaveLen(5))
 		})
 
 		It("supports multiple selectors", func() {
@@ -234,7 +239,7 @@ var _ = Describe("PubSub", func() {
 			publishAllTypes(pubsub, "b")
 
 			Expect(setter1.envelopes).To(HaveLen(2))
-			Expect(setter2.envelopes).To(HaveLen(4))
+			Expect(setter2.envelopes).To(HaveLen(5))
 		})
 	})
 })
@@ -263,6 +268,7 @@ func publishAllTypes(pubsub *v2.PubSub, id string) {
 	pubsub.Publish(buildCounter(id))
 	pubsub.Publish(buildGauge(id))
 	pubsub.Publish(buildTimer(id))
+	pubsub.Publish(buildEvent(id))
 }
 
 func buildLog(id string) *loggregator_v2.Envelope {
@@ -314,6 +320,18 @@ func buildTimer(id string) *loggregator_v2.Envelope {
 				Name:  "my-time",
 				Start: 1234,
 				Stop:  123454,
+			},
+		},
+	}
+}
+
+func buildEvent(id string) *loggregator_v2.Envelope {
+	return &loggregator_v2.Envelope{
+		SourceId: id,
+		Message: &loggregator_v2.Envelope_Event{
+			Event: &loggregator_v2.Event{
+				Title: "some-title",
+				Body:  "some-body",
 			},
 		},
 	}

@@ -20,6 +20,7 @@ It has these top-level messages:
 	GaugeSelector
 	CounterSelector
 	TimerSelector
+	EventSelector
 	ContainerMetricRequest
 	QueryResponse
 	Envelope

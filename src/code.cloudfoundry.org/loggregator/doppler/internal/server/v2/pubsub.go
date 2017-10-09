@@ -101,6 +101,8 @@ func buildFilter(s *loggregator_v2.Selector) *EnvelopeFilter {
 		f.Message_Envelope_Gauge = &Envelope_GaugeFilter{}
 	case *loggregator_v2.Selector_Timer:
 		f.Message_Envelope_Timer = &Envelope_TimerFilter{}
+	case *loggregator_v2.Selector_Event:
+		f.Message_Envelope_Event = &Envelope_EventFilter{}
 	}
 
 	return f

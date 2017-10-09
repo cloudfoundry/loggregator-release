@@ -1,10 +1,9 @@
 package v2
 
 import (
-	"hash/crc64"
-
 	"code.cloudfoundry.org/go-pubsub"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
+	"hash/crc64"
 )
 
 func envelopeTraverserTraverse(data interface{}) pubsub.Paths {
@@ -62,19 +61,23 @@ func ___Message(idx int, data interface{}) (path uint64, nextTraverser pubsub.Tr
 
 	case 0:
 		switch data.(*v2.Envelope).Message.(type) {
+		case *v2.Envelope_Timer:
+			// Interface implementation with no fields
+			return 5, pubsub.TreeTraverser(done), true
+
+		case *v2.Envelope_Event:
+			// Interface implementation with no fields
+			return 2, pubsub.TreeTraverser(done), true
+
+		case *v2.Envelope_Log:
+			// Interface implementation with no fields
+			return 4, pubsub.TreeTraverser(done), true
+
 		case *v2.Envelope_Counter:
 			// Interface implementation with no fields
 			return 1, pubsub.TreeTraverser(done), true
 
 		case *v2.Envelope_Gauge:
-			// Interface implementation with no fields
-			return 2, pubsub.TreeTraverser(done), true
-
-		case *v2.Envelope_Timer:
-			// Interface implementation with no fields
-			return 4, pubsub.TreeTraverser(done), true
-
-		case *v2.Envelope_Log:
 			// Interface implementation with no fields
 			return 3, pubsub.TreeTraverser(done), true
 
@@ -295,12 +298,94 @@ func _Message_Envelope_Timer_Timer(data interface{}) pubsub.Paths {
 	})
 }
 
+func _Message_Envelope_Event(data interface{}) pubsub.Paths {
+
+	return pubsub.Paths(func(idx int, data interface{}) (path uint64, nextTraverser pubsub.TreeTraverser, ok bool) {
+		switch idx {
+		case 0:
+			return 1, pubsub.TreeTraverser(done), true
+		default:
+			return 0, nil, false
+		}
+	})
+}
+
+func ___Message_Envelope_Event_Event(idx int, data interface{}) (path uint64, nextTraverser pubsub.TreeTraverser, ok bool) {
+	switch idx {
+
+	case 0:
+
+		if data.(*v2.Envelope).Message.(*v2.Envelope_Event).Event == nil {
+			return 0, pubsub.TreeTraverser(done), true
+		}
+
+		return 1, pubsub.TreeTraverser(_Message_Envelope_Event_Event_Title), true
+
+	default:
+		return 0, nil, false
+	}
+}
+
+func _Message_Envelope_Event_Event(data interface{}) pubsub.Paths {
+
+	if data.(*v2.Envelope).Message.(*v2.Envelope_Event).Event == nil {
+		return pubsub.Paths(func(idx int, data interface{}) (path uint64, nextTraverser pubsub.TreeTraverser, ok bool) {
+			switch idx {
+			case 0:
+				return 0, pubsub.TreeTraverser(done), true
+			default:
+				return 0, nil, false
+			}
+		})
+	}
+
+	return pubsub.Paths(func(idx int, data interface{}) (path uint64, nextTraverser pubsub.TreeTraverser, ok bool) {
+		switch idx {
+		case 0:
+			return 1, pubsub.TreeTraverser(_Message_Envelope_Event_Event_Title), true
+		default:
+			return 0, nil, false
+		}
+	})
+}
+
+func _Message_Envelope_Event_Event_Title(data interface{}) pubsub.Paths {
+
+	return pubsub.Paths(func(idx int, data interface{}) (path uint64, nextTraverser pubsub.TreeTraverser, ok bool) {
+		switch idx {
+		case 0:
+			return 0, pubsub.TreeTraverser(_Message_Envelope_Event_Event_Body), true
+		case 1:
+
+			return hashUint64(crc64.Checksum([]byte(data.(*v2.Envelope).Message.(*v2.Envelope_Event).Event.Title), tableECMA)), pubsub.TreeTraverser(_Message_Envelope_Event_Event_Body), true
+		default:
+			return 0, nil, false
+		}
+	})
+}
+
+func _Message_Envelope_Event_Event_Body(data interface{}) pubsub.Paths {
+
+	return pubsub.Paths(func(idx int, data interface{}) (path uint64, nextTraverser pubsub.TreeTraverser, ok bool) {
+		switch idx {
+		case 0:
+			return 0, pubsub.TreeTraverser(done), true
+		case 1:
+
+			return hashUint64(crc64.Checksum([]byte(data.(*v2.Envelope).Message.(*v2.Envelope_Event).Event.Body), tableECMA)), pubsub.TreeTraverser(done), true
+		default:
+			return 0, nil, false
+		}
+	})
+}
+
 type EnvelopeFilter struct {
 	SourceId                 *string
 	Message_Envelope_Log     *Envelope_LogFilter
 	Message_Envelope_Counter *Envelope_CounterFilter
 	Message_Envelope_Gauge   *Envelope_GaugeFilter
 	Message_Envelope_Timer   *Envelope_TimerFilter
+	Message_Envelope_Event   *Envelope_EventFilter
 }
 
 type Envelope_LogFilter struct {
@@ -331,6 +416,15 @@ type Envelope_TimerFilter struct {
 type TimerFilter struct {
 }
 
+type Envelope_EventFilter struct {
+	Event *EventFilter
+}
+
+type EventFilter struct {
+	Title *string
+	Body  *string
+}
+
 func envelopeTraverserCreatePath(f *EnvelopeFilter) []uint64 {
 	if f == nil {
 		return nil
@@ -354,6 +448,10 @@ func envelopeTraverserCreatePath(f *EnvelopeFilter) []uint64 {
 		count++
 	}
 
+	if f.Message_Envelope_Event != nil {
+		count++
+	}
+
 	if count > 1 {
 		panic("Only one field can be set")
 	}
@@ -366,6 +464,8 @@ func envelopeTraverserCreatePath(f *EnvelopeFilter) []uint64 {
 	}
 
 	path = append(path, createPath__Message_Envelope_Counter(f.Message_Envelope_Counter)...)
+
+	path = append(path, createPath__Message_Envelope_Event(f.Message_Envelope_Event)...)
 
 	path = append(path, createPath__Message_Envelope_Gauge(f.Message_Envelope_Gauge)...)
 
@@ -421,13 +521,65 @@ func createPath__Envelope_Counter_Counter(f *CounterFilter) []uint64 {
 	return path
 }
 
-func createPath__Message_Envelope_Gauge(f *Envelope_GaugeFilter) []uint64 {
+func createPath__Message_Envelope_Event(f *Envelope_EventFilter) []uint64 {
 	if f == nil {
 		return nil
 	}
 	var path []uint64
 
 	path = append(path, 2)
+
+	var count int
+	if f.Event != nil {
+		count++
+	}
+
+	if count > 1 {
+		panic("Only one field can be set")
+	}
+
+	path = append(path, createPath__Envelope_Event_Event(f.Event)...)
+
+	return path
+}
+
+func createPath__Envelope_Event_Event(f *EventFilter) []uint64 {
+	if f == nil {
+		return nil
+	}
+	var path []uint64
+
+	path = append(path, 1)
+
+	var count int
+	if count > 1 {
+		panic("Only one field can be set")
+	}
+
+	if f.Title != nil {
+
+		path = append(path, hashUint64(crc64.Checksum([]byte(*f.Title), tableECMA)))
+	} else {
+		path = append(path, 0)
+	}
+
+	if f.Body != nil {
+
+		path = append(path, hashUint64(crc64.Checksum([]byte(*f.Body), tableECMA)))
+	} else {
+		path = append(path, 0)
+	}
+
+	return path
+}
+
+func createPath__Message_Envelope_Gauge(f *Envelope_GaugeFilter) []uint64 {
+	if f == nil {
+		return nil
+	}
+	var path []uint64
+
+	path = append(path, 3)
 
 	var count int
 	if f.Gauge != nil {
@@ -465,7 +617,7 @@ func createPath__Message_Envelope_Log(f *Envelope_LogFilter) []uint64 {
 	}
 	var path []uint64
 
-	path = append(path, 3)
+	path = append(path, 4)
 
 	var count int
 	if f.Log != nil {
@@ -503,7 +655,7 @@ func createPath__Message_Envelope_Timer(f *Envelope_TimerFilter) []uint64 {
 	}
 	var path []uint64
 
-	path = append(path, 4)
+	path = append(path, 5)
 
 	var count int
 	if f.Timer != nil {
