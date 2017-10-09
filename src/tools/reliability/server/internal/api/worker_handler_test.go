@@ -21,7 +21,7 @@ var _ = Describe("WorkerServer", func() {
 		client, err := newFakeClient(strings.Replace(server.URL, "http", "ws", 1))
 		Expect(err).ToNot(HaveOccurred())
 
-		handler.Run(&sharedapi.Test{})
+		Expect(handler.Run(&sharedapi.Test{})).To(Succeed())
 		Eventually(client.tests).Should(HaveLen(1))
 	})
 
@@ -34,7 +34,7 @@ var _ = Describe("WorkerServer", func() {
 		clientB, err := newFakeClient(strings.Replace(server.URL, "http", "ws", 1))
 		Expect(err).ToNot(HaveOccurred())
 
-		handler.Run(&sharedapi.Test{})
+		Expect(handler.Run(&sharedapi.Test{})).To(Succeed())
 		Eventually(clientA.tests).Should(HaveLen(1))
 		Eventually(clientB.tests).Should(HaveLen(1))
 	})
@@ -50,9 +50,9 @@ var _ = Describe("WorkerServer", func() {
 			clients = append(clients, c)
 		}
 
-		handler.Run(&sharedapi.Test{
+		Expect(handler.Run(&sharedapi.Test{
 			Cycles: 1000,
-		})
+		})).To(Succeed())
 
 		var writeCyclesTotal uint64
 		for _, c := range clients {
@@ -78,7 +78,7 @@ var _ = Describe("WorkerServer", func() {
 
 		go func() {
 			for i := 0; i < 10; i++ {
-				handler.Run(&sharedapi.Test{})
+				Expect(handler.Run(&sharedapi.Test{})).To(Succeed())
 			}
 		}()
 

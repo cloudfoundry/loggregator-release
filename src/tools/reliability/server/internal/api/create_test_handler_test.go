@@ -20,7 +20,7 @@ import (
 var _ = Describe("CreateTestHandler", func() {
 	It("passes the test to a runner", func() {
 		runner := &spyRunner{}
-		h := api.NewCreateTestHandler(runner, 1*time.Microsecond)
+		h := api.NewCreateTestHandler(runner, time.Second)
 		recorder := httptest.NewRecorder()
 
 		h.ServeHTTP(recorder, &http.Request{
@@ -36,7 +36,7 @@ var _ = Describe("CreateTestHandler", func() {
 
 	It("responds with the created test", func() {
 		runner := &spyRunner{}
-		h := api.NewCreateTestHandler(runner, 1*time.Microsecond)
+		h := api.NewCreateTestHandler(runner, time.Second)
 		recorder := httptest.NewRecorder()
 
 		h.ServeHTTP(recorder, &http.Request{
@@ -47,7 +47,7 @@ var _ = Describe("CreateTestHandler", func() {
 		})
 
 		var test sharedapi.Test
-		err := json.Unmarshal([]byte(recorder.Body.String()), &test)
+		err := json.Unmarshal(recorder.Body.Bytes(), &test)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(test.ID).ToNot(Equal(int64(0)))
 		Expect(test.Cycles).To(Equal(uint64(1000)))
@@ -66,7 +66,7 @@ var _ = Describe("CreateTestHandler", func() {
 
 	DescribeTable("with an invalid test request", func(body string) {
 		runner := &spyRunner{}
-		h := api.NewCreateTestHandler(runner, 1*time.Microsecond)
+		h := api.NewCreateTestHandler(runner, time.Second)
 		recorder := httptest.NewRecorder()
 
 		h.ServeHTTP(recorder, &http.Request{
@@ -88,7 +88,7 @@ var _ = Describe("CreateTestHandler", func() {
 
 	It("returns MethodNotAllowed on anything but a POST", func() {
 		runner := &spyRunner{}
-		h := api.NewCreateTestHandler(runner, 1*time.Microsecond)
+		h := api.NewCreateTestHandler(runner, time.Second)
 		recorder := httptest.NewRecorder()
 
 		h.ServeHTTP(recorder, &http.Request{
@@ -103,7 +103,7 @@ var _ = Describe("CreateTestHandler", func() {
 			runner := &spyRunner{
 				err: errors.New("some-error"),
 			}
-			h := api.NewCreateTestHandler(runner, 1*time.Millisecond)
+			h := api.NewCreateTestHandler(runner, time.Millisecond)
 			recorder := httptest.NewRecorder()
 
 			h.ServeHTTP(recorder, &http.Request{
@@ -120,7 +120,7 @@ var _ = Describe("CreateTestHandler", func() {
 			runner := &spyRunner{
 				err: errors.New("some-error"),
 			}
-			h := api.NewCreateTestHandler(runner, 1*time.Microsecond)
+			h := api.NewCreateTestHandler(runner, time.Millisecond)
 			recorder := httptest.NewRecorder()
 
 			h.ServeHTTP(recorder, &http.Request{

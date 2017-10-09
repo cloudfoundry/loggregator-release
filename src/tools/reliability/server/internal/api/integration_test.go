@@ -16,7 +16,7 @@ import (
 var _ = Describe("Server<->Worker communciation", func() {
 	It("will record an error when there are no workers", func() {
 		workerHandler := api.NewWorkerHandler()
-		createTestHandler := api.NewCreateTestHandler(workerHandler, time.Microsecond)
+		createTestHandler := api.NewCreateTestHandler(workerHandler, time.Millisecond)
 
 		recorder := initiateTest(createTestHandler)
 		Expect(recorder.Code).To(Equal(http.StatusInternalServerError))
@@ -24,7 +24,7 @@ var _ = Describe("Server<->Worker communciation", func() {
 
 	It("creates a test when workers are available", func() {
 		workerHandler := api.NewWorkerHandler()
-		createTestHandler := api.NewCreateTestHandler(workerHandler, time.Microsecond)
+		createTestHandler := api.NewCreateTestHandler(workerHandler, time.Second)
 		cleanup := attachWorker(workerHandler)
 		defer cleanup()
 
