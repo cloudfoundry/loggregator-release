@@ -18,6 +18,10 @@ const (
 	envelopeBufferSize = 10000
 )
 
+var (
+	errUnsupportedMixOfSelectors = errors.New("Using LegacySelector with Selectors is not supported.")
+)
+
 // HealthRegistrar provides an interface to record various counters.
 type HealthRegistrar interface {
 	Inc(name string)
@@ -26,7 +30,7 @@ type HealthRegistrar interface {
 
 // Receiver creates a function which will receive envelopes on a stream.
 type Receiver interface {
-	Receive(ctx context.Context, req *v2.EgressRequest) (rx func() (*v2.Envelope, error), err error)
+	Subscribe(ctx context.Context, req *v2.EgressBatchRequest) (rx func() (*v2.Envelope, error), err error)
 }
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
@@ -83,10 +87,8 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 	s.health.Inc("subscriptionCount")
 	defer s.health.Dec("subscriptionCount")
 
-	if r.GetLegacySelector() != nil &&
-		r.GetLegacySelector().SourceId == "" &&
-		r.GetLegacySelector().Message != nil {
-		return errors.New("invalid request: cannot have type legacy selector without source id")
+	if r.GetLegacySelector() != nil && r.GetSelectors() != nil {
+		return errUnsupportedMixOfSelectors
 	}
 
 	ctx, cancel := context.WithCancel(srv.Context())
@@ -103,7 +105,15 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 		}
 	}()
 
-	rx, err := s.receiver.Receive(ctx, r)
+	// TODO: Error when given legacy selector and selector
+	br := &v2.EgressBatchRequest{
+		ShardId:          r.GetShardId(),
+		LegacySelector:   r.GetLegacySelector(),
+		Selectors:        r.GetSelectors(),
+		UsePreferredTags: r.GetUsePreferredTags(),
+	}
+
+	rx, err := s.receiver.Subscribe(ctx, br)
 	if err != nil {
 		log.Printf("Unable to setup subscription: %s", err)
 		return fmt.Errorf("unable to setup subscription")
@@ -133,10 +143,8 @@ func (s *Server) BatchedReceiver(r *v2.EgressBatchRequest, srv v2.Egress_Batched
 	s.health.Inc("subscriptionCount")
 	defer s.health.Dec("subscriptionCount")
 
-	if r.GetLegacySelector() != nil &&
-		r.GetLegacySelector().SourceId == "" &&
-		r.GetLegacySelector().Message != nil {
-		return errors.New("invalid request: cannot have type legacy selector without source id")
+	if r.GetLegacySelector() != nil && r.GetSelectors() != nil {
+		return errUnsupportedMixOfSelectors
 	}
 
 	ctx, cancel := context.WithCancel(srv.Context())
@@ -153,11 +161,8 @@ func (s *Server) BatchedReceiver(r *v2.EgressBatchRequest, srv v2.Egress_Batched
 		}
 	}()
 
-	rx, err := s.receiver.Receive(ctx, &v2.EgressRequest{
-		ShardId:          r.GetShardId(),
-		LegacySelector:   r.GetLegacySelector(),
-		UsePreferredTags: r.GetUsePreferredTags(),
-	})
+	// TODO: Error if given legacy selector and selector
+	rx, err := s.receiver.Subscribe(ctx, r)
 	// TODO Add coverage for this error case
 	if err != nil {
 		log.Printf("Unable to setup subscription: %s", err)

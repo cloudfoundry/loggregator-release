@@ -39,10 +39,12 @@ type RLP struct {
 
 	ingressAddrs    []string
 	ingressDialOpts []grpc.DialOption
-	ingressPool     *plumbing.Pool
 
-	receiver *ingress.Receiver
-	querier  *ingress.Querier
+	v1IngressPool *plumbing.Pool
+	v2IngressPool *ingress.Pool
+
+	querier     *ingress.Querier
+	v2Connector *ingress.GRPCConnector
 
 	egressAddr     net.Addr
 	egressListener net.Listener
@@ -53,7 +55,8 @@ type RLP struct {
 
 	metricClient MetricClient
 
-	finder *plumbing.StaticFinder
+	v1Finder *plumbing.StaticFinder
+	v2Finder *plumbing.StaticFinder
 }
 
 // NewRLP returns a new unstarted RLP.
@@ -155,24 +158,30 @@ func (r *RLP) Stop() {
 	}()
 
 	// Stop reconnects to ingress servers
-	r.finder.Stop()
+	r.v1Finder.Stop()
 
 	// Close current connections to ingress servers
 	for _, addr := range r.ingressAddrs {
-		r.ingressPool.Close(addr)
+		r.v1IngressPool.Close(addr)
 	}
 }
 
 func (r *RLP) setupIngress() {
-	r.finder = plumbing.NewStaticFinder(r.ingressAddrs)
-	r.ingressPool = plumbing.NewPool(20, r.ingressDialOpts...)
+	r.v1Finder = plumbing.NewStaticFinder(r.ingressAddrs)
+	r.v2Finder = plumbing.NewStaticFinder(r.ingressAddrs)
+	r.v1IngressPool = plumbing.NewPool(2, r.ingressDialOpts...)
+	r.v2IngressPool = ingress.NewPool(20, r.ingressDialOpts...)
 
 	batcher := &ingress.NullMetricBatcher{} // TODO: Add real metrics
 
-	connector := plumbing.NewGRPCConnector(1000, r.ingressPool, r.finder, batcher, r.metricClient)
+	// V1
+	// TODO: Delete once all v1 concerns are removed from RLP
+	v1Connector := plumbing.NewGRPCConnector(1000, r.v1IngressPool, r.v1Finder, batcher, r.metricClient)
 	converter := ingress.NewConverter()
-	r.receiver = ingress.NewReceiver(converter, ingress.NewRequestConverter(), connector)
-	r.querier = ingress.NewQuerier(converter, connector)
+	r.querier = ingress.NewQuerier(converter, v1Connector)
+
+	// V2
+	r.v2Connector = ingress.NewGRPCConnector(1000, r.v2IngressPool, r.v2Finder, r.metricClient)
 }
 
 func (r *RLP) startEgressListener() {
@@ -188,7 +197,7 @@ func (r *RLP) setupEgress() {
 	r.egressServer = grpc.NewServer(r.egressServerOpts...)
 	v2.RegisterEgressServer(
 		r.egressServer,
-		egress.NewServer(r.receiver, r.metricClient, r.health, r.ctx, 100, time.Second),
+		egress.NewServer(r.v2Connector, r.metricClient, r.health, r.ctx, 100, time.Second),
 	)
 	v2.RegisterEgressQueryServer(r.egressServer, egress.NewQueryServer(r.querier))
 }

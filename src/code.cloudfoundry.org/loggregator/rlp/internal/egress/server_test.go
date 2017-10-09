@@ -20,30 +20,6 @@ import (
 
 var _ = Describe("Server", func() {
 	Describe("Receiver()", func() {
-		It("returns an error for a request that has type legacy selector but not a source ID", func() {
-			req := &v2.EgressRequest{
-				LegacySelector: &v2.Selector{
-					Message: &v2.Selector_Log{
-						Log: &v2.LogSelector{},
-					},
-				},
-			}
-			receiverServer := &spyReceiverServer{}
-			receiver := newSpyReceiver(0)
-			server := egress.NewServer(
-				receiver,
-				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
-				context.TODO(),
-				1,
-				time.Nanosecond,
-			)
-
-			err := server.Receiver(req, receiverServer)
-
-			Expect(err).To(MatchError("invalid request: cannot have type legacy selector without source id"))
-		})
-
 		It("errors when the sender cannot send the envelope", func() {
 			receiverServer := &spyReceiverServer{err: errors.New("Oh No!")}
 			receiver := newSpyReceiver(1)
@@ -74,9 +50,61 @@ var _ = Describe("Server", func() {
 			)
 
 			err := server.Receiver(&v2.EgressRequest{}, receiverServer)
-
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(receiverServer.EnvelopeCount).Should(Equal(int64(10)))
+		})
+
+		It("forwards the request as an egress batch request", func() {
+			receiverServer := &spyReceiverServer{}
+			receiver := newSpyReceiver(10)
+			server := egress.NewServer(
+				receiver,
+				testhelper.NewMetricClient(),
+				newSpyHealthRegistrar(),
+				context.TODO(),
+				1,
+				time.Nanosecond,
+			)
+
+			egressReq := &v2.EgressRequest{
+				ShardId: "a-shard-id",
+				Selectors: []*v2.Selector{
+					{SourceId: "a-source-id"},
+				},
+				UsePreferredTags: true,
+			}
+			err := server.Receiver(egressReq, receiverServer)
+			Expect(err).ToNot(HaveOccurred())
+
+			var egressBatchReq *v2.EgressBatchRequest
+			Eventually(receiver.requests).Should(Receive(&egressBatchReq))
+			Expect(egressBatchReq.GetShardId()).To(Equal(egressReq.GetShardId()))
+			Expect(egressBatchReq.GetSelectors()).To(Equal(egressReq.GetSelectors()))
+			Expect(egressBatchReq.GetUsePreferredTags()).To(Equal(egressReq.GetUsePreferredTags()))
+		})
+
+		It("errors when it receives a legacy selector and a selector", func() {
+			receiverServer := &spyReceiverServer{}
+			receiver := newSpyReceiver(10)
+			server := egress.NewServer(
+				receiver,
+				testhelper.NewMetricClient(),
+				newSpyHealthRegistrar(),
+				context.TODO(),
+				1,
+				time.Nanosecond,
+			)
+
+			err := server.Receiver(&v2.EgressRequest{
+				LegacySelector: &v2.Selector{
+					SourceId: "source-id",
+				},
+				Selectors: []*v2.Selector{
+					{SourceId: "source-id"},
+				},
+			}, receiverServer)
+
+			Expect(err).To(MatchError("Using LegacySelector with Selectors is not supported."))
 		})
 
 		It("closes the receiver when the context is canceled", func() {
@@ -202,28 +230,6 @@ var _ = Describe("Server", func() {
 	})
 
 	Describe("BatchedReceiver()", func() {
-		It("returns an error for a request that has type legacy selector but not a source ID", func() {
-			req := &v2.EgressBatchRequest{
-				LegacySelector: &v2.Selector{
-					Message: &v2.Selector_Log{
-						Log: &v2.LogSelector{},
-					},
-				},
-			}
-			server := egress.NewServer(
-				newSpyReceiver(0),
-				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
-				context.TODO(),
-				1,
-				time.Nanosecond,
-			)
-
-			err := server.BatchedReceiver(req, &spyBatchedReceiverServer{})
-
-			Expect(err).To(MatchError("invalid request: cannot have type legacy selector without source id"))
-		})
-
 		It("errors when the sender cannot send the envelope", func() {
 			receiverServer := &spyBatchedReceiverServer{err: errors.New("Oh No!")}
 			server := egress.NewServer(
@@ -255,6 +261,55 @@ var _ = Describe("Server", func() {
 
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(receiverServer.EnvelopeCount).Should(Equal(int64(10)))
+		})
+
+		It("errors when it receives a legacy selector and a selector", func() {
+			receiverServer := &spyBatchedReceiverServer{}
+			receiver := newSpyReceiver(10)
+			server := egress.NewServer(
+				receiver,
+				testhelper.NewMetricClient(),
+				newSpyHealthRegistrar(),
+				context.TODO(),
+				1,
+				time.Nanosecond,
+			)
+
+			err := server.BatchedReceiver(&v2.EgressBatchRequest{
+				LegacySelector: &v2.Selector{
+					SourceId: "source-id",
+				},
+				Selectors: []*v2.Selector{
+					{SourceId: "source-id"},
+				},
+			}, receiverServer)
+
+			Expect(err).To(MatchError("Using LegacySelector with Selectors is not supported."))
+		})
+
+		It("passes the egress batch request through", func() {
+			receiverServer := &spyBatchedReceiverServer{}
+			receiver := newSpyReceiver(10)
+			server := egress.NewServer(
+				receiver,
+				testhelper.NewMetricClient(),
+				newSpyHealthRegistrar(),
+				context.TODO(),
+				1,
+				time.Nanosecond,
+			)
+
+			expectedReq := &v2.EgressBatchRequest{
+				ShardId: "a-shard-id",
+				Selectors: []*v2.Selector{
+					{SourceId: "a-source-id"},
+				},
+				UsePreferredTags: true,
+			}
+			err := server.BatchedReceiver(expectedReq, receiverServer)
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(receiver.requests).Should(Receive(Equal(expectedReq)))
 		})
 
 		It("closes the receiver when the context is canceled", func() {
@@ -434,8 +489,9 @@ type spyReceiver struct {
 	envelope       *v2.Envelope
 	envelopeRepeat int
 
-	stopCh chan struct{}
-	ctx    chan context.Context
+	stopCh   chan struct{}
+	ctx      chan context.Context
+	requests chan *v2.EgressBatchRequest
 }
 
 func newSpyReceiver(envelopeCount int) *spyReceiver {
@@ -444,11 +500,13 @@ func newSpyReceiver(envelopeCount int) *spyReceiver {
 		envelopeRepeat: envelopeCount,
 		stopCh:         make(chan struct{}),
 		ctx:            make(chan context.Context, 1),
+		requests:       make(chan *v2.EgressBatchRequest, 100),
 	}
 }
 
-func (s *spyReceiver) Receive(ctx context.Context, req *v2.EgressRequest) (func() (*v2.Envelope, error), error) {
+func (s *spyReceiver) Subscribe(ctx context.Context, req *v2.EgressBatchRequest) (func() (*v2.Envelope, error), error) {
 	s.ctx <- ctx
+	s.requests <- req
 
 	return func() (*v2.Envelope, error) {
 		if s.envelopeRepeat > 0 {
@@ -467,7 +525,7 @@ func (s *spyReceiver) Receive(ctx context.Context, req *v2.EgressRequest) (func(
 
 type stubReceiver struct{}
 
-func (s *stubReceiver) Receive(ctx context.Context, req *v2.EgressRequest) (func() (*v2.Envelope, error), error) {
+func (s *stubReceiver) Subscribe(ctx context.Context, req *v2.EgressBatchRequest) (func() (*v2.Envelope, error), error) {
 	rx := func() (*v2.Envelope, error) {
 		return &v2.Envelope{}, nil
 	}

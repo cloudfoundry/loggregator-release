@@ -8,12 +8,12 @@ import (
 )
 
 func NewConverter() EnvelopeConverter {
-	return &envelopeConverter{}
+	return envelopeConverter{}
 }
 
 type envelopeConverter struct{}
 
-func (e *envelopeConverter) Convert(payload []byte, usePreferredTags bool) (*v2.Envelope, error) {
+func (e envelopeConverter) Convert(payload []byte, usePreferredTags bool) (*v2.Envelope, error) {
 	v1e := &events.Envelope{}
 	err := v1e.Unmarshal(payload)
 	if err != nil {

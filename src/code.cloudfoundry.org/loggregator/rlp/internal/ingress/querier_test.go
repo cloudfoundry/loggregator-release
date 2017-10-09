@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"code.cloudfoundry.org/loggregator/plumbing/conversion"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	"code.cloudfoundry.org/loggregator/rlp/internal/ingress"
 
@@ -99,4 +100,17 @@ func buildContainerMetric() (*events.Envelope, []byte) {
 		panic(err)
 	}
 	return e, b
+}
+
+type SpyEnvelopeConverter struct {
+	data             []byte
+	usePreferredTags bool
+	envelope         *v2.Envelope
+	err              error
+}
+
+func (s *SpyEnvelopeConverter) Convert(data []byte, usePreferredTags bool) (*v2.Envelope, error) {
+	s.data = data
+	s.usePreferredTags = usePreferredTags
+	return s.envelope, s.err
 }

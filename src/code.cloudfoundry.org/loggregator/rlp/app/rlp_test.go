@@ -7,17 +7,18 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	"code.cloudfoundry.org/loggregator/plumbing"
-	"code.cloudfoundry.org/loggregator/plumbing/conversion"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 	"code.cloudfoundry.org/loggregator/testservers"
 
 	app "code.cloudfoundry.org/loggregator/rlp/app"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -26,38 +27,45 @@ import (
 )
 
 var _ = Describe("Start", func() {
-	It("receive messages via egress client", func() {
-		doppler, dopplerLis := setupDoppler()
+	It("receive messages via egress client", func(done Done) {
+		defer close(done)
+		_, _, dopplerLis := setupDoppler()
+		defer func() {
+			Expect(dopplerLis.Close()).To(Succeed())
+		}()
 
 		egressAddr, _ := setupRLP(dopplerLis, "localhost:0")
 
 		egressStream, cleanup := setupRLPStream(egressAddr)
 		defer cleanup()
 
-		var batchSubscriber plumbing.Doppler_BatchSubscribeServer
-		Eventually(doppler.BatchSubscribeInput.Stream, 5).Should(Receive(&batchSubscriber))
-		go func() {
-			response := &plumbing.BatchResponse{
-				Payload: buildLogMessage(),
-			}
-
-			for {
-				err := batchSubscriber.Send(response)
-				if err != nil {
-					log.Printf("batchSubscriber#Send failed: %s\n", err)
-					return
-				}
-			}
-		}()
-
 		envelope, err := egressStream.Recv()
 		Expect(err).ToNot(HaveOccurred())
-		Expect(envelope.GetDeprecatedTags()["origin"].GetText()).To(Equal("some-origin"))
-		Expect(dopplerLis.Close()).To(Succeed())
-	})
+		Expect(envelope.GetSourceId()).To(Equal("a"))
+	}, 10)
+
+	It("receive messages via egress batching client", func(done Done) {
+		defer close(done)
+		_, _, dopplerLis := setupDoppler()
+		defer func() {
+			Expect(dopplerLis.Close()).To(Succeed())
+		}()
+
+		egressAddr, _ := setupRLP(dopplerLis, "localhost:0")
+
+		egressStream, cleanup := setupRLPBatchedStream(egressAddr)
+		defer cleanup()
+
+		f := func() int {
+			batch, err := egressStream.Recv()
+			Expect(err).ToNot(HaveOccurred())
+			return len(batch.GetBatch())
+		}
+		Eventually(f, 2).Should(Equal(100))
+	}, 10)
 
 	It("receives container metrics via egress query client", func() {
-		doppler, dopplerLis := setupDoppler()
+		doppler, _, dopplerLis := setupDoppler()
 		doppler.ContainerMetricsOutput.Err <- nil
 		doppler.ContainerMetricsOutput.Resp <- &plumbing.ContainerMetricsResponse{
 			Payload: [][]byte{buildContainerMetric()},
@@ -86,7 +94,7 @@ var _ = Describe("Start", func() {
 	})
 
 	It("limits the number of allowed connections", func() {
-		doppler, dopplerLis := setupDoppler()
+		doppler, _, dopplerLis := setupDoppler()
 		doppler.ContainerMetricsOutput.Err <- nil
 		doppler.ContainerMetricsOutput.Resp <- &plumbing.ContainerMetricsResponse{
 			Payload: [][]byte{buildContainerMetric()},
@@ -119,7 +127,7 @@ var _ = Describe("Start", func() {
 
 	Describe("draining", func() {
 		It("Stops accepting new connections", func() {
-			doppler, dopplerLis := setupDoppler()
+			doppler, _, dopplerLis := setupDoppler()
 			doppler.ContainerMetricsOutput.Err <- nil
 			doppler.ContainerMetricsOutput.Resp <- &plumbing.ContainerMetricsResponse{
 				Payload: [][]byte{buildContainerMetric()},
@@ -154,20 +162,16 @@ var _ = Describe("Start", func() {
 		})
 
 		It("Drains the envelopes", func() {
-			doppler, dopplerLis := setupDoppler()
+			_, doppler, dopplerLis := setupDoppler()
+			defer func() {
+				Expect(dopplerLis.Close()).To(Succeed())
+			}()
 			egressAddr, rlp := setupRLP(dopplerLis, "localhost:0")
 
 			stream, cleanup := setupRLPStream(egressAddr)
 			defer cleanup()
 
-			var batchSubscriber plumbing.Doppler_BatchSubscribeServer
-			Eventually(doppler.BatchSubscribeInput.Stream, 5).Should(Receive(&batchSubscriber))
-
-			expectedEnvelope := buildLogMessage()
-			response := &plumbing.BatchResponse{
-				Payload: expectedEnvelope,
-			}
-			Expect(batchSubscriber.Send(response)).ToNot(HaveOccurred())
+			Eventually(doppler.requests, 5).ShouldNot(BeEmpty())
 
 			done := make(chan struct{})
 			go func() {
@@ -177,40 +181,28 @@ var _ = Describe("Start", func() {
 				rlp.Stop()
 			}()
 
-			By("stop reading from the dopplers")
-			response2 := &plumbing.BatchResponse{
-				Payload: [][]byte{buildContainerMetric()},
-			}
-			Eventually(func() error { return batchSubscriber.Send(response2) }).Should(HaveOccurred())
-
 			// Currently, the call to Stop() blocks.
 			// We need to Recv the message after the call to Stop has been
 			// made.
-			envelope, err := stream.Recv()
+			_, err := stream.Recv()
 			Expect(err).ToNot(HaveOccurred())
 
-			var e events.Envelope
-			err = proto.Unmarshal(expectedEnvelope[0], &e)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(envelope).To(Equal(conversion.ToV2(&e, false)))
-
-			errs := make(chan error, 100)
+			errs := make(chan error, 1000)
 			go func() {
 				for {
 					_, err := stream.Recv()
 					errs <- err
 				}
 			}()
-			Eventually(errs).Should(Receive(HaveOccurred()))
+			Eventually(errs, 5).Should(Receive(HaveOccurred()))
 			Eventually(done).Should(BeClosed())
-			Expect(dopplerLis.Close()).To(Succeed())
 		})
 
 	})
 
 	Describe("health endpoint", func() {
 		It("returns health metrics", func() {
-			doppler, dopplerLis := setupDoppler()
+			doppler, _, dopplerLis := setupDoppler()
 			doppler.ContainerMetricsOutput.Err <- nil
 			doppler.ContainerMetricsOutput.Resp <- &plumbing.ContainerMetricsResponse{
 				Payload: [][]byte{buildContainerMetric()},
@@ -267,8 +259,9 @@ func buildContainerMetric() []byte {
 	return b
 }
 
-func setupDoppler() (*mockDopplerServer, net.Listener) {
-	doppler := newMockDopplerServer()
+func setupDoppler() (*mockDopplerServer, *spyDopplerV2, net.Listener) {
+	dopplerV1 := newMockDopplerServer()
+	dopplerV2 := newSpyDopplerV2()
 
 	lis, err := net.Listen("tcp", "localhost:0")
 	Expect(err).ToNot(HaveOccurred())
@@ -281,11 +274,12 @@ func setupDoppler() (*mockDopplerServer, net.Listener) {
 	Expect(err).ToNot(HaveOccurred())
 
 	grpcServer := grpc.NewServer(grpc.Creds(tlsCredentials))
-	plumbing.RegisterDopplerServer(grpcServer, doppler)
+	plumbing.RegisterDopplerServer(grpcServer, dopplerV1)
+	v2.RegisterEgressServer(grpcServer, dopplerV2)
 	go func() {
 		log.Println(grpcServer.Serve(lis))
 	}()
-	return doppler, lis
+	return dopplerV1, dopplerV2, lis
 }
 
 func setupRLP(dopplerLis net.Listener, healthAddr string) (addr string, rlp *app.RLP) {
@@ -353,6 +347,19 @@ func setupRLPStream(egressAddr string) (v2.Egress_ReceiverClient, func()) {
 	return egressStream, cleanup
 }
 
+func setupRLPBatchedStream(egressAddr string) (v2.Egress_BatchedReceiverClient, func()) {
+	egressClient, cleanup := setupRLPClient(egressAddr)
+
+	var egressStream v2.Egress_BatchedReceiverClient
+	Eventually(func() error {
+		var err error
+		egressStream, err = egressClient.BatchedReceiver(context.Background(), &v2.EgressBatchRequest{})
+		return err
+	}, 5).ShouldNot(HaveOccurred())
+
+	return egressStream, cleanup
+}
+
 func setupRLPQueryClient(egressAddr string) (v2.EgressQueryClient, func()) {
 	ingressTLSCredentials, err := plumbing.NewClientCredentials(
 		testservers.Cert("reverselogproxy.crt"),
@@ -373,4 +380,51 @@ func setupRLPQueryClient(egressAddr string) (v2.EgressQueryClient, func()) {
 	return egressClient, func() {
 		Expect(conn.Close()).To(Succeed())
 	}
+}
+
+type spyDopplerV2 struct {
+	mu        sync.Mutex
+	_requests []*v2.EgressBatchRequest
+
+	batch []*v2.Envelope
+}
+
+func newSpyDopplerV2() *spyDopplerV2 {
+	return &spyDopplerV2{
+		batch: []*v2.Envelope{
+			{SourceId: "a"},
+			{SourceId: "b"},
+			{SourceId: "c"},
+		},
+	}
+}
+
+func (s *spyDopplerV2) Receiver(*v2.EgressRequest, v2.Egress_ReceiverServer) error {
+	return grpc.Errorf(codes.Unimplemented, "use BatchedReceiver")
+}
+
+func (s *spyDopplerV2) BatchedReceiver(r *v2.EgressBatchRequest, b v2.Egress_BatchedReceiverServer) error {
+	s.mu.Lock()
+	s._requests = append(s._requests, r)
+	s.mu.Unlock()
+
+	for {
+		select {
+		case <-b.Context().Done():
+			return nil
+		default:
+			err := b.Send(&v2.EnvelopeBatch{Batch: s.batch})
+			if err != nil {
+				return err
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+}
+
+func (s *spyDopplerV2) requests() []*v2.EgressBatchRequest {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s._requests
 }

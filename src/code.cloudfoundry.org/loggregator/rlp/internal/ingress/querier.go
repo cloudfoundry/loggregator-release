@@ -12,6 +12,10 @@ type ContainerMetricFetcher interface {
 	ContainerMetrics(ctx context.Context, appID string) [][]byte
 }
 
+type EnvelopeConverter interface {
+	Convert(data []byte, usePreferredTags bool) (*v2.Envelope, error)
+}
+
 type Querier struct {
 	fetcher   ContainerMetricFetcher
 	converter EnvelopeConverter
