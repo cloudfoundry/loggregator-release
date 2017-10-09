@@ -9,7 +9,6 @@ import (
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/server/v2"
 	"code.cloudfoundry.org/loggregator/plumbing/v2"
-	"github.com/gogo/protobuf/proto"
 )
 
 var (
@@ -57,9 +56,7 @@ type NopSetter struct{}
 
 var data []byte
 
-func (s NopSetter) Set(e *loggregator_v2.Envelope) {
-	data, _ = proto.Marshal(e)
-}
+func (s NopSetter) Set(e *loggregator_v2.Envelope) {}
 
 func randEnvGen() func() *loggregator_v2.Envelope {
 	var s []*loggregator_v2.Envelope
