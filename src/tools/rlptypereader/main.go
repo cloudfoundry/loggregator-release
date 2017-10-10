@@ -105,6 +105,12 @@ func stringToSelector(selectorType string) *v2.Selector {
 				Timer: &v2.TimerSelector{},
 			},
 		}
+	case "event":
+		return &v2.Selector{
+			Message: &v2.Selector_Event{
+				Event: &v2.EventSelector{},
+			},
+		}
 	default:
 		log.Fatalf("Unknown selector type: %s", selectorType)
 	}
