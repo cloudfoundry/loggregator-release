@@ -37,12 +37,14 @@ files:
 - loggregator/src/github.com/onsi/ginkgo/internal/leafnodes/*.go # gosub
 - loggregator/src/github.com/onsi/ginkgo/internal/remote/*.go # gosub
 - loggregator/src/github.com/onsi/ginkgo/internal/spec/*.go # gosub
+- loggregator/src/github.com/onsi/ginkgo/internal/spec_iterator/*.go # gosub
 - loggregator/src/github.com/onsi/ginkgo/internal/specrunner/*.go # gosub
 - loggregator/src/github.com/onsi/ginkgo/internal/suite/*.go # gosub
 - loggregator/src/github.com/onsi/ginkgo/internal/testingtproxy/*.go # gosub
 - loggregator/src/github.com/onsi/ginkgo/internal/writer/*.go # gosub
 - loggregator/src/github.com/onsi/ginkgo/reporters/*.go # gosub
 - loggregator/src/github.com/onsi/ginkgo/reporters/stenographer/*.go # gosub
+- loggregator/src/github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable/*.go # gosub
 - loggregator/src/github.com/onsi/ginkgo/types/*.go # gosub
 - loggregator/src/github.com/onsi/gomega/*.go # gosub
 - loggregator/src/github.com/onsi/gomega/format/*.go # gosub
