@@ -4,6 +4,8 @@
     instance_id = spec.id || spec.index.to_s
     instance_zone = p("metron_agent.zone").empty? ? spec.az : p("metron_agent.zone")
     deployment = p("metron_agent.deployment").empty? ? spec.deployment : p("metron_agent.deployment")
+    doppler_addr = p("metron_agent.bosh_dns") ? link("doppler").address : p("doppler.addr")
+    doppler_addr_with_az = p("metron_agent.bosh_dns") ? link("doppler").address(azs: [spec.az]) : "#{instance_zone}.#{p("doppler.addr")}"
 
     grpcConfig = {
         "Port" => p("metron_agent.grpc_port"),
@@ -33,8 +35,8 @@
         a[:PPROFPort] = p("metron_agent.pprof_port")
         a[:HealthEndpointPort] = p("metron_agent.health_port")
         a[:GRPC] = grpcConfig
-        a[:DopplerAddr] = "#{p('doppler.addr')}:#{p('doppler.grpc_port')}"
-        a[:DopplerAddrUDP] = "#{p('doppler.addr')}:#{p('doppler.udp_port')}"
+        a[:DopplerAddr] = "#{doppler_addr}:#{p('doppler.grpc_port')}"
+        a[:DopplerAddrWithAZ] = "#{doppler_addr_with_az}:#{p('doppler.grpc_port')}"
     end
 %>
 

@@ -25,7 +25,8 @@ func BuildMetronConfig(dopplerURI string, dopplerGRPCPort int) app.Config {
 
 		Deployment: "deployment",
 
-		DopplerAddr: fmt.Sprintf("%s:%d", dopplerURI, dopplerGRPCPort),
+		DopplerAddr:       fmt.Sprintf("%s:%d", dopplerURI, dopplerGRPCPort),
+		DopplerAddrWithAZ: fmt.Sprintf("%s.%s:%d", availabilityZone, dopplerURI, dopplerGRPCPort),
 
 		GRPC: app.GRPC{
 			CertFile: Cert("metron.crt"),

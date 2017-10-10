@@ -8,6 +8,11 @@ provides:
   - metron_agent.listening_address
   - metron_agent.listening_port
 
+consumes:
+- name: doppler
+  type: doppler
+  optional: true
+
 templates:
   pre-start.ps1.erb: bin/pre-start.ps1
   metron_agent.json.erb: config/metron_agent.json
@@ -55,6 +60,9 @@ properties:
     description: "Port the metron agent is listening on to receive gRPC log envelopes"
     default: 3458
 
+  metron_agent.bosh_dns:
+    description: Enable Bosh DNS. Disabling this implies Consul DNS.
+    default: false
   doppler.addr:
     description: DNS name for doppler. This needs to be round robbin DNS if you want metron to communicate with multiple dopplers.
     default: "doppler.service.cf.internal"
@@ -62,9 +70,6 @@ properties:
   doppler.grpc_port:
     description: Port for outgoing log messages via GRPC
     default: 8082
-  doppler.udp_port:
-    description: Port for outgoing log messages via UDP
-    default: 3457
 
   loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"

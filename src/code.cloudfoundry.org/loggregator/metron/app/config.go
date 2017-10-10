@@ -30,7 +30,8 @@ type Config struct {
 
 	GRPC GRPC
 
-	DopplerAddr string
+	DopplerAddr       string
+	DopplerAddrWithAZ string
 
 	MetricBatchIntervalMilliseconds  uint
 	RuntimeStatsIntervalMilliseconds uint
@@ -60,6 +61,10 @@ func Parse(reader io.Reader) (*Config, error) {
 
 	if config.DopplerAddr == "" {
 		return nil, fmt.Errorf("DopplerAddr is required")
+	}
+
+	if config.DopplerAddrWithAZ == "" {
+		return nil, fmt.Errorf("DopplerAddrWithAZ is required")
 	}
 
 	return config, nil

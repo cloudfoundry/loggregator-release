@@ -15,10 +15,9 @@ RSpec.describe "Metron Agent JSON" do
       "doppler" => {
           "addr" => "10.0.0.1",
           "grpc_port" => 5555,
-          "udp_port" => 6666,
       },
       "metron_agent" => {
-        "zone" => "some-id",
+        "zone" => "some-az",
         "deployment" => "some-deployment",
         "grpc_port" => 4444,
         "listening_port" => 1111,
@@ -40,7 +39,7 @@ RSpec.describe "Metron Agent JSON" do
     expected_config = {
       "Index" => "some-id",
       "Job" => "some-job",
-      "Zone" => "some-id",
+      "Zone" => "some-az",
       "Deployment" => "some-deployment",
       "IP" => "127.0.0.1",
       "Tags" => {
@@ -63,7 +62,7 @@ RSpec.describe "Metron Agent JSON" do
 
       },
       "DopplerAddr" => "10.0.0.1:5555",
-      "DopplerAddrUDP" => "10.0.0.1:6666",
+      "DopplerAddrWithAZ" => "some-az.10.0.0.1:5555",
     }
     expect(config).to eq(expected_config)
   end
@@ -182,24 +181,47 @@ RSpec.describe "Metron Agent JSON" do
         "doppler" => {
           "addr" => "127.0.0.1",
           "grpc_port" => "9999",
-          "udp_port" => "1111",
         },
       }
 
       config = render_template(properties)
 
       expect(config["DopplerAddr"]).to eq("127.0.0.1:9999")
-      expect(config["DopplerAddrUDP"]).to eq("127.0.0.1:1111")
     end
   end
 
-  def render_template(properties, spec: InstanceSpec.new)
-    release_path = File.join(File.dirname(__FILE__), '../../../')
-    release = ReleaseDir.new(release_path)
-    job = release.job('metron_agent')
-    template = job.template('config/metron_agent.json')
-    rendered = template.render(properties, spec: spec)
+  describe "Bosh DNS is enabled" do
+    it "uses bosh links to populate DopplerAddr and DopplerAddrWithAZ" do
+      pending "Links are not supported by bosh-template"
 
-    JSON.parse(rendered)
+      instanceA = LinkInstance.new(
+        name: 'doppler',
+        az: 'az1',
+        address: 'doppler.bosh.internal',
+      )
+      instanceB = LinkInstance.new(
+        name: 'doppler',
+        az: 'az2',
+        address: 'doppler.bosh.internal',
+      )
+      link = Link.new(name: "doppler", instances: [instanceA, instanceB])
+
+      properties = {"metron_agent" => {"bosh_dns" => true}}
+
+      config = render_template(properties, links: [link])
+
+      expect(config['DopplerAddr']).to eq('some-doppler-addr:8082')
+      expect(config['DopplerAddrWithAZ']).to eq('az1.some-doppler-addr:8082')
+    end
   end
+end
+
+def render_template(properties, spec: InstanceSpec.new, links: [])
+  release_path = File.join(File.dirname(__FILE__), '../../../')
+  release = ReleaseDir.new(release_path)
+  job = release.job('metron_agent')
+  template = job.template('config/metron_agent.json')
+  rendered = template.render(properties, spec: spec, consumes: links)
+
+  JSON.parse(rendered)
 end

@@ -6,6 +6,7 @@
   config = {
     "IP" => spec.ip,
     "DopplerEndpoint" => "ws://" + tc.instances.first.address + ":" + tc.p("loggregator.outgoing_dropsonde_port").to_s,
+    "ReverseLogProxyAddr" => p("loggregator_acceptance_tests.bosh_dns") ? "#{link('reverse_log_proxy').address}:8082" : p("reverse_log_proxy.addr"),
     "SkipSSLVerify" => properties.ssl.skip_cert_verify,
     "DropsondePort" => properties.metron_agent.dropsonde_incoming_port,
     "EtcdUrls" => properties.loggregator.etcd.machines.map {|ip| "#{properties.loggregator.etcd.require_ssl ? 'https' : 'http'}://#{ip}:4001"},
