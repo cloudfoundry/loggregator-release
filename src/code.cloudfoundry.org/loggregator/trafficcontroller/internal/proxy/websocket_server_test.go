@@ -3,6 +3,7 @@ package proxy_test
 import (
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"time"
 
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
@@ -13,19 +14,42 @@ import (
 )
 
 var _ = Describe("WebsocketServer", func() {
-	It("increments a slow consumer counter", func() {
-		mc := testhelper.NewMetricClient()
-		em := mc.NewCounter("egress")
-		s := NewWebSocketServer(time.Millisecond, mc)
+	Describe("Slow Consumer", func() {
+		var (
+			metricClient *testhelper.SpyMetricClient
+		)
 
-		req, _ := http.NewRequest("GET", "/some", nil)
+		BeforeEach(func() {
+			metricClient = testhelper.NewMetricClient()
+			em := metricClient.NewCounter("egress")
+			s := NewWebSocketServer(time.Millisecond, metricClient)
 
-		s.ServeWS(httptest.NewRecorder(), req, func() ([]byte, error) {
-			return []byte("hello"), nil
-		}, em)
+			req, _ := http.NewRequest("GET", "/some", nil)
 
-		Eventually(func() uint64 {
-			return mc.GetDelta("doppler_proxy.slow_consumer")
-		}).ShouldNot(BeZero())
+			s.ServeWS(httptest.NewRecorder(), req, func() ([]byte, error) {
+				return []byte("hello"), nil
+			}, em)
+		})
+
+		It("increments a counter", func() {
+			Eventually(func() uint64 {
+				return metricClient.GetDelta("doppler_proxy.slow_consumer")
+			}).ShouldNot(BeZero())
+		})
+
+		It("emits an event", func() {
+			expectedBody := sanitizeWhitespace(`
+When Loggregator detects a slow connection, that connection is disconnected to
+prevent back pressure on the system. This may be due to improperly scaled
+nozzles, or slow user connections to Loggregator`)
+
+			Eventually(func() string {
+				return sanitizeWhitespace(metricClient.GetEvent("Traffic Controller has disconnected slow consumer"))
+			}).Should(Equal(expectedBody))
+		})
 	})
 })
+
+func sanitizeWhitespace(s string) string {
+	return regexp.MustCompile(`\s`).ReplaceAllString(s, "")
+}

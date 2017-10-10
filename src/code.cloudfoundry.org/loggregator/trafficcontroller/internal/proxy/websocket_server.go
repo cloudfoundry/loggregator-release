@@ -8,11 +8,16 @@ import (
 	"code.cloudfoundry.org/loggregator/metricemitter"
 )
 
-const websocketKeepAliveDuration = 30 * time.Second
+const (
+	websocketKeepAliveDuration = 30 * time.Second
+	slowConsumerEventTitle     = "Traffic Controller has disconnected slow consumer"
+	slowConsumerEventBody      = "When Loggregator detects a slow connection, that connection is disconnected to prevent back pressure on the system. This may be due to improperly scaled nozzles, or slow user connections to Loggregator"
+)
 
 type WebSocketServer struct {
 	slowConsumerMetric  *metricemitter.Counter
 	slowConsumerTimeout time.Duration
+	metricClient        MetricClient
 }
 
 func NewWebSocketServer(slowConsumerTimeout time.Duration, m MetricClient) *WebSocketServer {
@@ -25,6 +30,7 @@ func NewWebSocketServer(slowConsumerTimeout time.Duration, m MetricClient) *WebS
 	return &WebSocketServer{
 		slowConsumerMetric:  slowConsumerMetric,
 		slowConsumerTimeout: slowConsumerTimeout,
+		metricClient:        m,
 	}
 }
 
@@ -65,6 +71,11 @@ func (s *WebSocketServer) ServeWS(
 				}
 			case <-timer.C:
 				s.slowConsumerMetric.Increment(1)
+				s.metricClient.EmitEvent(
+					slowConsumerEventTitle,
+					slowConsumerEventBody,
+				)
+
 				log.Print("Doppler Proxy: Slow Consumer")
 				return
 			}

@@ -40,8 +40,9 @@ type grpcConnector interface {
 }
 
 type MetricClient interface {
-	NewCounter(string, ...metricemitter.MetricOption) *metricemitter.Counter
-	NewGauge(string, string, ...metricemitter.MetricOption) *metricemitter.Gauge
+	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
+	NewGauge(name string, unit string, opts ...metricemitter.MetricOption) *metricemitter.Gauge
+	EmitEvent(title string, body string)
 }
 
 func NewDopplerProxy(

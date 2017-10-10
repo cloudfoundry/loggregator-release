@@ -73,7 +73,40 @@ var _ = Describe("Emitter Client", func() {
 		Eventually(grpcServer.senders).Should(HaveLen(1))
 	})
 
-	Context("with a metric", func() {
+	It("emits an event", func() {
+		grpcServer := newgRPCServer()
+		defer grpcServer.stop()
+
+		client, err := metricemitter.NewClient(
+			grpcServer.addr,
+			metricemitter.WithGRPCDialOptions(grpc.WithInsecure()),
+			metricemitter.WithPulseInterval(50*time.Millisecond),
+		)
+		Expect(err).ToNot(HaveOccurred())
+
+		client.EmitEvent("some-title", "some-body")
+
+		var e *v2.Envelope
+		Eventually(grpcServer.envelopes).Should(Receive(&e))
+		Expect(e.GetEvent().GetTitle()).To(Equal("some-title"))
+		Expect(e.GetEvent().GetBody()).To(Equal("some-body"))
+	})
+
+	It("does not try to emit an event when loggregator is not available", func() {
+		client, err := metricemitter.NewClient(
+			"127.0.0.1:9093",
+			metricemitter.WithGRPCDialOptions(grpc.WithInsecure()),
+			metricemitter.WithPulseInterval(50*time.Millisecond),
+		)
+		Expect(err).ToNot(HaveOccurred())
+
+		f := func() {
+			client.EmitEvent("some-title", "some-body")
+		}
+		Expect(f).ToNot(Panic())
+	})
+
+	Describe("synchronous data frame emission", func() {
 		It("emits a zero value on an interval", func() {
 			grpcServer := newgRPCServer()
 			defer grpcServer.stop()

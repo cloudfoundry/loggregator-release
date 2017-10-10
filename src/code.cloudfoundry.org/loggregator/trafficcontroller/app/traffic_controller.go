@@ -37,10 +37,11 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
-// MetricClient creates new CounterMetrics to be emitted periodically.
+// MetricClient can be used to emit metrics and events.
 type MetricClient interface {
 	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
-	NewGauge(name, unit string, opts ...metricemitter.MetricOption) *metricemitter.Gauge
+	NewGauge(name string, unit string, opts ...metricemitter.MetricOption) *metricemitter.Gauge
+	EmitEvent(title string, body string)
 }
 
 type TrafficController struct {

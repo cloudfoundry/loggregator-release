@@ -112,6 +112,30 @@ func (c *Client) NewGauge(name, unit string, opts ...MetricOption) *Gauge {
 	return m
 }
 
+// EmitEvent will emit an event as an asynchrounous metric.
+// NOTE: Currently, due to the fact that loggregator only accepts envelopes
+// via streaming, we are going to ignore the errors. Streams do not give
+// proper feedback for errors due to batching. When/if loggregator accepts
+// envelopes with a normal RPC call, we will be able to do something with
+// an error.
+func (c *Client) EmitEvent(title, body string) {
+	senderClient, err := c.ingressClient.Sender(context.Background())
+	if err != nil {
+		return
+	}
+
+	err = senderClient.Send(&v2.Envelope{
+		Message: &v2.Envelope_Event{
+			Event: &v2.Event{
+				Title: title,
+				Body:  body,
+			},
+		},
+	})
+	// TODO: Handle error when non-streaming endpoint is available.
+	_ = err
+}
+
 func (c *Client) pulse(s sendable) {
 	var senderClient v2.Ingress_SenderClient
 	for range time.Tick(c.pulseInterval) {

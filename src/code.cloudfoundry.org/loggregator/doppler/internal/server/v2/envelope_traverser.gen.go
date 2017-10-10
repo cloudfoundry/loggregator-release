@@ -1,9 +1,10 @@
 package v2
 
 import (
+	"hash/crc64"
+
 	"code.cloudfoundry.org/go-pubsub"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
-	"hash/crc64"
 )
 
 func envelopeTraverserTraverse(data interface{}) pubsub.Paths {
