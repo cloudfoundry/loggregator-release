@@ -35,7 +35,10 @@ files:
 - loggregator/src/github.com/gogo/protobuf/proto/*.go # gosub
 - loggregator/src/github.com/gogo/protobuf/protoc-gen-gogo/descriptor/*.go # gosub
 - loggregator/src/github.com/golang/protobuf/proto/*.go # gosub
+- loggregator/src/github.com/golang/protobuf/ptypes/*.go # gosub
 - loggregator/src/github.com/golang/protobuf/ptypes/any/*.go # gosub
+- loggregator/src/github.com/golang/protobuf/ptypes/duration/*.go # gosub
+- loggregator/src/github.com/golang/protobuf/ptypes/timestamp/*.go # gosub
 - loggregator/src/github.com/matttproud/golang_protobuf_extensions/pbutil/*.go # gosub
 - loggregator/src/github.com/prometheus/client_golang/prometheus/*.go # gosub
 - loggregator/src/github.com/prometheus/client_golang/prometheus/promhttp/*.go # gosub
@@ -59,7 +62,9 @@ files:
 - loggregator/src/google.golang.org/genproto/googleapis/rpc/status/*.go # gosub
 - loggregator/src/google.golang.org/grpc/*.go # gosub
 - loggregator/src/google.golang.org/grpc/codes/*.go # gosub
+- loggregator/src/google.golang.org/grpc/connectivity/*.go # gosub
 - loggregator/src/google.golang.org/grpc/credentials/*.go # gosub
+- loggregator/src/google.golang.org/grpc/grpclb/grpc_lb_v1/messages/*.go # gosub
 - loggregator/src/google.golang.org/grpc/grpclog/*.go # gosub
 - loggregator/src/google.golang.org/grpc/internal/*.go # gosub
 - loggregator/src/google.golang.org/grpc/keepalive/*.go # gosub
