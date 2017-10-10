@@ -54,7 +54,7 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.server.serveWS(w, r, client, h.egressMetric)
+	h.server.ServeWS(w, r, client, h.egressMetric)
 }
 
 func (h *StreamHandler) Count() int64 {

@@ -53,6 +53,7 @@ var _ = Describe("DopplerProxy", func() {
 			mockGrpcConnector,
 			"cookieDomain",
 			50*time.Millisecond,
+			time.Hour,
 			mockSender,
 			mockHealth,
 		)

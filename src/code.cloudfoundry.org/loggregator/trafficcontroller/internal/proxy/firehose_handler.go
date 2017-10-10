@@ -73,7 +73,7 @@ func (h *FirehoseHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.server.serveWS(w, r, client, h.egressFirehoseMetric)
+	h.server.ServeWS(w, r, client, h.egressFirehoseMetric)
 }
 
 func (h *FirehoseHandler) Count() int64 {

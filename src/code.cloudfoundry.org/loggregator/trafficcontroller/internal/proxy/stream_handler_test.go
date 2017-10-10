@@ -40,6 +40,7 @@ var _ = Describe("StreamHandler", func() {
 			connector,
 			"cookieDomain",
 			50*time.Millisecond,
+			time.Hour,
 			mockSender,
 			mockHealth,
 		)

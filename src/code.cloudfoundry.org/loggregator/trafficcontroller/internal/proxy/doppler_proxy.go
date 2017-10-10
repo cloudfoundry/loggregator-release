@@ -50,6 +50,7 @@ func NewDopplerProxy(
 	grpcConn grpcConnector,
 	cookieDomain string,
 	timeout time.Duration,
+	slowConsumerTimeout time.Duration,
 	m MetricClient,
 	health Health,
 ) *DopplerProxy {
@@ -78,7 +79,7 @@ func NewDopplerProxy(
 	recentLogsHandler := NewRecentLogsHandler(grpcConn, timeout, m)
 	r.Handle("/apps/{appID}/recentlogs", logAccessMiddleware.Wrap(recentLogsHandler))
 
-	wsServer := NewWebSocketServer(m)
+	wsServer := NewWebSocketServer(slowConsumerTimeout, m)
 	streamHandler := NewStreamHandler(grpcConn, wsServer, m)
 	r.Handle("/apps/{appID}/stream", logAccessMiddleware.Wrap(streamHandler))
 

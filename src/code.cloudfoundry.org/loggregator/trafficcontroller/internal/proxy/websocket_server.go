@@ -11,10 +11,11 @@ import (
 const websocketKeepAliveDuration = 30 * time.Second
 
 type WebSocketServer struct {
-	slowConsumerMetric *metricemitter.Counter
+	slowConsumerMetric  *metricemitter.Counter
+	slowConsumerTimeout time.Duration
 }
 
-func NewWebSocketServer(m MetricClient) *WebSocketServer {
+func NewWebSocketServer(slowConsumerTimeout time.Duration, m MetricClient) *WebSocketServer {
 	// metric-documentation-v2: (doppler_proxy.slow_consumer) Counter
 	// indicating occurrences of slow consumers.
 	slowConsumerMetric := m.NewCounter("doppler_proxy.slow_consumer",
@@ -22,11 +23,12 @@ func NewWebSocketServer(m MetricClient) *WebSocketServer {
 	)
 
 	return &WebSocketServer{
-		slowConsumerMetric: slowConsumerMetric,
+		slowConsumerMetric:  slowConsumerMetric,
+		slowConsumerTimeout: slowConsumerTimeout,
 	}
 }
 
-func (s *WebSocketServer) serveWS(
+func (s *WebSocketServer) ServeWS(
 	w http.ResponseWriter,
 	r *http.Request,
 	recv func() ([]byte, error),
@@ -42,7 +44,7 @@ func (s *WebSocketServer) serveWS(
 
 	go func() {
 		defer close(data)
-		timer := time.NewTimer(5 * time.Second)
+		timer := time.NewTimer(s.slowConsumerTimeout)
 		timer.Stop()
 		for {
 			resp, err := recv()
@@ -55,7 +57,7 @@ func (s *WebSocketServer) serveWS(
 				continue
 			}
 
-			timer.Reset(5 * time.Second)
+			timer.Reset(s.slowConsumerTimeout)
 			select {
 			case data <- resp:
 				if !timer.Stop() {

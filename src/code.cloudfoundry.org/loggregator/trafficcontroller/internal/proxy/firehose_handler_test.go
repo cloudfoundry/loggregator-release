@@ -48,6 +48,7 @@ var _ = Describe("FirehoseHandler", func() {
 			connector,
 			"cookieDomain",
 			50*time.Millisecond,
+			time.Hour,
 			mockSender,
 			mockHealth,
 		)
@@ -71,6 +72,7 @@ var _ = Describe("FirehoseHandler", func() {
 			connector,
 			"cookieDomain",
 			50*time.Millisecond,
+			time.Hour,
 			mockSender,
 			mockHealth,
 		)
@@ -79,6 +81,7 @@ var _ = Describe("FirehoseHandler", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		h := proxy.NewFirehoseHandler(connector, proxy.NewWebSocketServer(
+			time.Hour,
 			testhelper.NewMetricClient(),
 		), mockSender)
 		h.ServeHTTP(recorder, req)
@@ -97,6 +100,7 @@ var _ = Describe("FirehoseHandler", func() {
 			connector,
 			"cookieDomain",
 			50*time.Millisecond,
+			time.Hour,
 			mockSender,
 			mockHealth,
 		)
@@ -105,6 +109,7 @@ var _ = Describe("FirehoseHandler", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		h := proxy.NewFirehoseHandler(connector, proxy.NewWebSocketServer(
+			time.Hour,
 			testhelper.NewMetricClient(),
 		), mockSender)
 		h.ServeHTTP(recorder, req)
@@ -123,6 +128,7 @@ var _ = Describe("FirehoseHandler", func() {
 			connector,
 			"cookieDomain",
 			50*time.Millisecond,
+			time.Hour,
 			mockSender,
 			mockHealth,
 		)
@@ -148,6 +154,7 @@ var _ = Describe("FirehoseHandler", func() {
 			connector,
 			"cookieDomain",
 			50*time.Millisecond,
+			time.Hour,
 			mockSender,
 			mockHealth,
 		)
@@ -167,6 +174,7 @@ var _ = Describe("FirehoseHandler", func() {
 			connector,
 			"cookieDomain",
 			50*time.Millisecond,
+			time.Hour,
 			mockSender,
 			mockHealth,
 		)
@@ -194,6 +202,7 @@ var _ = Describe("FirehoseHandler", func() {
 			connector,
 			"cookieDomain",
 			50*time.Millisecond,
+			time.Hour,
 			mockSender,
 			mockHealth,
 		)
