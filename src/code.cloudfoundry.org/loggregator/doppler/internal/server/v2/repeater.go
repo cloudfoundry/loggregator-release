@@ -16,7 +16,7 @@ type Reader func() *loggregator_v2.Envelope
 // Writer writes envelopes.
 type Writer func(*loggregator_v2.Envelope)
 
-// NewRepeater is the constructor for Transponder.
+// NewRepeater is the constructor for Repeater.
 func NewRepeater(w Writer, r Reader) *Repeater {
 	return &Repeater{
 		r: r,
