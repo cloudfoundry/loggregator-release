@@ -39,11 +39,11 @@ var _ = Describe("v1 App", func() {
 			he,
 			clientCreds,
 			spyMetricClient{},
-			app.WithLookup(spyLookup.lookup),
+			app.WithV1Lookup(spyLookup.lookup),
 		)
 		go app.Start()
 
-		Eventually(spyLookup.calledWith).Should(HaveKey(expectedHost))
+		Eventually(spyLookup.calledWith(expectedHost)).Should(BeTrue())
 	})
 })
 
@@ -58,10 +58,13 @@ func newSpyLookup() *spyLookup {
 	}
 }
 
-func (s *spyLookup) calledWith() map[string]struct{} {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s._calledWith
+func (s *spyLookup) calledWith(host string) func() bool {
+	return func() bool {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		_, ok := s._calledWith[host]
+		return ok
+	}
 }
 
 func (s *spyLookup) lookup(host string) ([]net.IP, error) {
@@ -78,7 +81,6 @@ type spyMetricClient struct {
 	app.MetricClient
 }
 
-// NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
 func (spyMetricClient) NewGauge(name, unit string, opts ...metricemitter.MetricOption) *metricemitter.Gauge {
 	return metricemitter.NewGauge(name, unit, "test-source-id")
 }

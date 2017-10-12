@@ -35,8 +35,8 @@ type AppV1 struct {
 // AppV1Option configures AppV1 options.
 type AppV1Option func(*AppV1)
 
-// WithLookup allows the default DNS resolver to be changed.
-func WithLookup(l func(string) ([]net.IP, error)) func(*AppV1) {
+// WithV1Lookup allows the default DNS resolver to be changed.
+func WithV1Lookup(l func(string) ([]net.IP, error)) func(*AppV1) {
 	return func(a *AppV1) {
 		a.lookup = l
 	}

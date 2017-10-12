@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net"
 	"time"
 
 	"code.cloudfoundry.org/loggregator/diodes"
@@ -29,12 +30,23 @@ type MetricClient interface {
 	NewGauge(name, unit string, opts ...metricemitter.MetricOption) *metricemitter.Gauge
 }
 
+// AppV2Option configures AppV2 options.
+type AppV2Option func(*AppV2)
+
+// WithLookup allows the default DNS resolver to be changed.
+func WithLookup(l func(string) ([]net.IP, error)) func(*AppV2) {
+	return func(a *AppV2) {
+		a.lookup = l
+	}
+}
+
 type AppV2 struct {
 	config          *Config
 	healthRegistrar *healthendpoint.Registrar
 	clientCreds     credentials.TransportCredentials
 	serverCreds     credentials.TransportCredentials
 	metricClient    MetricClient
+	lookup          func(string) ([]net.IP, error)
 }
 
 func NewV2App(
@@ -43,14 +55,22 @@ func NewV2App(
 	clientCreds credentials.TransportCredentials,
 	serverCreds credentials.TransportCredentials,
 	metricClient MetricClient,
+	opts ...AppV2Option,
 ) *AppV2 {
-	return &AppV2{
+	a := &AppV2{
 		config:          c,
 		healthRegistrar: r,
 		clientCreds:     clientCreds,
 		serverCreds:     serverCreds,
 		metricClient:    metricClient,
+		lookup:          net.LookupIP,
 	}
+
+	for _, o := range opts {
+		o(a)
+	}
+
+	return a
 }
 
 func (a *AppV2) Start() {
@@ -105,8 +125,8 @@ func (a *AppV2) initializePool() *clientpoolv2.ClientPool {
 	}
 
 	balancers := []*clientpoolv2.Balancer{
-		clientpoolv2.NewBalancer(a.config.DopplerAddrWithAZ),
-		clientpoolv2.NewBalancer(a.config.DopplerAddr),
+		clientpoolv2.NewBalancer(a.config.DopplerAddrWithAZ, clientpoolv2.WithLookup(a.lookup)),
+		clientpoolv2.NewBalancer(a.config.DopplerAddr, clientpoolv2.WithLookup(a.lookup)),
 	}
 
 	avgEnvelopeSize := a.metricClient.NewGauge("average_envelope", "bytes/minute",
