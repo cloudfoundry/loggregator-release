@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metric_sender"
@@ -28,10 +29,39 @@ type AppV1 struct {
 	creds           credentials.TransportCredentials
 	healthRegistrar *healthendpoint.Registrar
 	metricClient    MetricClient
+	lookup          func(string) ([]net.IP, error)
 }
 
-func NewV1App(c *Config, r *healthendpoint.Registrar, creds credentials.TransportCredentials, m MetricClient) *AppV1 {
-	return &AppV1{config: c, healthRegistrar: r, creds: creds, metricClient: m}
+// AppV1Option configures AppV1 options.
+type AppV1Option func(*AppV1)
+
+// WithLookup allows the default DNS resolver to be changed.
+func WithLookup(l func(string) ([]net.IP, error)) func(*AppV1) {
+	return func(a *AppV1) {
+		a.lookup = l
+	}
+}
+
+func NewV1App(
+	c *Config,
+	r *healthendpoint.Registrar,
+	creds credentials.TransportCredentials,
+	m MetricClient,
+	opts ...AppV1Option,
+) *AppV1 {
+	a := &AppV1{
+		config:          c,
+		healthRegistrar: r,
+		creds:           creds,
+		metricClient:    m,
+		lookup:          net.LookupIP,
+	}
+
+	for _, o := range opts {
+		o(a)
+	}
+
+	return a
 }
 
 func (a *AppV1) Start() {
@@ -93,8 +123,14 @@ func (a *AppV1) setupGRPC() egress.BatchChainByteWriter {
 	}
 
 	balancers := []*clientpoolv1.Balancer{
-		clientpoolv1.NewBalancer(fmt.Sprintf("%s.%s", a.config.Zone, a.config.DopplerAddr)),
-		clientpoolv1.NewBalancer(a.config.DopplerAddr),
+		clientpoolv1.NewBalancer(
+			a.config.DopplerAddrWithAZ,
+			clientpoolv1.WithLookup(a.lookup),
+		),
+		clientpoolv1.NewBalancer(
+			a.config.DopplerAddr,
+			clientpoolv1.WithLookup(a.lookup),
+		),
 	}
 
 	avgEnvelopeSize := a.metricClient.NewGauge("average_envelope", "bytes/minute",
