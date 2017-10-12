@@ -71,6 +71,8 @@ func NewDopplerServer(
 	batchInverval time.Duration,
 	batchSize uint,
 ) *DopplerServer {
+	// metric-documentation-v2: (loggregator.doppler.egress) Number of
+	// v1 envelopes read from a diode to be sent to subscriptions.
 	egressMetric := metricClient.NewCounter(
 		"egress",
 		metricemitter.WithVersion(2, 0),
@@ -170,8 +172,6 @@ func (m *DopplerServer) sendData(req *plumbing.SubscriptionRequest, sender sende
 			return err
 		}
 
-		// metric-documentation-v2: (loggregator.doppler.egress) Number of
-		// v1 envelopes read from a diode to be sent to subscriptions.
 		m.egressMetric.Increment(1)
 	}
 
@@ -179,8 +179,9 @@ func (m *DopplerServer) sendData(req *plumbing.SubscriptionRequest, sender sende
 }
 
 type batchWriter struct {
-	sender    plumbing.Doppler_BatchSubscribeServer
-	errStream chan<- error
+	sender       plumbing.Doppler_BatchSubscribeServer
+	errStream    chan<- error
+	egressMetric *metricemitter.Counter
 }
 
 func (b *batchWriter) Write(batch [][]byte) {
@@ -188,6 +189,7 @@ func (b *batchWriter) Write(batch [][]byte) {
 	if err != nil {
 		b.errStream <- err
 	}
+	b.egressMetric.Increment(uint64(len(batch)))
 }
 
 func (m *DopplerServer) sendBatchData(req *plumbing.SubscriptionRequest, sender plumbing.Doppler_BatchSubscribeServer) error {
@@ -199,7 +201,11 @@ func (m *DopplerServer) sendBatchData(req *plumbing.SubscriptionRequest, sender 
 	batcher := batching.NewByteBatcher(
 		int(m.batchSize),
 		m.batchInterval,
-		&batchWriter{sender: sender, errStream: errStream},
+		&batchWriter{
+			sender:       sender,
+			errStream:    errStream,
+			egressMetric: m.egressMetric,
+		},
 	)
 
 	for {

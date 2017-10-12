@@ -109,6 +109,21 @@ var _ = Describe("v1 doppler server", func() {
 		})
 
 		Describe("health registrar and metrics", func() {
+			It("emits a metric for number of envelopes egressed", func() {
+				_, err := dopplerClient.Subscribe(context.TODO(), subscribeRequest)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(mockRegistrar.registerSetter).ShouldNot(BeNil())
+
+				setter := mockRegistrar.registerSetter()
+				setter.Set([]byte("some-data-0"))
+				setter.Set([]byte("some-data-0"))
+				setter.Set([]byte("some-data-0"))
+
+				Eventually(func() uint64 {
+					return metricClient.GetDelta("egress")
+				}).Should(Equal(uint64(3)))
+			})
+
 			It("emits a metric for the number of subscriptions", func() {
 				dopplerClient.Subscribe(context.TODO(), subscribeRequest)
 				expected := fake.Message{
@@ -206,6 +221,21 @@ var _ = Describe("v1 doppler server", func() {
 					healthRegistrar,
 					metricClient,
 				)
+			})
+
+			It("emits a metric for number of envelopes egressed", func() {
+				_, err := dopplerClient.BatchSubscribe(context.TODO(), subscribeRequest)
+				Expect(err).ToNot(HaveOccurred())
+
+				Eventually(mockRegistrar.registerSetter).ShouldNot(BeNil())
+				setter := mockRegistrar.registerSetter()
+				setter.Set([]byte("some-data-0"))
+				setter.Set([]byte("some-data-0"))
+				setter.Set([]byte("some-data-0"))
+
+				Eventually(func() uint64 {
+					return metricClient.GetDelta("egress")
+				}).Should(Equal(uint64(3)))
 			})
 
 			It("emits a metric for the number of subscriptions", func() {
