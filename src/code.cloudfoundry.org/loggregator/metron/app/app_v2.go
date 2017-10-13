@@ -33,8 +33,8 @@ type MetricClient interface {
 // AppV2Option configures AppV2 options.
 type AppV2Option func(*AppV2)
 
-// WithLookup allows the default DNS resolver to be changed.
-func WithLookup(l func(string) ([]net.IP, error)) func(*AppV2) {
+// WithV2Lookup allows the default DNS resolver to be changed.
+func WithV2Lookup(l func(string) ([]net.IP, error)) func(*AppV2) {
 	return func(a *AppV2) {
 		a.lookup = l
 	}

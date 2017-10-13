@@ -46,7 +46,7 @@ var _ = Describe("v2 App", func() {
 			clientCreds,
 			serverCreds,
 			spyMetricClient{},
-			app.WithLookup(spyLookup.lookup),
+			app.WithV2Lookup(spyLookup.lookup),
 		)
 		go app.Start()
 
@@ -54,6 +54,9 @@ var _ = Describe("v2 App", func() {
 	})
 })
 
-func (spyMetricClient) NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter {
+func (spyMetricClient) NewCounter(
+	name string,
+	opts ...metricemitter.MetricOption,
+) *metricemitter.Counter {
 	return metricemitter.NewCounter(name, "test-source-id")
 }
