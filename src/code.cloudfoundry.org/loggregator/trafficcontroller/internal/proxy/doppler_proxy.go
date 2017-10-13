@@ -19,6 +19,7 @@ var MetricsInterval = 15 * time.Second
 
 type Health interface {
 	Set(name string, value float64)
+	Inc(name string)
 }
 
 type DopplerProxy struct {
@@ -80,7 +81,7 @@ func NewDopplerProxy(
 	recentLogsHandler := NewRecentLogsHandler(grpcConn, timeout, m)
 	r.Handle("/apps/{appID}/recentlogs", logAccessMiddleware.Wrap(recentLogsHandler))
 
-	wsServer := NewWebSocketServer(slowConsumerTimeout, m)
+	wsServer := NewWebSocketServer(slowConsumerTimeout, m, health)
 	streamHandler := NewStreamHandler(grpcConn, wsServer, m)
 	r.Handle("/apps/{appID}/stream", logAccessMiddleware.Wrap(streamHandler))
 

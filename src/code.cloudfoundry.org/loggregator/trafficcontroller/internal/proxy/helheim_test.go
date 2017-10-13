@@ -274,6 +274,10 @@ type mockHealth struct {
 		Name  chan string
 		Value chan float64
 	}
+	IncCalled chan bool
+	IncInput  struct {
+		Name chan string
+	}
 }
 
 func newMockHealth() *mockHealth {
@@ -281,6 +285,8 @@ func newMockHealth() *mockHealth {
 	m.SetCalled = make(chan bool, 100)
 	m.SetInput.Name = make(chan string, 100)
 	m.SetInput.Value = make(chan float64, 100)
+	m.IncCalled = make(chan bool, 100)
+	m.IncInput.Name = make(chan string, 100)
 	return m
 }
 
@@ -288,4 +294,9 @@ func (m *mockHealth) Set(name string, value float64) {
 	m.SetCalled <- true
 	m.SetInput.Name <- name
 	m.SetInput.Value <- value
+}
+
+func (m *mockHealth) Inc(name string) {
+	m.IncCalled <- true
+	m.IncInput.Name <- name
 }

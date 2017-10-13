@@ -20,5 +20,6 @@ var _ = Describe("TrafficController Health Endpoint", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(body).To(ContainSubstring("firehoseStreamCount"))
 		Expect(body).To(ContainSubstring("appStreamCount"))
+		Expect(body).To(ContainSubstring("slowConsumerCount"))
 	})
 })

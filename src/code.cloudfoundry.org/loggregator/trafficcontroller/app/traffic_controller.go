@@ -120,6 +120,17 @@ func (t *TrafficController) Start() {
 				Help:      "Number of open app streams",
 			},
 		),
+		// metric-documentation-health: (slowConsumerCount)
+		// Number of stream consumers disconnected to avoid backpressure on
+		// the Loggregator system.
+		"slowConsumerCount": prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: "loggregator",
+				Subsystem: "trafficcontroller",
+				Name:      "slowConsumerCount",
+				Help:      "Number of stream consumers disconnected to avoid backpressure on the Loggregator system",
+			},
+		),
 	})
 
 	creds, err := plumbing.NewClientCredentials(

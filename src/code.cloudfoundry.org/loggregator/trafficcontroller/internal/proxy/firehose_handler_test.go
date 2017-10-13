@@ -83,6 +83,7 @@ var _ = Describe("FirehoseHandler", func() {
 		h := proxy.NewFirehoseHandler(connector, proxy.NewWebSocketServer(
 			time.Hour,
 			testhelper.NewMetricClient(),
+			mockHealth,
 		), mockSender)
 		h.ServeHTTP(recorder, req)
 
@@ -111,6 +112,7 @@ var _ = Describe("FirehoseHandler", func() {
 		h := proxy.NewFirehoseHandler(connector, proxy.NewWebSocketServer(
 			time.Hour,
 			testhelper.NewMetricClient(),
+			mockHealth,
 		), mockSender)
 		h.ServeHTTP(recorder, req)
 

@@ -18,9 +18,10 @@ type WebSocketServer struct {
 	slowConsumerMetric  *metricemitter.Counter
 	slowConsumerTimeout time.Duration
 	metricClient        MetricClient
+	health              Health
 }
 
-func NewWebSocketServer(slowConsumerTimeout time.Duration, m MetricClient) *WebSocketServer {
+func NewWebSocketServer(slowConsumerTimeout time.Duration, m MetricClient, h Health) *WebSocketServer {
 	// metric-documentation-v2: (doppler_proxy.slow_consumer) Counter
 	// indicating occurrences of slow consumers.
 	slowConsumerMetric := m.NewCounter("doppler_proxy.slow_consumer",
@@ -31,6 +32,7 @@ func NewWebSocketServer(slowConsumerTimeout time.Duration, m MetricClient) *WebS
 		slowConsumerMetric:  slowConsumerMetric,
 		slowConsumerTimeout: slowConsumerTimeout,
 		metricClient:        m,
+		health:              h,
 	}
 }
 
@@ -75,6 +77,7 @@ func (s *WebSocketServer) ServeWS(
 					slowConsumerEventTitle,
 					slowConsumerEventBody,
 				)
+				s.health.Inc("slowConsumerCount")
 
 				log.Print("Doppler Proxy: Slow Consumer")
 				return
