@@ -79,3 +79,10 @@ properties:
   metron_agent.health_port:
     description: "The port for the health endpoint"
     default: 14824
+
+  metron_agent.batch.interval:
+    description: "EXPERIMENTAL: Batching interval for v2 egressing"
+    default: 500000000
+  metron_agent.batch.size:
+    description: "EXPERIMENTAL: Batching size for v2 egressing"
+    default: 100

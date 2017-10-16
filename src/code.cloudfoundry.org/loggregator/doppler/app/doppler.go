@@ -65,6 +65,8 @@ func NewDoppler(grpc GRPC, opts ...DopplerOption) *Doppler {
 			ContainerMetricTTLSeconds:    120,
 			DisableAnnounce:              true,
 			DisableSyslogDrains:          true,
+			BatchSize:                    100,
+			BatchInterval:                int(500 * time.Millisecond),
 		},
 	}
 
@@ -193,8 +195,8 @@ func (d *Doppler) Start() {
 	v2Egress := v2.NewEgressServer(
 		v2PubSub,
 		healthRegistrar,
-		time.Second,
-		100,
+		time.Duration(d.c.BatchInterval),
+		d.c.BatchSize,
 	)
 
 	var opts []plumbing.ConfigOption

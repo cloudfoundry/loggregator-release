@@ -126,3 +126,10 @@ properties:
   metron_endpoint.grpc_port:
     description: "The port used to emit grpc messages to the Metron agent"
     default: 3458
+
+  doppler.batch.interval:
+    description: "EXPERIMENTAL: Batching interval for v1 egressing"
+    default: 500000000
+  doppler.batch.size:
+    description: "EXPERIMENTAL: Batching size for v1 egressing"
+    default: 100

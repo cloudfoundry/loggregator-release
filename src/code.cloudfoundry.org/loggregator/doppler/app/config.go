@@ -59,6 +59,11 @@ type Config struct {
 	PPROFPort                       uint32
 	HealthAddr                      string
 
+	// TODO: These should be removed once we better understand what the
+	// value should be set to.
+	BatchInterval int
+	BatchSize     uint
+
 	// TODO: Deprecated. We left this in during the removal of Dopplers
 	// outgoing websocket server. This is still needed so that
 	// trafficcontroller can find dopplers via etcd.
@@ -119,7 +124,9 @@ func ParseConfig(configFile string) (*Config, error) {
 
 func Parse(confData []byte) (*Config, error) {
 	config := &Config{
-		OutgoingPort: 8081,
+		OutgoingPort:  8081,
+		BatchSize:     100,
+		BatchInterval: int(500 * time.Millisecond),
 	}
 
 	err := json.Unmarshal(confData, config)
