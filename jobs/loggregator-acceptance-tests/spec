@@ -4,7 +4,7 @@ name: loggregator-acceptance-tests
 description: "The loggregator acceptance tests."
 
 packages:
-  - golang1.8.3
+  - golang1.9.1
   - loggregator-acceptance-tests
 templates:
   run.erb: bin/run

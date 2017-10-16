@@ -1,7 +1,7 @@
 ---
 name: syslog_drain_binder
 dependencies:
-- golang1.8.3
+- golang1.9.1
 files:
 - loggregator/src/code.cloudfoundry.org/loggregator/syslog_drain_binder/LICENSE
 - loggregator/src/code.cloudfoundry.org/loggregator/syslog_drain_binder/NOTICE
