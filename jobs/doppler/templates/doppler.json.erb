@@ -56,7 +56,7 @@
             a[:BlackListIPs] = prop
         end
         a[:BatchSize] = p('doppler.batch.size')
-        a[:Interval] = p('doppler.batch.interval')
+        a[:BatchInterval] = p('doppler.batch.interval')
     end
 %>
 <%= JSON.pretty_generate(args) %>
