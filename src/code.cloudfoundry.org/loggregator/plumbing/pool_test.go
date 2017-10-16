@@ -181,7 +181,6 @@ var _ = Describe("Pool", func() {
 			})
 
 			Describe("ContainerMetrics()", func() {
-
 				var fetchResp = func(addr string, ctx context.Context, req *plumbing.ContainerMetricsRequest) [][]byte {
 					var resp *plumbing.ContainerMetricsResponse
 					f := func() error {
