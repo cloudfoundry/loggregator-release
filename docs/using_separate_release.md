@@ -40,7 +40,6 @@ properties:
    zone: z1
    deployment: redis
    preferred_protocol: null
-   shared_secret: "loggregator-secret"
    tls_client:
      cert: null
      key: null

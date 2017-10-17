@@ -41,8 +41,6 @@ properties:
     description: "PEM-encoded client key"
     default: ""
 
-  loggregator_endpoint.shared_secret:
-    description: ""
   loggregator_acceptance_tests.login_required:
     description: ""
   loggregator_acceptance_tests.admin_user:

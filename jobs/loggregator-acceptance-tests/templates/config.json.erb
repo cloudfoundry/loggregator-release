@@ -10,7 +10,6 @@
     "SkipSSLVerify" => properties.ssl.skip_cert_verify,
     "DropsondePort" => properties.metron_agent.dropsonde_incoming_port,
     "EtcdUrls" => properties.loggregator.etcd.machines.map {|ip| "#{properties.loggregator.etcd.require_ssl ? 'https' : 'http'}://#{ip}:4001"},
-    "SharedSecret" => properties.loggregator_endpoint.shared_secret,
     "EtcdRequireTLS" => properties.loggregator.etcd.require_ssl,
     "EtcdTLSClientConfig" => {
       "KeyFile" => "/var/vcap/jobs/loggregator-acceptance-tests/config/certs/etcd-client.key",

@@ -250,7 +250,6 @@ properties:
     outgoing_port: 8080
 
   loggregator_endpoint: # The end point sources will connect to
-    shared_secret: loggregatorEndPointSharedSecret
     host: 10.10.16.16
     port: 3456
 ```

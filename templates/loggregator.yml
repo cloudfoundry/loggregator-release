@@ -79,8 +79,6 @@ instance_groups:
     properties:
       traffic_controller:
         disable_access_control: true
-      loggregator_endpoint:
-        shared_secret: "((dropsonde_shared_secret))"
   - name: consul_agent
     release: consul
     consumes:
@@ -128,8 +126,6 @@ instance_groups:
           doppler:
             cert: "((loggregator_doppler.certificate))"
             key: "((loggregator_doppler.private_key))"
-      doppler_endpoint:
-        shared_secret: "((dropsonde_shared_secret))"
   - name: metron_agent
     release: loggregator
     properties: *metron_agent_properties
@@ -230,8 +226,6 @@ instance_groups:
     serial: true
 
 variables:
-- name: dropsonde_shared_secret
-  type: password
 - name: loggregator_ca
   type: certificate
   options:

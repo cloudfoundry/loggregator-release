@@ -14,7 +14,6 @@ type TestConfig struct {
 	DropsondePort int
 
 	EtcdUrls              []string
-	SharedSecret          string
 	EtcdRequireTLS        bool
 	EtcdTLSClientConfig   TLSClientConfig
 	MetronTLSClientConfig TLSClientConfig
@@ -30,7 +29,6 @@ type TLSClientConfig struct {
 
 type MetronConfig struct {
 	IncomingUDPPort               int
-	SharedSecret                  string
 	EtcdUrls                      []string
 	LoggregatorDropsondePort      int
 	Index                         string
@@ -79,7 +77,6 @@ func (tc *TestConfig) SaveMetronConfig() {
 	// fixture file had to go.
 	metronConfig := MetronConfig{
 		IncomingUDPPort:          3457,
-		SharedSecret:             "PLACEHOLDER-LOGGREGATOR-SECRET",
 		EtcdUrls:                 []string{"http://10.244.0.42:4001"},
 		LoggregatorDropsondePort: 3457,
 		Index: "0",
@@ -90,10 +87,6 @@ func (tc *TestConfig) SaveMetronConfig() {
 	metronConfig.IncomingUDPPort = tc.DropsondePort
 	if len(tc.EtcdUrls) != 0 {
 		metronConfig.EtcdUrls = tc.EtcdUrls
-	}
-
-	if tc.SharedSecret != "" {
-		metronConfig.SharedSecret = tc.SharedSecret
 	}
 
 	if tc.EtcdRequireTLS {

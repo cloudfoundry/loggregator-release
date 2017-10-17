@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	sharedSecret     = "test-shared-secret"
 	availabilityZone = "test-availability-zone"
 	jobName          = "test-job-name"
 	jobIndex         = "42"
