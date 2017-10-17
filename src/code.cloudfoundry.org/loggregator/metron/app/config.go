@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 )
 
 type GRPC struct {
@@ -36,6 +37,11 @@ type Config struct {
 	MetricBatchIntervalMilliseconds  uint
 	RuntimeStatsIntervalMilliseconds uint
 
+	// TODO: These should be removed once we better understand what the
+	// value should be set to.
+	BatchInterval int
+	BatchSize     int
+
 	PPROFPort uint32
 }
 
@@ -53,6 +59,8 @@ func Parse(reader io.Reader) (*Config, error) {
 	config := &Config{
 		MetricBatchIntervalMilliseconds:  60000,
 		RuntimeStatsIntervalMilliseconds: 60000,
+		BatchInterval:                    int(500 * time.Millisecond),
+		BatchSize:                        100,
 	}
 	err := json.NewDecoder(reader).Decode(config)
 	if err != nil {

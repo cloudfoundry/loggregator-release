@@ -37,6 +37,8 @@
         a[:GRPC] = grpcConfig
         a[:DopplerAddr] = "#{doppler_addr}:#{p('doppler.grpc_port')}"
         a[:DopplerAddrWithAZ] = "#{doppler_addr_with_az}:#{p('doppler.grpc_port')}"
+        a[:BatchSize] = p('metron_agent.batch.size')
+        a[:BatchInterval] = p('metron_agent.batch.interval')
     end
 %>
 

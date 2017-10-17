@@ -55,6 +55,8 @@
         if_p("doppler.blacklisted_syslog_ranges") do |prop|
             a[:BlackListIPs] = prop
         end
+        a[:BatchSize] = p('doppler.batch.size')
+        a[:BatchInterval] = p('doppler.batch.interval')
     end
 %>
 <%= JSON.pretty_generate(args) %>

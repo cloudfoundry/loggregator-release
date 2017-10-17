@@ -97,7 +97,8 @@ func (a *AppV2) Start() {
 		envelopeBuffer,
 		counterAggr,
 		a.config.Tags,
-		100, time.Second,
+		a.config.BatchSize,
+		time.Duration(a.config.BatchInterval),
 		a.metricClient,
 	)
 	go tx.Start()
