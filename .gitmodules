@@ -121,6 +121,3 @@
 [submodule "src/code.cloudfoundry.org/grpc-throughputlb"]
 	path = src/code.cloudfoundry.org/grpc-throughputlb
 	url = https://github.com/cloudfoundry-incubator/grpc-throughputlb
-[submodule "src/github.com/alecthomas/gometalinter"]
-	path = src/github.com/alecthomas/gometalinter
-	url = https://github.com/alecthomas/gometalinter
