@@ -1,5 +1,0 @@
-{
-	"DopplerEndpoint": "ws://10.244.10.252:8081",
-	"SkipSslVerify": true,
-	"EtcdUrls": ["http://10.244.10.12:4001"]
-}

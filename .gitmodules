@@ -118,3 +118,6 @@
 [submodule "src/code.cloudfoundry.org/go-pubsub"]
 	path = src/code.cloudfoundry.org/go-pubsub
 	url = https://github.com/cloudfoundry-incubator/go-pubsub
+[submodule "src/code.cloudfoundry.org/loggregator"]
+	path = src/code.cloudfoundry.org/loggregator
+	url = https://github.com/cloudfoundry/loggregator
