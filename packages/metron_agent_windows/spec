@@ -5,7 +5,7 @@ dependencies:
 files:
 - loggregator/src/exiter.ps1
 - loggregator/src/code.cloudfoundry.org/batching/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/diodes/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/go-diodes/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/diodes/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/healthendpoint/*.go # gosub
