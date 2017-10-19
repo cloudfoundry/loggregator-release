@@ -5,7 +5,11 @@
     instance_zone = p("metron_agent.zone").empty? ? spec.az : p("metron_agent.zone")
     deployment = p("metron_agent.deployment").empty? ? spec.deployment : p("metron_agent.deployment")
     doppler_addr = p("metron_agent.bosh_dns") ? link("doppler").address : p("doppler.addr")
-    doppler_addr_with_az = p("metron_agent.bosh_dns") ? link("doppler").address(azs: [spec.az]) : "#{instance_zone}.#{p("doppler.addr")}"
+
+    doppler_addr_with_az = "#{instance_zone}.#{p("doppler.addr")}"
+    if p("metron_agent.bosh_dns")
+        doppler_addr_with_az = link("doppler").address(azs: [spec.az])
+    end
 
     grpcConfig = {
         "Port" => p("metron_agent.grpc_port"),
