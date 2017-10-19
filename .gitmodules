@@ -109,9 +109,6 @@
 [submodule "src/github.com/prometheus/procfs"]
 	path = src/github.com/prometheus/procfs
 	url = https://github.com/prometheus/procfs
-[submodule "src/code.cloudfoundry.org/batching"]
-	path = src/code.cloudfoundry.org/batching
-	url = https://github.com/cloudfoundry/batching
 [submodule "src/code.cloudfoundry.org/go-diodes"]
 	path = src/code.cloudfoundry.org/go-diodes
 	url = https://github.com/cloudfoundry/go-diodes
@@ -121,3 +118,6 @@
 [submodule "src/code.cloudfoundry.org/loggregator"]
 	path = src/code.cloudfoundry.org/loggregator
 	url = https://github.com/cloudfoundry/loggregator
+[submodule "src/code.cloudfoundry.org/go-batching"]
+	path = src/code.cloudfoundry.org/go-batching
+	url = https://github.com/cloudfoundry/go-batching
