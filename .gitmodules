@@ -112,9 +112,9 @@
 [submodule "src/code.cloudfoundry.org/batching"]
 	path = src/code.cloudfoundry.org/batching
 	url = https://github.com/cloudfoundry/batching
-[submodule "src/code.cloudfoundry.org/diodes"]
-	path = src/code.cloudfoundry.org/diodes
-	url = https://github.com/cloudfoundry/diodes
+[submodule "src/code.cloudfoundry.org/go-diodes"]
+	path = src/code.cloudfoundry.org/go-diodes
+	url = https://github.com/cloudfoundry/go-diodes
 [submodule "src/code.cloudfoundry.org/go-pubsub"]
 	path = src/code.cloudfoundry.org/go-pubsub
 	url = https://github.com/cloudfoundry-incubator/go-pubsub
