@@ -3,7 +3,7 @@ name: metron_agent
 dependencies:
 - golang1.9.1
 files:
-- loggregator/src/code.cloudfoundry.org/batching/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/go-batching/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/go-diodes/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/diodes/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub
