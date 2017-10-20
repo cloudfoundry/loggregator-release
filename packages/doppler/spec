@@ -3,7 +3,7 @@ name: doppler
 dependencies:
 - golang1.9.1
 files:
-- loggregator/src/code.cloudfoundry.org/batching/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/go-batching/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/go-diodes/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/go-pubsub/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/go-pubsub/internal/node/*.go # gosub
