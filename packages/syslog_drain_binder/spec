@@ -3,8 +3,6 @@ name: syslog_drain_binder
 dependencies:
 - golang1.9.1
 files:
-- loggregator/src/code.cloudfoundry.org/loggregator/syslog_drain_binder/LICENSE
-- loggregator/src/code.cloudfoundry.org/loggregator/syslog_drain_binder/NOTICE
 - loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
