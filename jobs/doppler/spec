@@ -20,9 +20,6 @@ provides:
   - doppler.grpc_port
 
 properties:
-  doppler.zone:
-    description: Zone of the doppler server
-    default: ""
   doppler.maxRetainedLogMessages:
     description: number of log messages to retain per application
     default: 100

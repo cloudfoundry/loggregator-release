@@ -1,9 +1,4 @@
 <%
-    # try and set these properties from a BOSH 2.0 spec object
-    job_name = spec.job.name || name
-    instance_id = spec.id || spec.index.to_s
-    instance_zone = p("doppler.zone").empty? ? spec.az : p("doppler.zone")
-
     grpcListenerConfig = {
         "Port" => p("doppler.grpc_port"),
         "KeyFile" => "/var/vcap/jobs/doppler/config/certs/doppler.key",
@@ -20,10 +15,6 @@
     args = Hash.new.tap do |a|
         a[:MessageDrainBufferSize] = p("doppler.message_drain_buffer_size")
         a[:GRPC] = grpcListenerConfig
-        a[:Zone] = instance_zone
-        a[:IP] = spec.ip
-        a[:JobName] = job_name
-        a[:Index] = instance_id
         a[:MaxRetainedLogMessages] = p("doppler.maxRetainedLogMessages")
         a[:ContainerMetricTTLSeconds] = p("doppler.container_metric_ttl_seconds")
         a[:SinkInactivityTimeoutSeconds] = p("doppler.sink_inactivity_timeout_seconds")
