@@ -53,9 +53,6 @@ RSpec.describe "Traffic Controller JSON" do
 
     expected_config = {
       "IP" => "10.0.0.250",
-      "EtcdUrls" => [],
-      "EtcdMaxConcurrentRequests" => 0,
-      "EtcdRequireTLS" => false,
       "DopplerAddrs" => ["doppler.service.cf.internal:1111"],
       "DopplerPort" => 4444,
       "OutgoingDropsondePort" => 5555,
@@ -65,7 +62,6 @@ RSpec.describe "Traffic Controller JSON" do
         "CertFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/trafficcontroller.crt",
         "CAFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/loggregator_ca.crt"
       },
-      "SkipCertVerify" => false,
       "SystemDomain" => "bosh-lite.com",
       "PPROFPort" => 6666,
       "HealthAddr" => "localhost:7777",
@@ -104,10 +100,6 @@ RSpec.describe "Traffic Controller JSON" do
       config = render_template(required_properties, links: links)
 
       expect(config["DopplerAddrs"]).to eq(["doppler.service.cf.internal:1111"])
-      expect(config["EtcdUrls"]).to eq([])
-      expect(config["EtcdRequireTLS"]).to eq(false)
-      expect(config["EtcdTLSClientConfig"]).to eq(nil)
-      expect(config["EtcdMaxConcurrentRequests"]).to eq(0)
     end
 
     it "uses an address property when no link is present" do
@@ -128,69 +120,12 @@ RSpec.describe "Traffic Controller JSON" do
       config = render_template(required_properties.merge(properties))
 
       expect(config["DopplerAddrs"]).to eq(["10.0.0.1:1111"])
-      expect(config["EtcdUrls"]).to eq([])
-      expect(config["EtcdRequireTLS"]).to eq(false)
-      expect(config["EtcdTLSClientConfig"]).to eq(nil)
-      expect(config["EtcdMaxConcurrentRequests"]).to eq(0)
     end
-
-     it "otherwises configures etcd URLs to discover Dopplers" do
-       properties = {
-         "loggregator" => {
-           "etcd" => {
-             "machines" => ["etcd.service.cf.internal"],
-             "maxconcurrentrequests" => 1,
-             "require_ssl" => false,
-           },
-           # required property of no importance here
-           "uaa" => {
-             "client_secret" => "secret"
-           }
-         }
-       }
-       config = render_template(required_properties.merge(properties))
-
-       expect(config["DopplerAddrs"]).to eq([])
-       expect(config["EtcdUrls"]).to eq(["http://etcd.service.cf.internal:4001"])
-       expect(config["EtcdRequireTLS"]).to eq(false)
-       expect(config["EtcdTLSClientConfig"]).to eq(nil)
-       expect(config["EtcdMaxConcurrentRequests"]).to eq(1)
-     end
-
-     it "configures etcd URLs with https" do
-       properties = {
-         "loggregator" => {
-           "etcd" => {
-             "machines" => ["etcd.service.cf.internal"],
-             "maxconcurrentrequests" => 1,
-             "require_ssl" => true,
-           },
-           # required property of no importance here
-           "uaa" => {
-             "client_secret" => "secret"
-           }
-         }
-       }
-       config = render_template(required_properties.merge(properties))
-
-       expect(config["EtcdUrls"]).to eq(["https://etcd.service.cf.internal:4001"])
-       expect(config["EtcdRequireTLS"]).to eq(true)
-       expected_tls_config = {
-         "KeyFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-client.key",
-         "CertFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-client.crt",
-         "CAFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-ca.crt"
-       }
-       expect(config["EtcdTLSClientConfig"]).to eq(expected_tls_config)
-     end
-   end
 
   describe "UAA config" do
     it "configures a client" do
       properties = {
         "loggregator" => {
-          "etcd" => {
-            "machines" => [],
-          },
           "uaa" => {
             "client" => "some-client",
             "client_secret" => "some-secret"
@@ -207,9 +142,6 @@ RSpec.describe "Traffic Controller JSON" do
     it "configures a client using an old property name" do
       properties = {
         "loggregator" => {
-          "etcd" => {
-            "machines" => [],
-          },
           "uaa_client_id" => "old-name",
           "uaa" => {
             "client" => "some-client",
@@ -252,9 +184,6 @@ RSpec.describe "Traffic Controller JSON" do
         "internal_service_hostname" => "cc.service.cf.internal"
       },
       "loggregator" => {
-        "etcd" => {
-          "machines" => []
-        },
         "uaa" => {
           "client_secret" => "secret"
         }

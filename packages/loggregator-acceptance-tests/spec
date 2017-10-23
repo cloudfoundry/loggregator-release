@@ -4,7 +4,6 @@ dependencies:
   - golang1.9.1
 files:
 - loggregator/src/github.com/onsi/ginkgo/ginkgo/**/*.go
-- loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/lats/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
@@ -21,7 +20,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/noaa/consumer/internal/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/noaa/errors/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
 - loggregator/src/github.com/gogo/protobuf/gogoproto/*.go # gosub
 - loggregator/src/github.com/gogo/protobuf/proto/*.go # gosub
 - loggregator/src/github.com/gogo/protobuf/protoc-gen-gogo/descriptor/*.go # gosub

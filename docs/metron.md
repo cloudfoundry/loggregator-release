@@ -8,8 +8,7 @@ environment and is therefore co-located on the emitter sources.
 
 Traffic is routed to Dopplers in the same AZ, but it can fall back to any
 Doppler if none are available in the current AZ. All Metron traffic is
-randomly distributed across available Dopplers. Metron keeps track of healthy
-dopplers by polling etcd for their health status.
+randomly distributed across available Dopplers.
 
 Metron only listens to local network interfaces and all logs and metrics are
 immediately signed before forwarding to Dopplers. This prevents

@@ -1,26 +1,11 @@
 <%
     doppler_addrs = []
-    etcd_machines = []
-    etcd_tls_client_config = {}
-    etcd_max_concurrent_requests = 0
-    etcd_require_tls = false
 
     if_link("doppler") do |ds|
         doppler_addrs = ds.instances.map{|i| "#{i.address}:#{ds.p('doppler.grpc_port')}"}
     end.else do
         paddrs = p("loggregator.doppler.addrs")
-        if paddrs && paddrs.size > 0
-            doppler_addrs = paddrs.map{|addr| "#{addr}:#{p('doppler.grpc_port')}"}
-        else
-            etcd_machines = p("loggregator.etcd.machines").map{|addr| "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"}
-            etcd_tls_client_config = {
-                "KeyFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-client.key",
-                "CertFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-client.crt",
-                "CAFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-ca.crt"
-            }
-            etcd_max_concurrent_requests = p("loggregator.etcd.maxconcurrentrequests")
-            etcd_require_tls = p("loggregator.etcd.require_ssl")
-        end
+        doppler_addrs = paddrs.map{|addr| "#{addr}:#{p('doppler.grpc_port')}"}
     end
 
     # Handle renamed properties
@@ -53,9 +38,6 @@
 
     args = {
         "IP" => spec.ip,
-        "EtcdUrls" => etcd_machines,
-        "EtcdMaxConcurrentRequests" => etcd_max_concurrent_requests,
-        "EtcdRequireTLS" => etcd_require_tls,
         "DopplerAddrs" => doppler_addrs,
         "DopplerPort" => p("doppler.outgoing_port"),
         "OutgoingDropsondePort" => p("loggregator.outgoing_dropsonde_port"),
@@ -75,9 +57,6 @@
 
     if !uaa_host.empty?
         args["UaaCACert"] = "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/uaa_ca.crt"
-    end
-    if etcd_require_tls
-        args["EtcdTLSClientConfig"] = etcd_tls_client_config
     end
     if p("traffic_controller.security_event_logging.enabled")
         args["SecurityEventLog"] = "/var/vcap/sys/log/loggregator_trafficcontroller/loggregator_trafficcontroller_security_events.log"
