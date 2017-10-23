@@ -14,6 +14,7 @@ function print_usage {
     echo "   unit              Run the unit tests"
     echo "   integration       Run the integration tests"
     echo "   multiplatform     Run the multiplatform sanity checks"
+    echo "   templates         Run the template specs"
     echo "   linters           Run common linters against the project"
     echo "   install_tools     Install all necessary binaries for these scripts"
 }
@@ -98,6 +99,15 @@ function run_multiplatform {
     return $?
 }
 
+function run_templates {
+    print_checkpoint "Running Template Specs"
+    if which rspec > /dev/null ; then
+        rspec
+        return $?
+    fi
+    return 0
+}
+
 function run_build {
     print_checkpoint "Make Sure Loggregator Packages Compile"
     go test -run xxxxxxxxxxxxxxxxx code.cloudfoundry.org/loggregator/... > /dev/null
@@ -171,6 +181,7 @@ function run_all {
     check_output run_cleaners
     check_output run_build
     check_output run_multiplatform
+    check_output run_templates
     check_output run_unit $@
     check_output run_integration $@
 }
@@ -187,7 +198,7 @@ function parse_argc {
             print_usage
             exit 0
             ;;
-        all|unit|integration|build|cleaners|multiplatform|linters|install_tools)
+        all|unit|integration|build|cleaners|multiplatform|templates|linters|install_tools)
             command=run_$arg
             ;;
         *)
