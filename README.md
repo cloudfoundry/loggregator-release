@@ -61,7 +61,7 @@ Loggregator does not provide any guaruntees around the order of delivery
 of logs. Because Loggregator is a distributed system this means that logs 
 appear out of order in the stream. To improve this the CLI will hold and order
 logs based on thier source timestamp as do most syslog servers. If you are using 
-Java a popular [work around exists using the Logback libirary](docs/java-multi-line-work-around.md).
+Java a popular [work around exists using the Logback library](docs/java-multi-line-work-around.md).
 
 ## Consuming the Firehose
 
