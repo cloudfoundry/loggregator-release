@@ -81,7 +81,8 @@ RSpec.describe "Traffic Controller JSON" do
       },
       "ApiHost" => "https://cc.service.cf.internal:8888",
       "UaaCACert" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/uaa_ca.crt",
-      "SecurityEventLog" => "/var/vcap/sys/log/loggregator_trafficcontroller/loggregator_trafficcontroller_security_events.log"
+      "SecurityEventLog" => "/var/vcap/sys/log/loggregator_trafficcontroller/loggregator_trafficcontroller_security_events.log",
+      "SkipCertVerify" => false,
     }
     expect(config).to eq(expected_config)
   end
@@ -121,6 +122,7 @@ RSpec.describe "Traffic Controller JSON" do
 
       expect(config["DopplerAddrs"]).to eq(["10.0.0.1:1111"])
     end
+  end
 
   describe "UAA config" do
     it "configures a client" do
