@@ -46,10 +46,6 @@ RSpec.describe "Doppler JSON" do
         "CAFile" => "/var/vcap/jobs/doppler/config/certs/loggregator_ca.crt",
         "CipherSuites" => ["a", "b"]
       },
-      "Zone" => "some-az",
-      "IP" => "10.0.0.1",
-      "JobName" => "some-job",
-      "Index" => "some-id",
       "MaxRetainedLogMessages" => 100,
       "ContainerMetricTTLSeconds" => 60,
       "SinkInactivityTimeoutSeconds" => 10,
@@ -62,56 +58,6 @@ RSpec.describe "Doppler JSON" do
       },
     }
     expect(config).to eq(expected_config)
-  end
-
-  it "includes the IP address" do
-    spec = InstanceSpec.new(ip: "1.2.3.4")
-    config = render_template({}, spec: spec)
-
-    expect(config["IP"]).to eq("1.2.3.4")
-  end
-
-  it "defaults to the job's name" do
-    spec = InstanceSpec.new(name: "some-name")
-    config = render_template({}, spec: spec)
-
-    expect(config["JobName"]).to eq("some-name")
-  end
-
-  describe "Index" do
-    it "defaults to the spec's id" do
-      spec = InstanceSpec.new(id: "some-id")
-      config = render_template({}, spec: spec)
-
-      expect(config["Index"]).to eq("some-id")
-    end
-
-    it "fails over to index if id is not present" do
-      spec = InstanceSpec.new(index: "some-index", id: nil)
-      config = render_template({}, spec: spec)
-
-      expect(config["Index"]). to eq("some-index")
-    end
-  end
-
-  describe "Zone" do
-    it "defaults to the doppler zone property" do
-      properties = {
-        "doppler" => {
-          "zone" => "my-zone"
-        }
-      }
-      config = render_template(properties)
-
-      expect(config["Zone"]).to eq("my-zone")
-    end
-
-    it "fails over to the az" do
-      spec = InstanceSpec.new(az: "az2")
-      config = render_template({}, spec: spec)
-
-      expect(config["Zone"]).to eq("az2")
-    end
   end
 
   describe "GRPC" do
