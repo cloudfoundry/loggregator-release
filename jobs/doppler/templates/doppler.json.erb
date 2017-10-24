@@ -7,7 +7,7 @@
         "CipherSuites" => p("loggregator.tls.cipher_suites").split(":")
     }
 
-    metronConfig = {
+    agentConfig = {
         "UDPAddress" => p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.dropsonde_port').to_s,
         "GRPCAddress" => p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.grpc_port').to_s
     }
@@ -21,7 +21,7 @@
         a[:UnmarshallerCount] = p("doppler.unmarshaller_count")
         a[:PPROFPort] = p("doppler.pprof_port")
         a[:HealthAddr] = p("doppler.health_addr")
-        a[:MetronConfig] = metronConfig
+        a[:Agent] = agentConfig
     end
 %>
 <%= JSON.pretty_generate(args) %>

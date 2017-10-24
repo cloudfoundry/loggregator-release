@@ -1,11 +1,11 @@
 <%
-    doppler_addrs = []
+    router_addrs = []
 
     if_link("doppler") do |ds|
-        doppler_addrs = ds.instances.map{|i| "#{i.address}:#{ds.p('doppler.grpc_port')}"}
+        router_addrs = ds.instances.map{|i| "#{i.address}:#{ds.p('doppler.grpc_port')}"}
     end.else do
         paddrs = p("loggregator.doppler.addrs")
-        doppler_addrs = paddrs.map{|addr| "#{addr}:#{p('doppler.grpc_port')}"}
+        router_addrs = paddrs.map{|addr| "#{addr}:#{p('doppler.grpc_port')}"}
     end
 
     # Handle renamed properties
@@ -22,7 +22,7 @@
         "CAFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/loggregator_ca.crt"
     }
 
-    metronConfig = {
+    agentConfig = {
         "UDPAddress" => p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.dropsonde_port').to_s,
         "GRPCAddress" => p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.grpc_port').to_s
     }
@@ -38,8 +38,8 @@
 
     args = {
         "IP" => spec.ip,
-        "DopplerAddrs" => doppler_addrs,
-        "DopplerPort" => p("doppler.outgoing_port"),
+        "RouterAddrs" => router_addrs,
+        "RouterPort" => p("doppler.outgoing_port"),
         "OutgoingDropsondePort" => p("loggregator.outgoing_dropsonde_port"),
         "GRPC" => grpc_config,
         "SkipCertVerify" => p("ssl.skip_cert_verify"),
@@ -49,7 +49,7 @@
         "UaaHost" => uaa_host,
         "UaaClient" => uaa_client,
         "UaaClientSecret" => p("loggregator.uaa.client_secret"),
-        "MetronConfig" => metronConfig,
+        "Agent" => agentConfig,
         "MetricEmitterInterval" => p('metric_emitter.interval'),
         "CCTLSClientConfig" => cc_tls_config,
         "ApiHost" => "https://#{p('cc.internal_service_hostname')}:#{p('cc.tls_port')}",

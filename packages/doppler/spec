@@ -9,13 +9,6 @@ files:
 - loggregator/src/code.cloudfoundry.org/go-pubsub/internal/node/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/go-pubsub/pubsub-gen/setters/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/diodes/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/doppler/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/server/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/server/v1/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/server/v2/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/sinks/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/truncatingbuffer/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/healthendpoint/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
@@ -23,6 +16,13 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/conversion/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/profiler/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/router/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/router/app/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/router/internal/server/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/router/internal/server/v1/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/router/internal/server/v2/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/router/internal/sinks/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/router/internal/truncatingbuffer/*.go # gosub
 - loggregator/src/github.com/beorn7/perks/quantile/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub

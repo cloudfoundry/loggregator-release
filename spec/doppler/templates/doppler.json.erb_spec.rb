@@ -52,7 +52,7 @@ RSpec.describe "Doppler JSON" do
       "UnmarshallerCount" => 30,
       "PPROFPort" => 2222,
       "HealthAddr" => "localhost:3333",
-      "MetronConfig" => {
+      "Agent" => {
         "UDPAddress" => "10.0.0.10:4444",
         "GRPCAddress" => "10.0.0.10:5555"
       },
@@ -85,7 +85,7 @@ RSpec.describe "Doppler JSON" do
     end
   end
 
-  describe "MetronConfig" do
+  describe "Agent" do
     it "includes a UDP and gRPC host port" do
       properties = {
         "metron_endpoint" => {
@@ -96,9 +96,9 @@ RSpec.describe "Doppler JSON" do
       }
       config = render_template(properties)
 
-      metron_config = config["MetronConfig"]
-      expect(metron_config["UDPAddress"]).to eq("10.0.0.1:1111")
-      expect(metron_config["GRPCAddress"]).to eq("10.0.0.1:2222")
+      agent_config = config["Agent"]
+      expect(agent_config["UDPAddress"]).to eq("10.0.0.1:1111")
+      expect(agent_config["GRPCAddress"]).to eq("10.0.0.1:2222")
     end
   end
 

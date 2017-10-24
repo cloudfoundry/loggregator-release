@@ -61,8 +61,8 @@ RSpec.describe "Metron Agent JSON" do
         "CipherSuites" => ["a", "b"]
 
       },
-      "DopplerAddr" => "10.0.0.1:5555",
-      "DopplerAddrWithAZ" => "some-az.10.0.0.1:5555",
+      "RouterAddr" => "10.0.0.1:5555",
+      "RouterAddrWithAZ" => "some-az.10.0.0.1:5555",
     }
     expect(config).to eq(expected_config)
   end
@@ -175,7 +175,7 @@ RSpec.describe "Metron Agent JSON" do
     end
   end
 
-  describe "DopplerAddr" do
+  describe "RouterAddr" do
     it "sets the addresses as a hostports" do
       properties = {
         "doppler" => {
@@ -186,23 +186,23 @@ RSpec.describe "Metron Agent JSON" do
 
       config = render_template(properties)
 
-      expect(config["DopplerAddr"]).to eq("127.0.0.1:9999")
+      expect(config["RouterAddr"]).to eq("127.0.0.1:9999")
     end
   end
 
   describe "Bosh DNS is enabled" do
-    it "uses bosh links to populate DopplerAddr and DopplerAddrWithAZ" do
+    it "uses bosh links to populate RouterAddr and RouterAddrWithAZ" do
       pending "Links are not supported by bosh-template"
 
       instanceA = LinkInstance.new(
         name: 'doppler',
         az: 'az1',
-        address: 'doppler.bosh.internal',
+        address: 'router.bosh.internal',
       )
       instanceB = LinkInstance.new(
         name: 'doppler',
         az: 'az2',
-        address: 'doppler.bosh.internal',
+        address: 'router.bosh.internal',
       )
       link = Link.new(name: "doppler", instances: [instanceA, instanceB])
 
@@ -210,8 +210,8 @@ RSpec.describe "Metron Agent JSON" do
 
       config = render_template(properties, links: [link])
 
-      expect(config['DopplerAddr']).to eq('some-doppler-addr:8082')
-      expect(config['DopplerAddrWithAZ']).to eq('az1.some-doppler-addr:8082')
+      expect(config['RouterAddr']).to eq('some-router-addr:8082')
+      expect(config['RouterAddrWithAZ']).to eq('az1.some-router-addr:8082')
     end
   end
 end

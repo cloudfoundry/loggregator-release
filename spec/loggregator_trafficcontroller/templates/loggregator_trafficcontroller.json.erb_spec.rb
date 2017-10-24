@@ -53,8 +53,8 @@ RSpec.describe "Traffic Controller JSON" do
 
     expected_config = {
       "IP" => "10.0.0.250",
-      "DopplerAddrs" => ["doppler.service.cf.internal:1111"],
-      "DopplerPort" => 4444,
+      "RouterAddrs" => ["doppler.service.cf.internal:1111"],
+      "RouterPort" => 4444,
       "OutgoingDropsondePort" => 5555,
       "GRPC" => {
         "Port" => 1111,
@@ -68,7 +68,7 @@ RSpec.describe "Traffic Controller JSON" do
       "UaaHost" => "uaa.service.cf.internal",
       "UaaClient" => "some-client",
       "UaaClientSecret" => "some-secret",
-      "MetronConfig" => {
+      "Agent" => {
         "UDPAddress" => "10.0.0.1:2222",
         "GRPCAddress" => "10.0.0.1:3333"
       },
@@ -87,7 +87,7 @@ RSpec.describe "Traffic Controller JSON" do
     expect(config).to eq(expected_config)
   end
 
-  describe "Doppler configuration" do
+  describe "Router configuration" do
     it "consumes a Doppler link" do
       links = [Link.new(
         name: "doppler",
@@ -100,7 +100,7 @@ RSpec.describe "Traffic Controller JSON" do
       )]
       config = render_template(required_properties, links: links)
 
-      expect(config["DopplerAddrs"]).to eq(["doppler.service.cf.internal:1111"])
+      expect(config["RouterAddrs"]).to eq(["doppler.service.cf.internal:1111"])
     end
 
     it "uses an address property when no link is present" do
@@ -120,7 +120,7 @@ RSpec.describe "Traffic Controller JSON" do
       }
       config = render_template(required_properties.merge(properties))
 
-      expect(config["DopplerAddrs"]).to eq(["10.0.0.1:1111"])
+      expect(config["RouterAddrs"]).to eq(["10.0.0.1:1111"])
     end
   end
 
