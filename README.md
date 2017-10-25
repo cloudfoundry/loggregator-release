@@ -145,7 +145,7 @@ planning tests.
 
 ### Roadmap
 
-We communicate our long term planning using a [Product Road Map][https://github.com/cloudfoundry/loggregator-release/projects/1],
+We communicate our long term planning using a [Product Road Map](https://github.com/cloudfoundry/loggregator-release/projects/1),
 and are always looking to gather feedback and input from Loggregator
 operators. Get in touch or file an issue if you have feature suggestions you'd
 like to see added.
