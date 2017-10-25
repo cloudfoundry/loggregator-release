@@ -57,11 +57,6 @@ func (i Ingestor) Sender(s plumbing.DopplerIngress_SenderServer) error {
 				metric.WithIncrement(count),
 			)
 
-			// metric-documentation-v1: (listeners.totalReceivedMessageCount)
-			// Total number of messages received by doppler.
-			i.batcher.BatchCounter("listeners.totalReceivedMessageCount").
-				Increment()
-
 			log.Printf("Ingressed (v2) %d envelopes", count)
 			lastEmitted = time.Now()
 			count = 0
