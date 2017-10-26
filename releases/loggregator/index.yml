@@ -143,12 +143,14 @@ builds:
     version: "34"
   a83eaa2a-0514-423a-7466-f2579c329292:
     version: 74.0.2
-  b0452256-fe81-4be1-5eeb-2f10c39af1b1:
-    version: "89"
   afc42a49-e2ad-4c0c-6dda-2bda5ef5d3b5:
     version: "77.2"
+  b0452256-fe81-4be1-5eeb-2f10c39af1b1:
+    version: "89"
   b0b9aa3b-b9f4-4271-8595-2254a6ff727f:
     version: "67"
+  b6e895db-38a3-4279-79a6-376fde26e5d6:
+    version: "101"
   b9ff4d66-fc00-4459-85bb-05f302e1732a:
     version: "52"
   ba61d767-22e6-439d-5716-dcfae3ecab39:
