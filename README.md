@@ -14,6 +14,7 @@ overview of Loggregator components and architecture.
 * [Streaming Application Logs](#streaming-application-logs)
   * [Using the CF CLI](#using-the-cf-cli)
   * [Forwarding to a Log Drain](#forwarding-to-a-log-drain)
+  * [Log Ordering](#log-ordering)
 * [Consuming the Firehose](#consuming-the-firehose)
   * [User Account and Authentication Scope](#user-account-and-authentication-scope)
   * [Nozzle Development](#nozzle-development)
@@ -53,6 +54,14 @@ The fastest way to see your logs is by running the `cf logs` command using the
 If you’d like to save all logs for an application in a third party or custom
 tool that expects the syslog format, a log drain allows you to do so. Check
 the [Cloud Foundry docs][cf-docs] for more details.
+
+### Log Ordering
+
+Loggregator does not provide any guaruntees around the order of delivery 
+of logs. Because Loggregator is a distributed system this means that logs 
+appear out of order in the stream. To improve this the CLI will hold and order
+logs based on thier source timestamp as do most syslog servers. If you are using 
+Java a popular [work around exists using the Logback library](docs/java-multi-line-work-around.md).
 
 ## Consuming the Firehose
 
@@ -136,7 +145,7 @@ planning tests.
 
 ### Roadmap
 
-We communicate our long term planning using a [Product Road Map][road-map],
+We communicate our long term planning using a [Product Road Map](https://github.com/cloudfoundry/loggregator-release/projects/1),
 and are always looking to gather feedback and input from Loggregator
 operators. Get in touch or file an issue if you have feature suggestions you'd
 like to see added.

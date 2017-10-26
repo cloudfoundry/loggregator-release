@@ -5,19 +5,18 @@ dependencies:
 files:
 - loggregator/src/code.cloudfoundry.org/go-batching/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/go-diodes/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/agent/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/agent/app/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/agent/internal/clientpool/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/agent/internal/clientpool/v1/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/agent/internal/clientpool/v2/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/agent/internal/egress/v1/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/agent/internal/egress/v2/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/agent/internal/ingress/v1/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/agent/internal/ingress/v2/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/diodes/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/healthendpoint/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/metron/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/metron/app/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/metron/internal/clientpool/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/metron/internal/clientpool/v1/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/metron/internal/clientpool/v2/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/metron/internal/egress/v1/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/metron/internal/egress/v2/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/metron/internal/ingress/v1/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/metron/internal/ingress/v2/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/batching/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
@@ -29,7 +28,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/dropsonde/metrics/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/runtime_stats/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
 - loggregator/src/github.com/gogo/protobuf/gogoproto/*.go # gosub
 - loggregator/src/github.com/gogo/protobuf/proto/*.go # gosub
 - loggregator/src/github.com/gogo/protobuf/protoc-gen-gogo/descriptor/*.go # gosub

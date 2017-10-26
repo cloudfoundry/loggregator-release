@@ -1,8 +1,0 @@
-set -e -x
-
-export GOROOT=$(readlink -nf /var/vcap/packages/golang1.9.1)
-export PATH=$GOROOT/bin:$PATH
-export GOPATH=$PWD/loggregator
-
-go install code.cloudfoundry.org/loggregator/syslog_drain_binder
-cp -a $PWD/loggregator/bin/syslog_drain_binder ${BOSH_INSTALL_TARGET}

@@ -7,9 +7,6 @@ templates:
   doppler.crt.erb: config/certs/doppler.crt
   doppler.key.erb: config/certs/doppler.key
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
-  etcd-client.crt.erb: config/certs/etcd-client.crt
-  etcd-client.key.erb: config/certs/etcd-client.key
-  etcd-ca.crt.erb: config/certs/etcd-ca.crt
   dns_health_check.erb: bin/dns_health_check
 
 packages:
@@ -23,9 +20,6 @@ provides:
   - doppler.grpc_port
 
 properties:
-  doppler.zone:
-    description: Zone of the doppler server
-    default: ""
   doppler.maxRetainedLogMessages:
     description: number of log messages to retain per application
     default: 100
@@ -42,44 +36,9 @@ properties:
       TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 and TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384.
     default: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
 
-  loggregator.etcd.require_ssl:
-    description: "Enable ssl for all communication with etcd"
-    default: false
-  loggregator.etcd.ca_cert:
-    description: "PEM-encoded CA certificate"
-    default: ""
-  doppler.etcd.client_cert:
-    description: "PEM-encoded client certificate"
-    default: ""
-  doppler.etcd.client_key:
-    description: "PEM-encoded client key"
-    default: ""
-
-  doppler.websocket_host:
-    description: Host for websocket server
-    default: 0.0.0.0
-  doppler.disable_announce:
-    description: Disable doppler announcing via etcd
-    default: false
-
   doppler.grpc_port:
     description: Port for outgoing log messages via GRPC
     default: 8082
-
-  doppler.websocket_write_timeout_seconds:
-    description: "Interval before a websocket write is aborted if it does not succeed"
-    default: 60
-
-  loggregator.disable_syslog_drains:
-    description: |
-      Disable syslog drain capability in Loggregator. This is meant to be used
-      when migrating to cf-syslog-drain-release.
-    default: false
-  doppler.syslog_skip_cert_verify:
-    description: "When connecting over TLS, don't verify certificates for syslog sink"
-    default: true
-  doppler.blacklisted_syslog_ranges:
-    description: "Blacklist for IPs that should not be used as syslog drains, e.g. internal ip addresses."
 
   doppler.container_metric_ttl_seconds:
     description: "TTL (in seconds) for container usage metrics"
@@ -91,12 +50,6 @@ properties:
   doppler.sink_inactivity_timeout_seconds:
     description: "Interval before removing a sink due to inactivity"
     default: 3600
-  doppler.sink_dial_timeout_seconds:
-    description: "Dial timeout for sinks"
-    default: 1
-  doppler.sink_io_timeout_seconds:
-    description: "I/O Timeout on sinks"
-    default: 60
 
   doppler.message_drain_buffer_size:
     description: "Size of the internal buffer used by doppler to store messages for output to firehose or 'cf logs'. If the buffer gets full doppler will drop the messages."
@@ -112,10 +65,6 @@ properties:
   doppler.health_addr:
     description: "The host:port to expose health metrics for doppler"
     default: "localhost:14825"
-
-  loggregator.etcd.machines:
-    description: "IPs pointing to the ETCD cluster"
-    default: []
 
   metron_endpoint.host:
     description: "The host used to emit messages to the Metron agent"

@@ -3,7 +3,7 @@
 set -e
 
 mkdir -p bin
-for line in rlp metron trafficcontroller doppler syslog_drain_binder; do
+for line in rlp agent trafficcontroller router; do
   echo building $line
   go build -o bin/$line code.cloudfoundry.org/loggregator/$line
 done
