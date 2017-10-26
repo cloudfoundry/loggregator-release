@@ -6,6 +6,7 @@ files:
 - loggregator/src/exiter.ps1
 - loggregator/src/code.cloudfoundry.org/go-batching/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/go-diodes/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/go-envstruct/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/agent/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/agent/app/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/agent/internal/clientpool/*.go # gosub

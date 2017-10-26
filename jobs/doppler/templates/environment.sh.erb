@@ -1,0 +1,16 @@
+export AGENT_UDP_ADDRESS="<%= p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.dropsonde_port').to_s %>"
+export AGENT_GRPC_ADDRESS="<%= p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.grpc_port').to_s %>"
+
+export ROUTER_PORT="<%= p("doppler.grpc_port") %>"
+export ROUTER_CERT_FILE="/var/vcap/jobs/doppler/config/certs/doppler.crt"
+export ROUTER_KEY_FILE="/var/vcap/jobs/doppler/config/certs/doppler.key"
+export ROUTER_CA_FILE="/var/vcap/jobs/doppler/config/certs/loggregator_ca.crt"
+export ROUTER_CIPHER_SUITES="<%= p("loggregator.tls.cipher_suites").split(":").join(',') %>"
+
+export ROUTER_MAX_RETAINED_LOG_MESSAGES="<%= p("doppler.maxRetainedLogMessages") %>"
+export ROUTER_MESSAGE_DRAIN_BUFFER_SIZE="<%= p("doppler.message_drain_buffer_size") %>"
+export ROUTER_CONTAINER_METRIC_TTL_SECONDS="<%= p("doppler.container_metric_ttl_seconds") %>"
+export ROUTER_SINK_INACTIVITY_TIMEOUT_SECONDS="<%= p("doppler.sink_inactivity_timeout_seconds") %>"
+export ROUTER_UNMARSHALLER_COUNT="<%= p("doppler.unmarshaller_count") %>"
+export ROUTER_PPROF_PORT="<%= p("doppler.pprof_port") %>"
+export ROUTER_HEALTH_ADDR="<%= p("doppler.health_addr") %>"

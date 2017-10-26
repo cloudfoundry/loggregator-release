@@ -4,8 +4,8 @@ require "bosh/template/test"
 
 include Bosh::Template::Test
 
-RSpec.describe "Traffic Controller JSON" do
-  it "renders a full configuration" do
+RSpec.describe "Traffic Controller Environment" do
+  it "renders a full environment" do
     properties = {
       "cc" => {
         "internal_service_hostname" => "cc.service.cf.internal",
@@ -26,7 +26,7 @@ RSpec.describe "Traffic Controller JSON" do
         }
       },
       "metric_emitter" => {
-        "interval" => 1,
+        "interval" => "1m",
       },
       "metron_endpoint" => {
         "dropsonde_port" => 2222,
@@ -38,6 +38,7 @@ RSpec.describe "Traffic Controller JSON" do
       },
       "system_domain" => "bosh-lite.com",
       "traffic_controller" => {
+        "disable_access_control" => true,
         "pprof_port" => 6666,
         "health_addr" => "localhost:7777",
         "security_event_logging" => {
@@ -52,37 +53,30 @@ RSpec.describe "Traffic Controller JSON" do
     config = render_template(properties, spec: spec)
 
     expected_config = {
-      "IP" => "10.0.0.250",
-      "RouterAddrs" => ["doppler.service.cf.internal:1111"],
-      "RouterPort" => 4444,
-      "OutgoingDropsondePort" => 5555,
-      "GRPC" => {
-        "Port" => 1111,
-        "KeyFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/trafficcontroller.key",
-        "CertFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/trafficcontroller.crt",
-        "CAFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/loggregator_ca.crt"
-      },
-      "SystemDomain" => "bosh-lite.com",
-      "PPROFPort" => 6666,
-      "HealthAddr" => "localhost:7777",
-      "UaaHost" => "uaa.service.cf.internal",
-      "UaaClient" => "some-client",
-      "UaaClientSecret" => "some-secret",
-      "Agent" => {
-        "UDPAddress" => "10.0.0.1:2222",
-        "GRPCAddress" => "10.0.0.1:3333"
-      },
-      "MetricEmitterInterval" => 1,
-      "CCTLSClientConfig" => {
-        "CertFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/cc_trafficcontroller.crt",
-        "KeyFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/cc_trafficcontroller.key",
-        "CAFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/mutual_tls_ca.crt",
-        "ServerName" => "cc.service.cf.internal",
-      },
-      "ApiHost" => "https://cc.service.cf.internal:8888",
-      "UaaCACert" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/uaa_ca.crt",
-      "SecurityEventLog" => "/var/vcap/sys/log/loggregator_trafficcontroller/loggregator_trafficcontroller_security_events.log",
-      "SkipCertVerify" => false,
+      "AGENT_UDP_ADDRESS" => "10.0.0.1:2222",
+      "AGENT_GRPC_ADDRESS" => "10.0.0.1:3333",
+      "ROUTER_ADDRS" => "doppler.service.cf.internal:1111",
+      "ROUTER_CA_FILE" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/loggregator_ca.crt",
+      "ROUTER_CERT_FILE" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/trafficcontroller.crt",
+      "ROUTER_KEY_FILE" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/trafficcontroller.key",
+      "CC_CERT_FILE" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/cc_trafficcontroller.crt",
+      "CC_KEY_FILE" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/cc_trafficcontroller.key",
+      "CC_CA_FILE" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/mutual_tls_ca.crt",
+      "CC_SERVER_NAME" => "cc.service.cf.internal",
+      "TRAFFIC_CONTROLLER_IP" => "10.0.0.250",
+      "TRAFFIC_CONTROLLER_API_HOST" => "https://cc.service.cf.internal:8888",
+      "TRAFFIC_CONTROLLER_OUTGOING_DROPSONDE_PORT" => "5555",
+      "TRAFFIC_CONTROLLER_SYSTEM_DOMAIN" => "bosh-lite.com",
+      "TRAFFIC_CONTROLLER_SKIP_CERT_VERIFY" => "false",
+      "TRAFFIC_CONTROLLER_UAA_HOST" => "uaa.service.cf.internal",
+      "TRAFFIC_CONTROLLER_UAA_CLIENT" => "some-client",
+      "TRAFFIC_CONTROLLER_UAA_CLIENT_SECRET" => "some-secret",
+      "TRAFFIC_CONTROLLER_UAA_CA_CERT" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/uaa_ca.crt",
+      "TRAFFIC_CONTROLLER_SECURITY_EVENT_LOG" => "/var/vcap/sys/log/loggregator_trafficcontroller/loggregator_trafficcontroller_security_events.log",
+      "TRAFFIC_CONTROLLER_PPROF_PORT" => "6666",
+      "TRAFFIC_CONTROLLER_METRIC_EMITTER_INTERVAL" => "1m",
+      "TRAFFIC_CONTROLLER_HEALTH_ADDR" => "localhost:7777",
+      "TRAFFIC_CONTROLLER_DISABLE_ACCESS_CONTROL" => "true",
     }
     expect(config).to eq(expected_config)
   end
@@ -91,7 +85,10 @@ RSpec.describe "Traffic Controller JSON" do
     it "consumes a Doppler link" do
       links = [Link.new(
         name: "doppler",
-        instances: [LinkInstance.new(address: "doppler.service.cf.internal")],
+        instances: [
+          LinkInstance.new(address: "doppler-1.service.cf.internal"),
+          LinkInstance.new(address: "doppler-2.service.cf.internal"),
+        ],
         properties: {
           "doppler" => {
             "grpc_port" => 1111,
@@ -100,7 +97,7 @@ RSpec.describe "Traffic Controller JSON" do
       )]
       config = render_template(required_properties, links: links)
 
-      expect(config["RouterAddrs"]).to eq(["doppler.service.cf.internal:1111"])
+      expect(config["ROUTER_ADDRS"]).to eq("doppler-1.service.cf.internal:1111,doppler-2.service.cf.internal:1111")
     end
 
     it "uses an address property when no link is present" do
@@ -120,7 +117,7 @@ RSpec.describe "Traffic Controller JSON" do
       }
       config = render_template(required_properties.merge(properties))
 
-      expect(config["RouterAddrs"]).to eq(["10.0.0.1:1111"])
+      expect(config["ROUTER_ADDRS"]).to eq("10.0.0.1:1111")
     end
   end
 
@@ -136,9 +133,9 @@ RSpec.describe "Traffic Controller JSON" do
       }
       config = render_template(required_properties.merge(properties))
 
-      expect(config["UaaClient"]).to eq("some-client")
-      expect(config["UaaClientSecret"]).to eq("some-secret")
-      expect(config["UaaCACert"]).to be_nil
+      expect(config["TRAFFIC_CONTROLLER_UAA_CLIENT"]).to eq("some-client")
+      expect(config["TRAFFIC_CONTROLLER_UAA_CLIENT_SECRET"]).to eq("some-secret")
+      expect(config["TRAFFIC_CONTROLLER_UAA_CA_CERT"]).to be_nil
     end
 
     it "configures a client using an old property name" do
@@ -153,7 +150,7 @@ RSpec.describe "Traffic Controller JSON" do
       }
       config = render_template(required_properties.merge(properties))
 
-      expect(config["UaaClient"]).to eq("old-name")
+      expect(config["TRAFFIC_CONTROLLER_UAA_CLIENT"]).to eq("old-name")
     end
 
     it "adds a CA cert when the host is present" do
@@ -164,18 +161,23 @@ RSpec.describe "Traffic Controller JSON" do
       }
       config = render_template(required_properties.merge(properties))
 
-      expect(config["UaaCACert"]).to eq("/var/vcap/jobs/loggregator_trafficcontroller/config/certs/uaa_ca.crt")
+      expect(config["TRAFFIC_CONTROLLER_UAA_CA_CERT"]).to eq("/var/vcap/jobs/loggregator_trafficcontroller/config/certs/uaa_ca.crt")
     end
   end
 
   def render_template(properties, spec: InstanceSpec.new, links: [])
-    release_path = File.join(File.dirname(__FILE__), "../../../")
+    release_path = File.join(File.dirname(__FILE__), '../../../')
     release = Bosh::Template::Test::ReleaseDir.new(release_path)
-    job = release.job("loggregator_trafficcontroller")
-    template = job.template("config/loggregator_trafficcontroller.json")
+    job = release.job('loggregator_trafficcontroller')
+    template = job.template('bin/environment.sh')
     rendered = template.render(properties, spec: spec, consumes: links)
 
-    JSON.parse(rendered)
+    rendered.split("\n").each_with_object({}) do |str, h|
+      if str != ""
+        k, v = str.split("=")
+        h[k.gsub("export ", "")] = v.gsub("\"", "")
+      end
+    end
   end
 
   # These are the properties the Bosh spec file requires operators to

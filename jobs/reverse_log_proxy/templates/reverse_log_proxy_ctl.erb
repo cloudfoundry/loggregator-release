@@ -7,6 +7,7 @@ JOB_DIR=/var/vcap/jobs/reverse_log_proxy
 CERT_DIR=$JOB_DIR/config/certs
 
 PACKAGE_DIR=/var/vcap/packages/reverse_log_proxy
+ENVIRONMENT=/var/vcap/jobs/reverse_log_proxy/bin/environment.sh
 
 case $1 in
 
@@ -25,32 +26,9 @@ case $1 in
 
     ulimit -n 8192
 
-    <%
-        ingress_addrs = []
-        if_link("doppler") { |ds|
-            ingress_addrs = ds.instances.map do |instance|
-                "#{instance.address}:#{ds.p('doppler.grpc_port')}"
-            end
-        }.else {
-            ingress_addrs = p('loggregator.doppler.addrs').map do |addr|
-                "#{addr}:#{p('loggregator.doppler.grpc_port')}"
-            end
-        }
-    %>
-
+    source $ENVIRONMENT
     echo $$ > $PIDFILE
-    exec chpst -u vcap:vcap ./rlp \
-      --pprof-port="<%= p('reverse_log_proxy.pprof.port') %>" \
-      --health-addr="<%= p('reverse_log_proxy.health_addr') %>" \
-      --egress-port="<%= p('reverse_log_proxy.egress.port') %>" \
-      --ingress-addrs="<%= ingress_addrs.join(',') %>" \
-      --ca=$CERT_DIR/mutual_tls_ca.crt \
-      --cert=$CERT_DIR/reverse_log_proxy.crt \
-      --key=$CERT_DIR/reverse_log_proxy.key \
-      --cipher-suites="<%= p('loggregator.tls.cipher_suites') %>" \
-      --metron-addr="<%= [ p('metron_endpoint.host'), p('metron_endpoint.grpc_port')].join(':') %>" \
-      --metric-emitter-interval="<%= p('metric_emitter.interval') %>" \
-      &>> ${LOG_DIR}/rlp.log
+    exec chpst -u vcap:vcap ./rlp &>> ${LOG_DIR}/rlp.log
 
     ;;
 

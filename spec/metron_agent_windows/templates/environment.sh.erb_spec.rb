@@ -4,8 +4,8 @@ require "bosh/template/test"
 
 include Bosh::Template::Test
 
-RSpec.describe "Metron Agent JSON" do
-  it "renders a full JSON configuration" do
+RSpec.describe "Metron Agent Windows Environment" do
+  it "renders a full environment" do
     spec = InstanceSpec.new(
         id: "some-id",
         ip: "127.0.0.1",
@@ -37,32 +37,26 @@ RSpec.describe "Metron Agent JSON" do
     config = render_template(properties, spec: spec)
 
     expected_config = {
-      "Index" => "some-id",
-      "Job" => "some-job",
-      "Zone" => "some-az",
-      "Deployment" => "some-deployment",
-      "IP" => "127.0.0.1",
-      "Tags" => {
-        "deployment" => "some-deployment",
-        "job" => "some-job",
-        "index" => "some-id",
-        "ip" => "127.0.0.1",
-        "some-key" => "some-value",
-      },
-      "IncomingUDPPort" => 1111,
-      "DisableUDP" => false,
-      "PPROFPort" => 2222,
-      "HealthEndpointPort" => 3333,
-      "GRPC" => {
-        "Port" => 4444,
-        "KeyFile" => "/var/vcap/jobs/metron_agent/config/certs/metron_agent.key",
-        "CertFile" => "/var/vcap/jobs/metron_agent/config/certs/metron_agent.crt",
-        "CAFile" => "/var/vcap/jobs/metron_agent/config/certs/loggregator_ca.crt",
-        "CipherSuites" => ["a", "b"]
-
-      },
-      "RouterAddr" => "10.0.0.1:5555",
-      "RouterAddrWithAZ" => "some-az.10.0.0.1:5555",
+      "__PIPE_SYSLOG_HOST" => "",
+      "__PIPE_SYSLOG_PORT" => "",
+      "__PIPE_SYSLOG_TRANSPORT" => "udp",
+      "AGENT_PORT" => "4444",
+      "AGENT_CA_FILE" => "/var/vcap/jobs/metron_agent/config/certs/loggregator_ca.crt",
+      "AGENT_CERT_FILE" => "/var/vcap/jobs/metron_agent/config/certs/metron_agent.crt",
+      "AGENT_KEY_FILE" => "/var/vcap/jobs/metron_agent/config/certs/metron_agent.key",
+      "AGENT_CIPHER_SUITES" => "a,b",
+      "AGENT_DEPLOYMENT" => "some-deployment",
+      "AGENT_ZONE" => "some-az",
+      "AGENT_JOB" => "some-job",
+      "AGENT_INDEX" => "some-id",
+      "AGENT_IP" => "127.0.0.1",
+      "AGENT_TAGS" => "deployment:some-deployment,job:some-job,index:some-id,ip:127.0.0.1,some-key:some-value",
+      "AGENT_DISABLE_UDP" => "false",
+      "AGENT_INCOMING_UDP_PORT" => "1111",
+      "AGENT_HEALTH_ENDPOINT_PORT" => "3333",
+      "AGENT_PPROF_PORT" => "2222",
+      "ROUTER_ADDR" => "10.0.0.1:5555",
+      "ROUTER_ADDR_WITH_AZ" => "some-az.10.0.0.1:5555",
     }
     expect(config).to eq(expected_config)
   end
@@ -71,7 +65,7 @@ RSpec.describe "Metron Agent JSON" do
     spec = InstanceSpec.new(name: "some-name")
     config = render_template({}, spec: spec)
 
-    expect(config["Job"]).to eq("some-name")
+    expect(config["AGENT_JOB"]).to eq("some-name")
   end
 
   describe "Index" do
@@ -79,14 +73,14 @@ RSpec.describe "Metron Agent JSON" do
       spec = InstanceSpec.new(id: "some-id")
       config = render_template({}, spec: spec)
 
-      expect(config["Index"]).to eq("some-id")
+      expect(config["AGENT_INDEX"]).to eq("some-id")
     end
 
     it "uses the spec's index when there is no ID" do
       spec = InstanceSpec.new(id: nil, index: 0)
       config = render_template({}, spec: spec)
 
-      expect(config["Index"]).to eq("0")
+      expect(config["AGENT_INDEX"]).to eq("0")
     end
   end
 
@@ -95,7 +89,7 @@ RSpec.describe "Metron Agent JSON" do
       spec = InstanceSpec.new(az: "some-az")
       config = render_template({}, spec: spec)
 
-      expect(config["Zone"]).to eq("some-az")
+      expect(config["AGENT_ZONE"]).to eq("some-az")
     end
 
     it "uses the provided property" do
@@ -107,7 +101,7 @@ RSpec.describe "Metron Agent JSON" do
       }
       config = render_template(prop, spec: spec)
 
-      expect(config["Zone"]).to eq("other-az")
+      expect(config["AGENT_ZONE"]).to eq("other-az")
     end
   end
 
@@ -116,7 +110,7 @@ RSpec.describe "Metron Agent JSON" do
       spec = InstanceSpec.new(deployment: "some-deployment")
       config = render_template({}, spec: spec)
 
-      expect(config["Deployment"]).to eq("some-deployment")
+      expect(config["AGENT_DEPLOYMENT"]).to eq("some-deployment")
     end
 
     it "uses the provided property" do
@@ -128,7 +122,7 @@ RSpec.describe "Metron Agent JSON" do
       }
       config = render_template(properties, spec: spec)
 
-      expect(config["Deployment"]).to eq("other-deployment")
+      expect(config["AGENT_DEPLOYMENT"]).to eq("other-deployment")
     end
   end
 
@@ -143,7 +137,7 @@ RSpec.describe "Metron Agent JSON" do
       }
       config = render_template(properties)
 
-      expect(config["GRPC"]["CipherSuites"]).to eq(["a", "b"])
+      expect(config["AGENT_CIPHER_SUITES"]).to eq("a,b")
     end
   end
 
@@ -164,14 +158,8 @@ RSpec.describe "Metron Agent JSON" do
       }
       config = render_template(properties, spec: spec)
 
-      expected_tags = {
-        "deployment" => "some-deployment",
-        "job" => "some-job",
-        "index" => "some-id",
-        "ip" => "127.0.0.1",
-        "other-tag" => "other-value",
-      }
-      expect(config["Tags"]).to eq(expected_tags)
+      expected_tags_str = "deployment:some-deployment,job:some-job,index:some-id,ip:127.0.0.1,other-tag:other-value"
+      expect(config["AGENT_TAGS"]).to eq(expected_tags_str)
     end
   end
 
@@ -186,7 +174,7 @@ RSpec.describe "Metron Agent JSON" do
 
       config = render_template(properties)
 
-      expect(config["RouterAddr"]).to eq("127.0.0.1:9999")
+      expect(config["ROUTER_ADDR"]).to eq("127.0.0.1:9999")
     end
   end
 
@@ -210,18 +198,25 @@ RSpec.describe "Metron Agent JSON" do
 
       config = render_template(properties, links: [link])
 
-      expect(config['RouterAddr']).to eq('some-router-addr:8082')
-      expect(config['RouterAddrWithAZ']).to eq('az1.some-router-addr:8082')
+      expect(config["ROUTER_ADDR"]).to eq("some-router-addr:8082")
+      expect(config["ROUTER_ADDR_WITH_AZ"]).to eq("az1.some-router-addr:8082")
     end
   end
-end
 
-def render_template(properties, spec: InstanceSpec.new, links: [])
-  release_path = File.join(File.dirname(__FILE__), '../../../')
-  release = ReleaseDir.new(release_path)
-  job = release.job('metron_agent')
-  template = job.template('config/metron_agent.json')
-  rendered = template.render(properties, spec: spec, consumes: links)
+  def render_template(properties, spec: InstanceSpec.new, links: [])
+    release_path = File.join(File.dirname(__FILE__), '../../../')
+    release = Bosh::Template::Test::ReleaseDir.new(release_path)
+    job = release.job('metron_agent_windows')
 
-  JSON.parse(rendered)
+    # Hack our monit template into the bosh templates
+    job.instance_variable_get(:@templates)["monit"] = '../monit'
+    template = job.template('../monit')
+    p = template.instance_variable_get(:@template_path)
+    p.gsub!("templates/monit", "monit")
+    template.instance_variable_set(:@template_path, p)
+
+    rendered = template.render(properties, spec: spec, consumes: links)
+
+    JSON.parse(rendered)["processes"].first["env"]
+  end
 end

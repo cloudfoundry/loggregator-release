@@ -3,7 +3,7 @@ name: doppler
 
 templates:
   doppler_ctl.erb: bin/doppler_ctl
-  doppler.json.erb: config/doppler.json
+  environment.sh.erb: bin/environment.sh
   doppler.crt.erb: config/certs/doppler.crt
   doppler.key.erb: config/certs/doppler.key
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt

@@ -112,3 +112,6 @@
 [submodule "src/code.cloudfoundry.org/go-batching"]
 	path = src/code.cloudfoundry.org/go-batching
 	url = https://github.com/cloudfoundry/go-batching
+[submodule "src/code.cloudfoundry.org/go-envstruct"]
+	path = src/code.cloudfoundry.org/go-envstruct
+	url = https://github.com/cloudfoundry/go-envstruct

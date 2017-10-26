@@ -3,6 +3,7 @@
 RUN_DIR=/var/vcap/sys/run/metron_agent
 LOG_DIR=/var/vcap/sys/log/metron_agent
 PIDFILE=$RUN_DIR/metron_agent.pid
+ENVIRONMENT=/var/vcap/jobs/metron_agent/bin/environment.sh
 
 mkdir -p $RUN_DIR
 mkdir -p $LOG_DIR
@@ -21,8 +22,8 @@ case $1 in
 
     chown -R vcap:vcap $LOG_DIR
 
-    chpst -u vcap:vcap /var/vcap/packages/metron_agent/metron \
-         --config /var/vcap/jobs/metron_agent/config/metron_agent.json 2>&1 | \
+    source $ENVIRONMENT
+    chpst -u vcap:vcap /var/vcap/packages/metron_agent/metron 2>&1 | \
          tee -a "$LOG_DIR/metron.log" | \
          logger -t "vcap.metron" -p user.error &
 

@@ -2,7 +2,7 @@
 name: loggregator_trafficcontroller
 templates:
   loggregator_trafficcontroller_ctl.erb: bin/loggregator_trafficcontroller_ctl
-  loggregator_trafficcontroller.json.erb: config/loggregator_trafficcontroller.json
+  environment.sh.erb: bin/environment.sh
   trafficcontroller.crt.erb: config/certs/trafficcontroller.crt
   trafficcontroller.key.erb: config/certs/trafficcontroller.key
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt

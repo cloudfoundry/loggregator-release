@@ -5,6 +5,7 @@ dependencies:
 files:
 - loggregator/src/code.cloudfoundry.org/go-batching/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/go-diodes/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/go-envstruct/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/go-pubsub/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/go-pubsub/internal/node/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/go-pubsub/pubsub-gen/setters/*.go # gosub

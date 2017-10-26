@@ -10,6 +10,7 @@
 RUN_DIR=/var/vcap/sys/run/loggregator_trafficcontroller
 LOG_DIR=/var/vcap/sys/log/loggregator_trafficcontroller
 PIDFILE=$RUN_DIR/loggregator_trafficcontroller.pid
+ENVIRONMENT=/var/vcap/jobs/loggregator_trafficcontroller/bin/environment.sh
 
 mkdir -p $RUN_DIR
 mkdir -p $LOG_DIR
@@ -32,12 +33,10 @@ case $1 in
     <% end %>
     ulimit -n 65536
 
-    <% p("traffic_controller.disable_access_control") == true ? disable_access_control_string = "--disableAccessControl" : disable_access_control_string = "" %>
-
     chown -R vcap:vcap $LOG_DIR
 
-    chpst -u vcap:vcap /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller <%= disable_access_control_string %> \
-         --config /var/vcap/jobs/loggregator_trafficcontroller/config/loggregator_trafficcontroller.json 2>&1 | \
+    source $ENVIRONMENT
+    chpst -u vcap:vcap /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller 2>&1 | \
          tee -a "$LOG_DIR/trafficcontroller.log" | \
          logger -t "vcap.trafficcontroller" -p user.error &
 

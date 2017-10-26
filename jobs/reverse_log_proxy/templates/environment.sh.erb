@@ -1,0 +1,24 @@
+<%
+    ingress_addrs = []
+    if_link("doppler") { |ds|
+        ingress_addrs = ds.instances.map do |instance|
+            "#{instance.address}:#{ds.p('doppler.grpc_port')}"
+        end
+    }.else {
+        ingress_addrs = p('loggregator.doppler.addrs').map do |addr|
+            "#{addr}:#{p('loggregator.doppler.grpc_port')}"
+        end
+    }
+%>
+export RLP_PORT="<%= p('reverse_log_proxy.egress.port') %>"
+export RLP_CERT_FILE="/var/vcap/jobs/reverse_log_proxy/config/certs/reverse_log_proxy.crt"
+export RLP_KEY_FILE="/var/vcap/jobs/reverse_log_proxy/config/certs/reverse_log_proxy.key"
+export RLP_CA_FILE="/var/vcap/jobs/reverse_log_proxy/config/certs/mutual_tls_ca.crt"
+export RLP_CIPHER_SUITES="<%= p('loggregator.tls.cipher_suites').gsub(":", ",") %>"
+export RLP_PPROF_PORT="<%= p('reverse_log_proxy.pprof.port') %>"
+export RLP_HEALTH_ADDR="<%= p('reverse_log_proxy.health_addr') %>"
+export RLP_METRIC_EMITTER_INTERVAL="<%= p('metric_emitter.interval') %>"
+
+export ROUTER_ADDRS="<%= ingress_addrs.join(",") %>"
+
+export AGENT_ADDR="<%= "#{p('metron_endpoint.host')}:#{p('metron_endpoint.grpc_port')}" %>"

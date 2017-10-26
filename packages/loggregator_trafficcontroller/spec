@@ -3,6 +3,7 @@ name: loggregator_trafficcontroller
 dependencies:
 - golang1.9.1
 files:
+- loggregator/src/code.cloudfoundry.org/go-envstruct/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/healthendpoint/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/*.go # gosub

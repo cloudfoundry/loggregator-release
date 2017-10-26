@@ -10,6 +10,7 @@
 RUN_DIR=/var/vcap/sys/run/doppler
 LOG_DIR=/var/vcap/sys/log/doppler
 PIDFILE=$RUN_DIR/doppler.pid
+ENVIRONMENT=/var/vcap/jobs/doppler/bin/environment.sh
 
 mkdir -p $RUN_DIR
 mkdir -p $LOG_DIR
@@ -35,8 +36,8 @@ case $1 in
 
     chown -R vcap:vcap $LOG_DIR
 
-    chpst -u vcap:vcap /var/vcap/packages/doppler/doppler \
-         --config /var/vcap/jobs/doppler/config/doppler.json 2>&1 | \
+    source $ENVIRONMENT
+    chpst -u vcap:vcap /var/vcap/packages/doppler/doppler 2>&1 | \
          tee -a "$LOG_DIR/doppler.log" | \
          logger -t "vcap.doppler" -p user.error &
 

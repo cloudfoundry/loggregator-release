@@ -15,7 +15,7 @@ consumes:
 
 templates:
   metron_agent_ctl.erb: bin/metron_agent_ctl
-  metron_agent.json.erb: config/metron_agent.json
+  environment.sh.erb: bin/environment.sh
   metron_agent.crt.erb: config/certs/metron_agent.crt
   metron_agent.key.erb: config/certs/metron_agent.key
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
