@@ -15,7 +15,6 @@ consumes:
 
 templates:
   pre-start.ps1.erb: bin/pre-start.ps1
-  metron_agent.json.erb: config/metron_agent.json
   metron_agent.crt.erb: config/certs/metron_agent.crt
   metron_agent.key.erb: config/certs/metron_agent.key
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt

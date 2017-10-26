@@ -41,9 +41,9 @@ RSpec.describe "Metron Agent Windows Environment" do
       "__PIPE_SYSLOG_PORT" => "",
       "__PIPE_SYSLOG_TRANSPORT" => "udp",
       "AGENT_PORT" => "4444",
-      "AGENT_CA_FILE" => "/var/vcap/jobs/metron_agent/config/certs/loggregator_ca.crt",
-      "AGENT_CERT_FILE" => "/var/vcap/jobs/metron_agent/config/certs/metron_agent.crt",
-      "AGENT_KEY_FILE" => "/var/vcap/jobs/metron_agent/config/certs/metron_agent.key",
+      "AGENT_CA_FILE" => "/var/vcap/jobs/metron_agent_windows/config/certs/loggregator_ca.crt",
+      "AGENT_CERT_FILE" => "/var/vcap/jobs/metron_agent_windows/config/certs/metron_agent.crt",
+      "AGENT_KEY_FILE" => "/var/vcap/jobs/metron_agent_windows/config/certs/metron_agent.key",
       "AGENT_CIPHER_SUITES" => "a,b",
       "AGENT_DEPLOYMENT" => "some-deployment",
       "AGENT_ZONE" => "some-az",
@@ -204,7 +204,7 @@ RSpec.describe "Metron Agent Windows Environment" do
   end
 
   def render_template(properties, spec: InstanceSpec.new, links: [])
-    release_path = File.join(File.dirname(__FILE__), '../../../')
+    release_path = File.join(File.dirname(__FILE__), '../../')
     release = Bosh::Template::Test::ReleaseDir.new(release_path)
     job = release.job('metron_agent_windows')
 
