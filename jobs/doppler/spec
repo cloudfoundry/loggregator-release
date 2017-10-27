@@ -43,20 +43,17 @@ properties:
   doppler.container_metric_ttl_seconds:
     description: "TTL (in seconds) for container usage metrics"
     default: 120
-  doppler.unmarshaller_count:
-    description: "Number of parallel unmarshallers to run within Doppler"
-    default: 5
 
   doppler.sink_inactivity_timeout_seconds:
     description: "Interval before removing a sink due to inactivity"
     default: 3600
 
-  doppler.message_drain_buffer_size:
-    description: "Size of the internal buffer used by doppler to store messages for output to firehose or 'cf logs'. If the buffer gets full doppler will drop the messages."
-    default: 10000
 
   doppler.locked_memory_limit:
-    description: "Size (KB) of shell's locked memory limit. Set to 'kernel' to use the kernel's default. Non-numeric values other than 'kernel', 'soft', 'hard', and 'unlimited' will result in an error."
+    description: |
+      Size (KB) of shell's locked memory limit. Set to 'kernel' to use the
+      kernel's default. Non-numeric values other than 'kernel', 'soft', 'hard',
+      and 'unlimited' will result in an error.
     default: "unlimited"
 
   doppler.pprof_port:
