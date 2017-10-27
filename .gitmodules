@@ -1,9 +1,6 @@
 [submodule "src/github.com/gogo/protobuf"]
 	path = src/github.com/gogo/protobuf
 	url = https://github.com/gogo/protobuf
-[submodule "src/github.com/howeyc/fsnotify"]
-	path = src/github.com/howeyc/fsnotify
-	url = https://github.com/howeyc/fsnotify
 [submodule "src/github.com/nu7hatch/gouuid"]
 	path = src/github.com/nu7hatch/gouuid
 	url = https://github.com/nu7hatch/gouuid.git
