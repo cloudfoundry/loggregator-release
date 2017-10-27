@@ -12,7 +12,7 @@ import (
 
 // Runner tells the children to run tests.
 type Runner interface {
-	Run(t *sharedapi.Test) error
+	Run(t *sharedapi.Test) (int, error)
 }
 
 // CreateTestHandler handles HTTP requests (POST only) to initiate tests
@@ -74,7 +74,7 @@ func (h *CreateTestHandler) attemptRun(t *sharedapi.Test) error {
 	timeout := time.After(h.runnerTimeout)
 	var err error
 	for {
-		err = h.runner.Run(t)
+		_, err = h.runner.Run(t)
 		if err == nil {
 			return nil
 		}
