@@ -118,38 +118,38 @@ function run_build {
 }
 
 function run_unit {
-    pushd $PROJECT_DIR/src/tools
+    pushd $PROJECT_DIR/src/tools > /dev/null
         print_checkpoint "Running Tool Unit Tests"
         go test -race ./... \
             -ginkgo.randomizeAllSpecs \
             -ginkgo.slowSpecThreshold 20 \
             $@
         exit_code=$?
-    popd
+    popd > /dev/null
     if [ $exit_code -ne 0 ]; then
         return $exit_code
     fi
 
-    pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator
+    pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator > /dev/null
         print_checkpoint "Running Unit Tests"
         go test -race $(go list ./... | grep -v integration_tests) \
             -ginkgo.randomizeAllSpecs \
             -ginkgo.slowSpecThreshold 20 \
             $@
         exit_code=$?
-    popd
+    popd > /dev/null
     return $exit_code
 }
 
 function run_integration {
     print_checkpoint "Running Integration Tests"
-    pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator/integration_tests
+    pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator/integration_tests > /dev/null
         go test -race ./... \
             -ginkgo.randomizeAllSpecs \
             -ginkgo.slowSpecThreshold 20 \
             $@
         exit_code=$?
-    popd
+    popd > /dev/null
     return $exit_code
 }
 
