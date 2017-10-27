@@ -1,8 +1,4 @@
-require "json"
-require "yaml"
-require "bosh/template/test"
-
-include Bosh::Template::Test
+require "spec_helper"
 
 RSpec.describe "Reverse Log Proxy Environment" do
   it "renders a full environment" do
@@ -38,7 +34,11 @@ RSpec.describe "Reverse Log Proxy Environment" do
         "interval" => "15m",
       }
     }
-    config = render_template(properties)
+    config = render_template(
+      properties,
+      job: "reverse_log_proxy",
+      template: "bin/environment.sh"
+    )
 
     expected_config = {
       "RLP_PORT" => "1111",
@@ -69,24 +69,14 @@ RSpec.describe "Reverse Log Proxy Environment" do
           }
         }
       )]
-      config = render_template({}, links: links)
+      config = render_template(
+        {},
+        links: links,
+        job: "reverse_log_proxy",
+        template: "bin/environment.sh"
+      )
 
       expect(config["ROUTER_ADDRS"]).to eq("doppler-1.service.cf.internal:1111,doppler-2.service.cf.internal:1111")
-    end
-  end
-
-  def render_template(properties, spec: InstanceSpec.new, links: [])
-    release_path = File.join(File.dirname(__FILE__), '../../../')
-    release = Bosh::Template::Test::ReleaseDir.new(release_path)
-    job = release.job('reverse_log_proxy')
-    template = job.template('bin/environment.sh')
-    rendered = template.render(properties, spec: spec, consumes: links)
-
-    rendered.split("\n").each_with_object({}) do |str, h|
-      if str != ""
-        k, v = str.split("=")
-        h[k.gsub("export ", "")] = v.gsub("\"", "")
-      end
     end
   end
 end
