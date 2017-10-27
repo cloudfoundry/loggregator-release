@@ -53,6 +53,8 @@ function exit_on_failure {
 function run_cleaners {
     print_checkpoint "Running Cleaners"
 
+    go get github.com/kisielk/gotool
+
     if ! which goimports > /dev/null 2>&1; then
         echo installing goimports
         go get golang.org/x/tools/cmd/goimports

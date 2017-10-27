@@ -32,6 +32,7 @@ releases/**/*.tgz
 /src/github.com/golang/lint
 /src/github.com/opennota/check
 /src/github.com/kisielk/errcheck
+src/github.com/kisielk/gotool
 /src/github.com/gordonklaus/ineffassign
 /src/github.com/mvdan/interfacer
 /src/github.com/mvdan/lint
