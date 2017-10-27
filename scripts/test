@@ -13,6 +13,7 @@ function print_usage {
     echo "   cleaners          Run tools that clean the code base"
     echo "   unit              Run the unit tests"
     echo "   integration       Run the integration tests"
+    echo "   ~integration      Run everything except the integration tests"
     echo "   multiplatform     Run the multiplatform sanity checks"
     echo "   templates         Run the template specs"
     echo "   linters           Run common linters against the project"
@@ -153,12 +154,16 @@ function run_integration {
     return $exit_code
 }
 
-function run_all {
+function run_~integration {
     check_output run_cleaners
     check_output run_build
     check_output run_multiplatform
     check_output run_templates
     check_output run_unit $@
+}
+
+function run_all {
+    run_~intregration $@
     check_output run_integration $@
 }
 
@@ -174,7 +179,7 @@ function parse_argc {
             print_usage
             exit 0
             ;;
-        all|unit|integration|build|cleaners|multiplatform|templates|linters|install_tools)
+        all|unit|integration|~integration|build|cleaners|multiplatform|templates|linters|install_tools)
             command=run_$arg
             ;;
         *)
