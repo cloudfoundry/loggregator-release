@@ -5,7 +5,7 @@ trap "echo Exited!; exit 1;" SIGINT SIGTERM
 PROJECT_DIR="$(cd "$(dirname "$0")/.."; pwd)"
 
 function print_usage {
-    echo "usage: test [subcommand] [ginkgo args]"
+    echo "usage: test [subcommand] [go test args]"
     echo
     echo -e "\033[1mSubcommands:\033[0m"
     echo "   all               Run all the tests, excluding linters (default)"
@@ -132,12 +132,9 @@ function run_build {
 function run_unit {
     pushd $PROJECT_DIR/src/tools
         print_checkpoint "Running Tool Unit Tests"
-        ginkgo \
-            -r \
-            --race \
-            --tags=~deprecated \
-            --randomizeAllSpecs \
-            --slowSpecThreshold 20 \
+        go test -race ./... \
+            -ginkgo.randomizeAllSpecs \
+            -ginkgo.slowSpecThreshold 20 \
             $@
         exit_code=$?
     popd
@@ -146,35 +143,26 @@ function run_unit {
     fi
 
     pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator
-        local not_unit_tests="integration_tests,lats"
         print_checkpoint "Running Unit Tests"
-        ginkgo \
-            -r \
-            --race \
-            --tags=~deprecated \
-            --randomizeAllSpecs \
-            --slowSpecThreshold 20 \
-            --skipPackage="$not_unit_tests" \
+        go test -race $(go list ./... | grep -v integration_tests) \
+            -ginkgo.randomizeAllSpecs \
+            -ginkgo.slowSpecThreshold 20 \
             $@
         exit_code=$?
-   popd
-   return $exit_code
+    popd
+    return $exit_code
 }
 
 function run_integration {
     print_checkpoint "Running Integration Tests"
-    pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator
-        ginkgo \
-            -r \
-            --race \
-            --tags=~deprecated \
-            --randomizeAllSpecs \
-            --slowSpecThreshold 20 \
-            $@ \
-            integration_tests
+    pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator/integration_tests
+        go test -race ./... \
+            -ginkgo.randomizeAllSpecs \
+            -ginkgo.slowSpecThreshold 20 \
+            $@
         exit_code=$?
-   popd
-   return $exit_code
+    popd
+    return $exit_code
 }
 
 function run_all {
