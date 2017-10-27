@@ -34,9 +34,6 @@
 [submodule "src/github.com/golang/protobuf"]
 	path = src/github.com/golang/protobuf
 	url = https://github.com/golang/protobuf
-[submodule "src/github.com/kisielk/gotool"]
-	path = src/github.com/kisielk/gotool
-	url = https://github.com/kisielk/gotool
 [submodule "src/github.com/codegangsta/cli"]
 	path = src/github.com/codegangsta/cli
 	url = https://github.com/codegangsta/cli
