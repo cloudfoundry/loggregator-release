@@ -10,9 +10,6 @@
 [submodule "src/github.com/gorilla/websocket"]
 	path = src/github.com/gorilla/websocket
 	url = https://github.com/gorilla/websocket
-[submodule "src/github.com/tedsuo/ifrit"]
-	path = src/github.com/tedsuo/ifrit
-	url = https://github.com/tedsuo/ifrit.git
 [submodule "src/github.com/ugorji/go"]
 	path = src/github.com/ugorji/go
 	url = https://github.com/ugorji/go
