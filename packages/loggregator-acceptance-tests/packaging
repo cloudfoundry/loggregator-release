@@ -1,9 +1,10 @@
 set -e -x
 
-export GOROOT=$(readlink -nf /var/vcap/packages/golang1.9.1)
-export PATH=${GOROOT}/bin:${PATH}
+mkdir -p ${BOSH_INSTALL_TARGET}/src
+cp -a . ${BOSH_INSTALL_TARGET}/src
 
-cp -r $PWD/loggregator/src ${BOSH_INSTALL_TARGET}/
+export GOROOT=$(readlink -nf /var/vcap/packages/golang1.9.1)
 export GOPATH=$BOSH_INSTALL_TARGET
+export PATH=$GOROOT/bin:$PATH
 
 go install github.com/onsi/ginkgo/ginkgo
