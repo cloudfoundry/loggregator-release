@@ -23,7 +23,6 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/router/internal/server/v1/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/router/internal/server/v2/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/router/internal/sinks/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/loggregator/router/internal/truncatingbuffer/*.go # gosub
 - loggregator/src/github.com/beorn7/perks/quantile/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
