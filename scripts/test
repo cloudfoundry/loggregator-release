@@ -163,7 +163,7 @@ function run_~integration {
 }
 
 function run_all {
-    run_~intregration $@
+    run_~integration $@
     check_output run_integration $@
 }
 
