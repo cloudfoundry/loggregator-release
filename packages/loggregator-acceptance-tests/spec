@@ -13,8 +13,6 @@ files:
 - github.com/cloudfoundry/dropsonde/envelope_extensions/*.go # gosub
 - github.com/cloudfoundry/dropsonde/factories/*.go # gosub
 - github.com/cloudfoundry/dropsonde/instrumented_handler/*.go # gosub
-- github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
-- github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
 - github.com/cloudfoundry/noaa/*.go # gosub
 - github.com/cloudfoundry/noaa/consumer/*.go # gosub
 - github.com/cloudfoundry/noaa/consumer/internal/*.go # gosub
