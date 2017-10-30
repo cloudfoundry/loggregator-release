@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
@@ -87,4 +88,8 @@ func (s *Server) BatchSender(server loggregator_v2.Ingress_BatchSenderServer) er
 			return nil
 		}
 	}
+}
+
+func (s *Server) Send(context.Context, *loggregator_v2.EnvelopeBatch) (*loggregator_v2.SendResponse, error) {
+	return nil, nil
 }
