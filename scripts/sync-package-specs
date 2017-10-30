@@ -9,8 +9,6 @@ if [ ! $(which gosub) ]; then
     exit 1
 fi
 
-loggregator_root=${GOPATH}
-
 function sync_package() {
   bosh_pkg=${1}
 
@@ -24,10 +22,11 @@ function sync_package() {
     {
       cat spec | grep -v '# gosub'
       gosub list "$@" | \
-        sed -e 's|\(.*\)|- loggregator/src/\1/*.go # gosub|g'
+        sed -e 's|\(.*\)|- \1/*.go # gosub|g'
     } > spec.new
 
     mv spec.new spec
+
   )
 }
 

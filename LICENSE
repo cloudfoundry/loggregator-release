@@ -2,7 +2,7 @@
            Version 2.0, January 2004
         http://www.apache.org/licenses/
 
-		
+
    TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
 
    1. Definitions.
@@ -206,17 +206,16 @@
 cf-loggregator
 
 cf-loggregator : includes a number of subcomponents with
-separate copyright notices and license terms.  The product that 
-includes this file does not necessarily use all the open source 
+separate copyright notices and license terms.  The product that
+includes this file does not necessarily use all the open source
 subcomponents referred to below. Your use of the source
 code for the these subcomponents is subject to the terms and
-conditions of the following license. 
+conditions of the following license.
 
 
 
 SECTION 1: BSD-STYLE, MIT-STYLE, OR SIMILAR STYLE LICENSES
 
-   >>> fsnotify-7beb45183d2ab48bfc9616d9a019513a123a4983
    >>> go-simplejson-ec501b3f691bcc79d97caf8fdf28bcf136efdab8
    >>> gocheck-85
    >>> gogoprotobuf-402a137c079e420e1f2fd3fb11ec6789a203de58
@@ -229,38 +228,6 @@ SECTION 1: BSD-STYLE, MIT-STYLE, OR SIMILAR STYLE LICENSES
 --------------- SECTION 1:  BSD-STYLE, MIT-STYLE, OR SIMILAR STYLE LICENSES ----------
 
 BSD-STYLE, MIT-STYLE, OR SIMILAR STYLE LICENSES are applicable to the following component(s).
-
-
->>> fsnotify-7beb45183d2ab48bfc9616d9a019513a123a4983
-
-Copyright (c) 2012 The Go Authors. All rights reserved.
-Copyright (c) 2012 fsnotify Authors. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-   * Redistributions of source code must retain the above copyright
-notice, this list of conditions and the following disclaimer.
-   * Redistributions in binary form must reproduce the above
-copyright notice, this list of conditions and the following disclaimer
-in the documentation and/or other materials provided with the
-distribution.
-   * Neither the name of Google Inc. nor the names of its
-contributors may be used to endorse or promote products derived from
-this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 >>> go-simplejson-ec501b3f691bcc79d97caf8fdf28bcf136efdab8
@@ -412,14 +379,14 @@ available (as would be noted above), you may obtain a copy of
 the source code corresponding to the binaries for such open
 source components and modifications thereto, if any, (the
 "Source Files"), by downloading the Source Files from VMware's website at
-http://www.vmware.com/download/open_source.html, or by sending a request, 
-with your name and address to: Pivotal Software Inc, 1900 S. Norfolk Street #125, 
-San Mateo, CA 94403, Attention: General Counsel. All such requests should clearly 
+http://www.vmware.com/download/open_source.html, or by sending a request,
+with your name and address to: Pivotal Software Inc, 1900 S. Norfolk Street #125,
+San Mateo, CA 94403, Attention: General Counsel. All such requests should clearly
 specify: OPEN SOURCE FILES REQUEST,
 Attention General Counsel. Pivotal Software Inc, shall mail a copy of the
 Source Files to you on a CD or equivalent physical medium. This
 offer to obtain a copy of the Source Files is valid for three
-years from the date you acquired this Software product. 
+years from the date you acquired this Software product.
 Alternatively, the Source Files may accompany the Pivotal Software Inc, product.
 
 [CFLOGGREGATOR11152013SS120313]

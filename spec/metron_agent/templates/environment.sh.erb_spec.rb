@@ -1,8 +1,4 @@
-require "json"
-require "yaml"
-require "bosh/template/test"
-
-include Bosh::Template::Test
+require "spec_helper"
 
 RSpec.describe "Metron Agent Environment" do
   it "renders a full environment" do
@@ -34,7 +30,12 @@ RSpec.describe "Metron Agent Environment" do
           }
       }
     }
-    config = render_template(properties, spec: spec)
+    config = render_template(
+      properties,
+      spec: spec,
+      job: "metron_agent",
+      template: "bin/environment.sh"
+    )
 
     expected_config = {
       "AGENT_PORT" => "4444",
@@ -60,7 +61,12 @@ RSpec.describe "Metron Agent Environment" do
 
   it "defaults to the job name of the spec" do
     spec = InstanceSpec.new(name: "some-name")
-    config = render_template({}, spec: spec)
+    config = render_template(
+      {},
+      spec: spec,
+      job: "metron_agent",
+      template: "bin/environment.sh"
+    )
 
     expect(config["AGENT_JOB"]).to eq("some-name")
   end
@@ -68,14 +74,24 @@ RSpec.describe "Metron Agent Environment" do
   describe "Index" do
     it "defaults to the spec's ID" do
       spec = InstanceSpec.new(id: "some-id")
-      config = render_template({}, spec: spec)
+      config = render_template(
+        {},
+        spec: spec,
+        job: "metron_agent",
+        template: "bin/environment.sh"
+      )
 
       expect(config["AGENT_INDEX"]).to eq("some-id")
     end
 
     it "uses the spec's index when there is no ID" do
       spec = InstanceSpec.new(id: nil, index: 0)
-      config = render_template({}, spec: spec)
+      config = render_template(
+        {},
+        spec: spec,
+        job: "metron_agent",
+        template: "bin/environment.sh"
+      )
 
       expect(config["AGENT_INDEX"]).to eq("0")
     end
@@ -84,7 +100,12 @@ RSpec.describe "Metron Agent Environment" do
   describe "Zone" do
     it "defaults to spec's az" do
       spec = InstanceSpec.new(az: "some-az")
-      config = render_template({}, spec: spec)
+      config = render_template(
+        {},
+        spec: spec,
+        job: "metron_agent",
+        template: "bin/environment.sh"
+      )
 
       expect(config["AGENT_ZONE"]).to eq("some-az")
     end
@@ -96,7 +117,12 @@ RSpec.describe "Metron Agent Environment" do
           "zone" => "other-az",
         },
       }
-      config = render_template(prop, spec: spec)
+      config = render_template(
+        prop,
+        spec: spec,
+        job: "metron_agent",
+        template: "bin/environment.sh"
+      )
 
       expect(config["AGENT_ZONE"]).to eq("other-az")
     end
@@ -105,7 +131,12 @@ RSpec.describe "Metron Agent Environment" do
   describe "Deployment" do
     it "defaults to the spec's deployment" do
       spec = InstanceSpec.new(deployment: "some-deployment")
-      config = render_template({}, spec: spec)
+      config = render_template(
+        {},
+        spec: spec,
+        job: "metron_agent",
+        template: "bin/environment.sh"
+      )
 
       expect(config["AGENT_DEPLOYMENT"]).to eq("some-deployment")
     end
@@ -117,7 +148,12 @@ RSpec.describe "Metron Agent Environment" do
           "deployment" => "other-deployment",
         },
       }
-      config = render_template(properties, spec: spec)
+      config = render_template(
+        properties,
+        spec: spec,
+        job: "metron_agent",
+        template: "bin/environment.sh"
+      )
 
       expect(config["AGENT_DEPLOYMENT"]).to eq("other-deployment")
     end
@@ -132,7 +168,11 @@ RSpec.describe "Metron Agent Environment" do
           },
         },
       }
-      config = render_template(properties)
+      config = render_template(
+        properties,
+        job: "metron_agent",
+        template: "bin/environment.sh"
+      )
 
       expect(config["AGENT_CIPHER_SUITES"]).to eq("a,b")
     end
@@ -153,7 +193,12 @@ RSpec.describe "Metron Agent Environment" do
           },
         },
       }
-      config = render_template(properties, spec: spec)
+      config = render_template(
+        properties,
+        spec: spec,
+        job: "metron_agent",
+        template: "bin/environment.sh"
+      )
 
       expected_tags_str = "deployment:some-deployment,job:some-job,index:some-id,ip:127.0.0.1,other-tag:other-value"
       expect(config["AGENT_TAGS"]).to eq(expected_tags_str)
@@ -169,7 +214,11 @@ RSpec.describe "Metron Agent Environment" do
         },
       }
 
-      config = render_template(properties)
+      config = render_template(
+        properties,
+        job: "metron_agent",
+        template: "bin/environment.sh"
+      )
 
       expect(config["ROUTER_ADDR"]).to eq("127.0.0.1:9999")
     end
@@ -193,25 +242,15 @@ RSpec.describe "Metron Agent Environment" do
 
       properties = {"metron_agent" => {"bosh_dns" => true}}
 
-      config = render_template(properties, links: [link])
+      config = render_template(
+        properties,
+        links: [link],
+        job: "metron_agent",
+        template: "bin/environment.sh"
+      )
 
       expect(config["ROUTER_ADDR"]).to eq("some-router-addr:8082")
       expect(config["ROUTER_ADDR_WITH_AZ"]).to eq("az1.some-router-addr:8082")
-    end
-  end
-
-  def render_template(properties, spec: InstanceSpec.new, links: [])
-    release_path = File.join(File.dirname(__FILE__), '../../../')
-    release = Bosh::Template::Test::ReleaseDir.new(release_path)
-    job = release.job('metron_agent')
-    template = job.template('bin/environment.sh')
-    rendered = template.render(properties, spec: spec, consumes: links)
-
-    rendered.split("\n").each_with_object({}) do |str, h|
-      if str != ""
-        k, v = str.split("=")
-        h[k.gsub("export ", "")] = v.gsub("\"", "")
-      end
     end
   end
 end

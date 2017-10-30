@@ -1,22 +1,39 @@
-. ./loggregator/src/exiter.ps1
+. ./exiter.ps1
+
+$ErrorActionPreference = "Stop";
+trap { $host.SetShouldExit(1) }
+
+$BOSH_INSTALL_TARGET = Resolve-Path "${env:BOSH_INSTALL_TARGET}"
 
 $env:GOROOT="C:\var\vcap\packages\golang1.9.1-windows\go"
-$env:GOPATH="${PWD}\loggregator"
+$env:GOPATH="${BOSH_INSTALL_TARGET}"
 $env:PATH="${env:GOROOT}\bin;${env:PATH}"
+$pkg_name="metron"
+$pkg_path="code.cloudfoundry.org/loggregator/agent"
 
-try {
-    $BOSH_INSTALL_TARGET = Resolve-Path $env:BOSH_INSTALL_TARGET
+# Create GOPATH
+New-Item -ItemType "directory" -Force "${BOSH_INSTALL_TARGET}\src"
 
-    go build -o "${BOSH_INSTALL_TARGET}\metron.exe" "code.cloudfoundry.org/loggregator/agent"
-    if($LASTEXITCODE -ne 0)
-    {
-        Write-Error "Error compiling: metron"
-        Exit 1
-    }
-} catch {
-    Write-Error "Error compiling golang:"
-    Write-Error $_.Exception.Message
-    Exit 1
+robocopy.exe /E "${PWD}" "${BOSH_INSTALL_TARGET}\src"
+if ($LASTEXITCODE -ge 8) {
+    Write-Error "robocopy.exe /E ${PWD} ${BOSH_INSTALL_TARGET}\src"
 }
+
+go.exe build -o "${BOSH_INSTALL_TARGET}\${pkg_name}.exe" "${pkg_path}"
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Error compiling: ${pkg_path}"
+}
+
+# Cleanup build artifacts
+New-Item -ItemType directory -Path ".\emptydirectory" -Force
+
+robocopy.exe ".\emptydirectory" "${BOSH_INSTALL_TARGET}\src" /PURGE
+if ($LASTEXITCODE -ge 8) {
+    Write-Error "robocopy.exe .\emptydirectory ${BOSH_INSTALL_TARGET}\src
+/PURGE"
+}
+
+Remove-Item -Recurse -Path "${BOSH_INSTALL_TARGET}\src" -Force
+Remove-Item -Recurse -Path ".\emptydirectory" -Force
 
 Exit 0

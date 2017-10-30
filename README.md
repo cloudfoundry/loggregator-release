@@ -24,7 +24,6 @@ overview of Loggregator components and architecture.
   * [Including Metron](#including-metron)
   * [Statsd-injector](#statsd-injector)
   * [Syslog-release](#syslog-release)
-  * [Bosh HM forwarder](#bosh-hm-forwarder)
 * [Tools for Testing and Monitoring Loggregator](#tools-for-testing-and-monitoring-loggregator)
   * [Tools](#tools)
   * [Operator Guidebook](#operator-guidebook)
@@ -57,10 +56,10 @@ the [Cloud Foundry docs][cf-docs] for more details.
 
 ### Log Ordering
 
-Loggregator does not provide any guaruntees around the order of delivery 
-of logs. Because Loggregator is a distributed system this means that logs 
+Loggregator does not provide any guaruntees around the order of delivery
+of logs. Because Loggregator is a distributed system this means that logs
 appear out of order in the stream. To improve this the CLI will hold and order
-logs based on thier source timestamp as do most syslog servers. If you are using 
+logs based on thier source timestamp as do most syslog servers. If you are using
 Java a popular [work around exists using the Logback library](docs/java-multi-line-work-around.md).
 
 ## Consuming the Firehose
@@ -121,25 +120,19 @@ the Firehose. The syslog release using rsyslog to accomplish this. For more
 information see the [syslog-release README][syslog-release-readme] (note this
 release is maintianed by the bosh team).
 
-### Bosh HM Forwarder
-
-The Bosh Health Monitor Forwarder allows operators to capture health metrics
-from the Bosh Director through the Firehose. For more information see the
-[bosh-hm-forwarder README][bosh-hm-forwarder-readme].
-
 ## Tools for Testing and Monitoring Loggregator
 
 ### Tools
 
 Loggregator provides a set of tools for testing the
-performance and reliability of your loggregator installation. 
-See the [loggregator tools](http://code.cloudfoundry.org/loggregator-tools) 
-repo for more details. 
+performance and reliability of your loggregator installation.
+See the [loggregator tools](http://code.cloudfoundry.org/loggregator-tools)
+repo for more details.
 
 ### Operator Guidebook
 The [Loggregator Operator Guidebook](./docs/Loggregator%20Operator%20Guide.pdf) provides details for scaling
-and managing Loggregator along with detailed results of capacity 
-planning tests. 
+and managing Loggregator along with detailed results of capacity
+planning tests.
 
 ## More Resources and Documentation
 
@@ -168,7 +161,6 @@ Items marked as "In Flight" on the Roadmap are tracked as new Features in
 [statsd-format]:            https://codeascraft.com/2011/02/15/measure-anything-measure-everything/
 [statsd-inejctor-readme]:   https://github.com/cloudfoundry/statsd-injector/blob/master/README.md
 [syslog-release-readme]:    https://github.com/cloudfoundry/syslog-release/blob/master/README.md
-[bosh-hm-forwarder-readme]: https://github.com/cloudfoundry/bosh-hm-forwarder/blob/master/README.md
 [health-nozzle-proposal]:   https://docs.google.com/document/d/1rqlSDssaNk7B9TUmHhjUsn1-FeUNX8odslc-T_3ixck/edit
 [road-map]:                 https://docs.google.com/spreadsheets/d/1bM1bInPQeC2xLayLsFb0aBuD3_HFNfJj9mEJZygnuWo/edit#gid=0
 [loggregator-tracker]:      https://www.pivotaltracker.com/n/projects/993188

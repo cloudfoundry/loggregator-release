@@ -1,27 +1,18 @@
 [submodule "src/github.com/gogo/protobuf"]
 	path = src/github.com/gogo/protobuf
 	url = https://github.com/gogo/protobuf
-[submodule "src/github.com/howeyc/fsnotify"]
-	path = src/github.com/howeyc/fsnotify
-	url = https://github.com/howeyc/fsnotify
 [submodule "src/github.com/nu7hatch/gouuid"]
 	path = src/github.com/nu7hatch/gouuid
 	url = https://github.com/nu7hatch/gouuid.git
 [submodule "src/github.com/gorilla/websocket"]
 	path = src/github.com/gorilla/websocket
 	url = https://github.com/gorilla/websocket
-[submodule "src/github.com/tedsuo/ifrit"]
-	path = src/github.com/tedsuo/ifrit
-	url = https://github.com/tedsuo/ifrit.git
 [submodule "src/github.com/gorilla/mux"]
 	path = src/github.com/gorilla/mux
 	url = http://github.com/gorilla/mux
 [submodule "src/github.com/gorilla/context"]
 	path = src/github.com/gorilla/context
 	url = http://github.com/gorilla/context
-[submodule "src/github.com/op/go-logging"]
-	path = src/github.com/op/go-logging
-	url = https://github.com/op/go-logging
 [submodule "src/gopkg.in/yaml.v2"]
 	path = src/gopkg.in/yaml.v2
 	url = https://gopkg.in/yaml.v2
@@ -37,9 +28,6 @@
 [submodule "src/github.com/golang/protobuf"]
 	path = src/github.com/golang/protobuf
 	url = https://github.com/golang/protobuf
-[submodule "src/github.com/kisielk/gotool"]
-	path = src/github.com/kisielk/gotool
-	url = https://github.com/kisielk/gotool
 [submodule "src/github.com/codegangsta/cli"]
 	path = src/github.com/codegangsta/cli
 	url = https://github.com/codegangsta/cli

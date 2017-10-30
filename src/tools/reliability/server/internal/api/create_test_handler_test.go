@@ -147,9 +147,9 @@ func (s *spyRunner) called() int64 {
 	return s.called_
 }
 
-func (s *spyRunner) Run(*sharedapi.Test) error {
+func (s *spyRunner) Run(*sharedapi.Test) (int, error) {
 	s.called_++
-	return s.err
+	return 0, s.err
 }
 
 type requestBody struct {

@@ -20,8 +20,11 @@ var _ = Describe("WorkerServer", func() {
 
 		client, err := newFakeClient(strings.Replace(server.URL, "http", "ws", 1))
 		Expect(err).ToNot(HaveOccurred())
+		Eventually(handler.ConnCount).Should(Equal(1))
 
-		Expect(handler.Run(&sharedapi.Test{})).To(Succeed())
+		n, err := handler.Run(&sharedapi.Test{})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(n).To(Equal(1))
 		Eventually(client.tests).Should(HaveLen(1))
 	})
 
@@ -33,10 +36,12 @@ var _ = Describe("WorkerServer", func() {
 		Expect(err).ToNot(HaveOccurred())
 		clientB, err := newFakeClient(strings.Replace(server.URL, "http", "ws", 1))
 		Expect(err).ToNot(HaveOccurred())
+		Eventually(handler.ConnCount).Should(Equal(2))
 
-		Expect(handler.Run(&sharedapi.Test{})).To(Succeed())
-		Eventually(clientA.tests).Should(HaveLen(1))
-		Eventually(clientB.tests).Should(HaveLen(1))
+		n, err := handler.Run(&sharedapi.Test{})
+		Expect(n).To(Equal(2))
+		Eventually(clientA.tests).Should(Receive())
+		Eventually(clientB.tests).Should(Receive())
 	})
 
 	It("shards the number of cycles for each worker to write", func() {
@@ -49,10 +54,13 @@ var _ = Describe("WorkerServer", func() {
 			Expect(err).ToNot(HaveOccurred())
 			clients = append(clients, c)
 		}
+		Eventually(handler.ConnCount).Should(Equal(3))
 
-		Expect(handler.Run(&sharedapi.Test{
+		n, err := handler.Run(&sharedapi.Test{
 			Cycles: 1000,
-		})).To(Succeed())
+		})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(n).To(Equal(3))
 
 		var writeCyclesTotal uint64
 		for _, c := range clients {
@@ -73,25 +81,29 @@ var _ = Describe("WorkerServer", func() {
 
 		clientB, err := newFakeClient(strings.Replace(server.URL, "http", "ws", 1))
 		Expect(err).ToNot(HaveOccurred())
+		Eventually(handler.ConnCount).Should(Equal(2))
 
 		clientA.Close()
+		Eventually(handler.ConnCount).Should(Equal(1))
 
 		go func() {
 			for i := 0; i < 10; i++ {
-				Expect(handler.Run(&sharedapi.Test{})).To(Succeed())
+				n, err := handler.Run(&sharedapi.Test{})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(n).To(Equal(1))
 			}
 		}()
 
 		Eventually(clientB.tests).Should(HaveLen(10))
-		Eventually(clientA.tests).ShouldNot(Receive())
-		Consistently(clientA.tests).ShouldNot(Equal(10))
+		Consistently(clientA.tests).ShouldNot(Receive())
 	})
 
 	Context("with no connections", func() {
 		It("return an error", func() {
 			handler := api.NewWorkerHandler()
-			err := handler.Run(&sharedapi.Test{})
+			n, err := handler.Run(&sharedapi.Test{})
 			Expect(err).To(HaveOccurred())
+			Expect(n).To(Equal(0))
 		})
 	})
 })
