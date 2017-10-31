@@ -27,7 +27,6 @@ files:
 - github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
 - github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
 - github.com/cloudfoundry/dropsonde/metrics/*.go # gosub
-- github.com/cloudfoundry/dropsonde/runtime_stats/*.go # gosub
 - github.com/cloudfoundry/sonde-go/events/*.go # gosub
 - github.com/gogo/protobuf/gogoproto/*.go # gosub
 - github.com/gogo/protobuf/proto/*.go # gosub
