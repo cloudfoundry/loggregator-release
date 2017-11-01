@@ -45,7 +45,9 @@
         a[:DisableUDP] = p("metron_agent.disable_udp")
         a[:PPROFPort] = p("metron_agent.pprof_port")
         a[:GRPC] = grpcConfig
-        a[:DopplerAddr] = "#{p('doppler.addr')}:#{p('doppler.grpc_port')}"
+        doppler_addr = "#{p('doppler.addr')}:#{p('doppler.grpc_port')}"
+        a[:DopplerAddr] = doppler_addr
+        a[:DopplerAddrWithAZ] = "#{instance_zone}.#{doppler_addr}"
         a[:DopplerAddrUDP] = "#{p('doppler.addr')}:#{p('doppler.udp_port')}"
         if_p("syslog_daemon_config") do |_|
             a[:Syslog] = "vcap.metron_agent"

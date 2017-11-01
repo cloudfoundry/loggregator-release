@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
+
+	"golang.org/x/net/idna"
 )
 
 type GRPC struct {
@@ -29,8 +32,9 @@ type Config struct {
 
 	SharedSecret string // TODO: Delete when UDP is removed
 
-	DopplerAddr    string
-	DopplerAddrUDP string // TODO: Delete when UDP is removed
+	DopplerAddr       string
+	DopplerAddrWithAZ string
+	DopplerAddrUDP    string // TODO: Delete when UDP is removed
 
 	MetricBatchIntervalMilliseconds  uint
 	RuntimeStatsIntervalMilliseconds uint
@@ -57,6 +61,12 @@ func Parse(reader io.Reader) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	config.DopplerAddrWithAZ, err = idna.ToASCII(config.DopplerAddrWithAZ)
+	if err != nil {
+		return nil, err
+	}
+	config.DopplerAddrWithAZ = strings.Replace(config.DopplerAddrWithAZ, "@", "-", -1)
 
 	if config.DopplerAddr == "" {
 		return nil, fmt.Errorf("DopplerAddr is required")

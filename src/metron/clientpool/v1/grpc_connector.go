@@ -12,7 +12,7 @@ import (
 
 type GRPCConnector struct {
 	doppler        string
-	zonePrefix     string
+	dopplerWithAZ  string
 	dial           DialFunc
 	ingestorClient IngestorClientFunc
 	opts           []grpc.DialOption
@@ -24,14 +24,14 @@ type IngestorClientFunc func(*grpc.ClientConn) plumbing.DopplerIngestorClient
 
 func MakeGRPCConnector(
 	doppler string,
-	zonePrefix string,
+	dopplerWithAZ string,
 	df DialFunc,
 	cf IngestorClientFunc,
 	opts ...grpc.DialOption,
 ) GRPCConnector {
 	return GRPCConnector{
 		doppler:        doppler,
-		zonePrefix:     zonePrefix,
+		dopplerWithAZ:  dopplerWithAZ,
 		dial:           df,
 		ingestorClient: cf,
 		opts:           opts,
@@ -39,7 +39,7 @@ func MakeGRPCConnector(
 }
 
 func (c GRPCConnector) Connect() (io.Closer, plumbing.DopplerIngestor_PusherClient, error) {
-	closer, pusher, err := c.connect(c.zonePrefix + "." + c.doppler)
+	closer, pusher, err := c.connect(c.dopplerWithAZ)
 	if err != nil {
 		return c.connect(c.doppler)
 	}
@@ -66,5 +66,5 @@ func (c GRPCConnector) connect(doppler string) (io.Closer, plumbing.DopplerInges
 }
 
 func (c GRPCConnector) String() string {
-	return fmt.Sprintf("[%s]%s", c.zonePrefix, c.doppler)
+	return fmt.Sprintf("[%s]%s", c.dopplerWithAZ, c.doppler)
 }

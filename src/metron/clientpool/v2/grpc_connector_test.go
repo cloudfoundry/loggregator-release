@@ -38,7 +38,7 @@ var _ = Describe("GRPCConnector", func() {
 		})
 
 		It("connects to the dns name with az prefix", func() {
-			connector := clientpool.MakeGRPCConnector("test-name", "z1", df.fn, cf.fn, grpc.WithInsecure())
+			connector := clientpool.MakeGRPCConnector("test-name", "z1.test-name", df.fn, cf.fn, grpc.WithInsecure())
 			_, _, err := connector.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -81,7 +81,7 @@ var _ = Describe("GRPCConnector", func() {
 			mockSender.SenderOutput.Ret1 <- nil
 			cf.retIngressClient <- mockSender
 
-			connector := clientpool.MakeGRPCConnector("test-name", "z1", df.fn, cf.fn)
+			connector := clientpool.MakeGRPCConnector("test-name", "z1.test-name", df.fn, cf.fn)
 			_, _, err := connector.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -100,7 +100,7 @@ var _ = Describe("GRPCConnector", func() {
 			df.retClientConn <- nil
 			df.retErr <- errors.New("fake error")
 
-			connector := clientpool.MakeGRPCConnector("test-name", "z1", df.fn, nil)
+			connector := clientpool.MakeGRPCConnector("test-name", "z1.test-name", df.fn, nil)
 			_, _, err := connector.Connect()
 			Expect(err).To(HaveOccurred())
 		})

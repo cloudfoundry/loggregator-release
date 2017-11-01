@@ -64,7 +64,7 @@ func (a *AppV2) initializePool() *clientpool.ClientPool {
 
 	connector := clientpool.MakeGRPCConnector(
 		a.config.DopplerAddr,
-		a.config.Zone,
+		a.config.DopplerAddrWithAZ,
 		grpc.Dial,
 		v2.NewDopplerIngressClient,
 		grpc.WithTransportCredentials(a.clientCreds),

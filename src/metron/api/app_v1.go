@@ -90,7 +90,7 @@ func (a *AppV1) setupGRPC() []legacy.Pool {
 
 	connector := clientpool.MakeGRPCConnector(
 		a.config.DopplerAddr,
-		a.config.Zone,
+		a.config.DopplerAddrWithAZ,
 		grpc.Dial,
 		plumbing.NewDopplerIngestorClient,
 		grpc.WithTransportCredentials(a.creds),
