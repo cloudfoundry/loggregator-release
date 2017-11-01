@@ -89,7 +89,7 @@ func (a *AppV1) setupGRPC() egress.BatchChainByteWriter {
 	}
 
 	balancers := []*clientpool.Balancer{
-		clientpool.NewBalancer(fmt.Sprintf("%s.%s", a.config.Zone, a.config.DopplerAddr)),
+		clientpool.NewBalancer(a.config.DopplerAddrWithAZ),
 		clientpool.NewBalancer(a.config.DopplerAddr),
 	}
 

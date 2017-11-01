@@ -86,7 +86,7 @@ func (a *AppV2) initializePool() *clientpool.ClientPool {
 	}
 
 	balancers := []*clientpool.Balancer{
-		clientpool.NewBalancer(fmt.Sprintf("%s.%s", a.config.Zone, a.config.DopplerAddr)),
+		clientpool.NewBalancer(a.config.DopplerAddrWithAZ),
 		clientpool.NewBalancer(a.config.DopplerAddr),
 	}
 
