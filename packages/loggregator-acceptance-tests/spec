@@ -4,6 +4,7 @@ dependencies:
   - golang1.9.1
 files:
 - github.com/onsi/ginkgo/**/*.go
+- code.cloudfoundry.org/grpc-throughputlb/*.go # gosub
 - code.cloudfoundry.org/loggregator/lats/*.go # gosub
 - code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
 - code.cloudfoundry.org/loggregator/plumbing/*.go # gosub

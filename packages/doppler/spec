@@ -9,6 +9,7 @@ files:
 - code.cloudfoundry.org/go-pubsub/*.go # gosub
 - code.cloudfoundry.org/go-pubsub/internal/node/*.go # gosub
 - code.cloudfoundry.org/go-pubsub/pubsub-gen/setters/*.go # gosub
+- code.cloudfoundry.org/grpc-throughputlb/*.go # gosub
 - code.cloudfoundry.org/loggregator/diodes/*.go # gosub
 - code.cloudfoundry.org/loggregator/healthendpoint/*.go # gosub
 - code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
