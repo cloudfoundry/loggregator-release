@@ -94,3 +94,6 @@
 [submodule "src/code.cloudfoundry.org/go-envstruct"]
 	path = src/code.cloudfoundry.org/go-envstruct
 	url = https://github.com/cloudfoundry/go-envstruct
+[submodule "src/code.cloudfoundry.org/grpc-throughputlb"]
+	path = src/code.cloudfoundry.org/grpc-throughputlb
+	url = https://github.com/cloudfoundry-incubator/grpc-throughputlb
