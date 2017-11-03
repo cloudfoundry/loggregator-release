@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'fileutils'
+require 'yaml'
 
 if ARGV.length != 1
   puts "Usage: bump-golang <version>"
@@ -53,7 +54,7 @@ end
 
 def move_packages(from_version, to_version)
   Dir.glob("packages/golang#{from_version}*").each do |src|
-    dst = src.gsub(/golang(\d*\.\d*\.\d*)/, to_version)
+    dst = src.gsub(from_version, to_version)
 
     FileUtils.mv(src, dst)
     text "Moved #{src} to #{dst}"
@@ -77,19 +78,15 @@ def bump_in_files(dir, from_version, to_version)
   end
 end
 
-def deploy_bosh_lite
-  `./scripts/deploy-bosh-lite`
-  check_process($?, "deploying bosh lite")
-end
-
-def run_lats
-  `./scripts/lats`
-  check_process($?, "running LATs")
-end
-
 def sync_package_specs
   `./scripts/sync-package-specs`
   check_process($?, "deploying bosh lite")
+end
+
+def remove_blobs(from_version)
+  blobs = YAML.parse(File.read("config/blobs.yml")).to_ruby
+  blobs.delete_if { |k, v| k.include?(from_version) }
+  File.open("config/blobs.yml", "w") { |f| f.write(blobs.to_yaml) }
 end
 
 to_version = ARGV[0]
@@ -112,15 +109,10 @@ bump_in_files("packages", from_version, to_version)
 header "Updating jobs..."
 bump_in_files("jobs", from_version, to_version)
 
-# TODO: Remove old blobs from config/blobs.yml
 header "Removing old blobs..."
+remove_blobs(from_version)
 
 header "Syncing package specs..."
+sync_package_specs
 
-header "Deploying to bosh lite..."
-deploy_bosh_lite
-
-header "Running LATs..."
-run_lats
-
-header "Done. Please verify the changes before committing"
+header "Done."
