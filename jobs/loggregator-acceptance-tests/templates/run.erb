@@ -6,7 +6,7 @@ raise "traffic_controller.disable_access_control must be true" unless p("traffic
 
 set -e
 
-export GOROOT=$(readlink -nf /var/vcap/packages/golang1.9.1)
+export GOROOT=$(readlink -nf /var/vcap/packages/golang1.9.2)
 export GOPATH=/var/vcap/packages/loggregator-acceptance-tests
 export PATH=${GOROOT}/bin:${GOPATH}/bin:${PATH}
 

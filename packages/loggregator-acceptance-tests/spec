@@ -1,7 +1,7 @@
 ---
 name: loggregator-acceptance-tests
 dependencies:
-  - golang1.9.1
+  - golang1.9.2
 files:
 - github.com/onsi/ginkgo/**/*.go
 - code.cloudfoundry.org/grpc-throughputlb/*.go # gosub
