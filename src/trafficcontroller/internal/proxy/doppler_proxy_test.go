@@ -16,7 +16,6 @@ import (
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-	"golang.org/x/net/context"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -94,40 +93,6 @@ var _ = Describe("DopplerProxy", func() {
 
 			Expect(metric.Unit).To(BeEmpty())
 			Expect(metric.Value).To(BeZero())
-		})
-
-		It("creates a context with a deadline for recent logs", func() {
-			go func() {
-				time.Sleep(100 * time.Millisecond)
-				mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
-			}()
-			req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
-			dopplerProxy.ServeHTTP(recorder, req)
-
-			var ctx context.Context
-			Eventually(mockGrpcConnector.RecentLogsInput.Ctx).Should(Receive(&ctx))
-			_, ok := ctx.Deadline()
-			Expect(ok).To(BeTrue())
-
-			Eventually(ctx.Err).Should(HaveOccurred())
-			Expect(recorder.Code).To(Equal(http.StatusServiceUnavailable))
-		})
-
-		It("creates a context with a deadline for container metrics", func() {
-			go func() {
-				time.Sleep(100 * time.Millisecond)
-				mockGrpcConnector.ContainerMetricsOutput.Ret0 <- nil
-			}()
-			req, _ := http.NewRequest("GET", "/apps/appID123/containermetrics", nil)
-			dopplerProxy.ServeHTTP(recorder, req)
-
-			var ctx context.Context
-			Eventually(mockGrpcConnector.ContainerMetricsInput.Ctx).Should(Receive(&ctx))
-			_, ok := ctx.Deadline()
-			Expect(ok).To(BeTrue())
-
-			Eventually(ctx.Err).Should(HaveOccurred())
-			Expect(recorder.Code).To(Equal(http.StatusServiceUnavailable))
 		})
 	})
 

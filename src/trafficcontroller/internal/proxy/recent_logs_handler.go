@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -34,12 +33,6 @@ func (h *RecentLogsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	resp := h.grpcConn.RecentLogs(ctx, appID)
-	if err := ctx.Err(); err != nil {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		log.Printf("recentlogs request encountered an error: %s", err)
-		return
-	}
-
 	limit, ok := limitFrom(r)
 	if ok && len(resp) > limit {
 		resp = resp[:limit]
