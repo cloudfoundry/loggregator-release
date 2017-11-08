@@ -145,7 +145,7 @@ func (t *trafficController) Start() {
 			adminAuthorizer,
 			grpcConnector,
 			"doppler."+t.conf.SystemDomain,
-			15*time.Second,
+			5*time.Second,
 		),
 	)
 	if accessMiddleware != nil {
