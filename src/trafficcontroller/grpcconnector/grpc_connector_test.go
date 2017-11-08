@@ -456,43 +456,72 @@ var _ = Describe("GRPCConnector", func() {
 				testRecentLogB = []byte("test-recent-log-b")
 			)
 
-			BeforeEach(func() {
-				event := dopplerservice.Event{
-					GRPCDopplers: createGrpcURIs(listeners),
-				}
-				mockFinder.NextOutput.Ret0 <- event
+			Context("when dopplers respond", func() {
+				BeforeEach(func() {
+					event := dopplerservice.Event{
+						GRPCDopplers: createGrpcURIs(listeners),
+					}
+					mockFinder.NextOutput.Ret0 <- event
 
-				mockDopplerServerA.ContainerMetricsOutput.Resp <- &plumbing.ContainerMetricsResponse{
-					Payload: [][]byte{testMetricA},
-				}
-				mockDopplerServerA.ContainerMetricsOutput.Err <- nil
-				mockDopplerServerB.ContainerMetricsOutput.Resp <- &plumbing.ContainerMetricsResponse{
-					Payload: [][]byte{testMetricB},
-				}
-				mockDopplerServerB.ContainerMetricsOutput.Err <- nil
+					mockDopplerServerA.ContainerMetricsOutput.Resp <- &plumbing.ContainerMetricsResponse{
+						Payload: [][]byte{testMetricA},
+					}
+					mockDopplerServerA.ContainerMetricsOutput.Err <- nil
+					mockDopplerServerB.ContainerMetricsOutput.Resp <- &plumbing.ContainerMetricsResponse{
+						Payload: [][]byte{testMetricB},
+					}
+					mockDopplerServerB.ContainerMetricsOutput.Err <- nil
 
-				mockDopplerServerA.RecentLogsOutput.Resp <- &plumbing.RecentLogsResponse{
-					Payload: [][]byte{testRecentLogA},
-				}
-				mockDopplerServerA.RecentLogsOutput.Err <- nil
-				mockDopplerServerB.RecentLogsOutput.Resp <- &plumbing.RecentLogsResponse{
-					Payload: [][]byte{testRecentLogB},
-				}
-				mockDopplerServerB.RecentLogsOutput.Err <- nil
+					mockDopplerServerA.RecentLogsOutput.Resp <- &plumbing.RecentLogsResponse{
+						Payload: [][]byte{testRecentLogA},
+					}
+					mockDopplerServerA.RecentLogsOutput.Err <- nil
+					mockDopplerServerB.RecentLogsOutput.Resp <- &plumbing.RecentLogsResponse{
+						Payload: [][]byte{testRecentLogB},
+					}
+					mockDopplerServerB.RecentLogsOutput.Err <- nil
+				})
+
+				It("can request container metrics", func() {
+					f := func() [][]byte {
+						return connector.ContainerMetrics(ctx, "test-app-id")
+					}
+					Eventually(f).Should(ConsistOf(testMetricA, testMetricB))
+				})
+
+				It("can request recent logs", func() {
+					f := func() [][]byte {
+						return connector.RecentLogs(ctx, "test-app-id")
+					}
+					Eventually(f).Should(ConsistOf(testRecentLogA, testRecentLogB))
+				})
 			})
 
-			It("can request container metrics", func() {
-				f := func() [][]byte {
-					return connector.ContainerMetrics(ctx, "test-app-id")
-				}
-				Eventually(f).Should(ConsistOf(testMetricA, testMetricB))
-			})
+			Context("when don't dopplers respond", func() {
+				BeforeEach(func() {
+					event := dopplerservice.Event{
+						GRPCDopplers: createGrpcURIs(listeners),
+					}
+					mockFinder.NextOutput.Ret0 <- event
 
-			It("can request recent logs", func() {
-				f := func() [][]byte {
-					return connector.RecentLogs(ctx, "test-app-id")
-				}
-				Eventually(f).Should(ConsistOf(testRecentLogA, testRecentLogB))
+					mockDopplerServerA.ContainerMetricsOutput.Resp <- &plumbing.ContainerMetricsResponse{
+						Payload: [][]byte{testMetricA},
+					}
+					mockDopplerServerA.ContainerMetricsOutput.Err <- nil
+
+					mockDopplerServerA.RecentLogsOutput.Resp <- &plumbing.RecentLogsResponse{
+						Payload: [][]byte{testRecentLogA},
+					}
+					mockDopplerServerA.RecentLogsOutput.Err <- nil
+				})
+
+				It("can request container metrics", func() {
+					f := func() [][]byte {
+						c, _ := context.WithTimeout(ctx, 250*time.Millisecond)
+						return connector.ContainerMetrics(c, "test-app-id")
+					}
+					Eventually(f).Should(ConsistOf([][]byte{testMetricA}))
+				})
 			})
 		})
 	})

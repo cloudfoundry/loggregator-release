@@ -162,21 +162,11 @@ func (p *Proxy) serveAppLogs(requestPath, appID string, writer http.ResponseWrit
 	case "recentlogs":
 		ctx, _ = context.WithDeadline(ctx, time.Now().Add(p.timeout))
 		resp := p.grpcConn.RecentLogs(ctx, appID)
-		if err := ctx.Err(); err != nil {
-			writer.WriteHeader(http.StatusServiceUnavailable)
-			log.Printf("recentlogs request encountered an error: %s", err)
-			return
-		}
 		p.serveMultiPartResponse(writer, resp)
 		return
 	case "containermetrics":
 		ctx, _ = context.WithDeadline(ctx, time.Now().Add(p.timeout))
 		resp := deDupe(p.grpcConn.ContainerMetrics(ctx, appID))
-		if err := ctx.Err(); err != nil {
-			writer.WriteHeader(http.StatusServiceUnavailable)
-			log.Printf("containermetrics request encountered an error: %s", err)
-			return
-		}
 		p.serveMultiPartResponse(writer, resp)
 		return
 	case "stream":

@@ -110,40 +110,6 @@ var _ = Describe("ServeHTTP()", func() {
 				Expect(metric.Unit).To(BeEmpty())
 				Expect(metric.Value).To(BeZero())
 			})
-
-			It("creates a context with a deadline for recent logs", func() {
-				go func() {
-					time.Sleep(100 * time.Millisecond)
-					mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
-				}()
-				req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
-				proxy.ServeHTTP(recorder, req)
-
-				var ctx context.Context
-				Eventually(mockGrpcConnector.RecentLogsInput.Ctx).Should(Receive(&ctx))
-				_, ok := ctx.Deadline()
-				Expect(ok).To(BeTrue())
-
-				Eventually(ctx.Err).Should(HaveOccurred())
-				Expect(recorder.Code).To(Equal(http.StatusServiceUnavailable))
-			})
-
-			It("creates a context with a deadline for container metrics", func() {
-				go func() {
-					time.Sleep(100 * time.Millisecond)
-					mockGrpcConnector.ContainerMetricsOutput.Ret0 <- nil
-				}()
-				req, _ := http.NewRequest("GET", "/apps/appID123/containermetrics", nil)
-				proxy.ServeHTTP(recorder, req)
-
-				var ctx context.Context
-				Eventually(mockGrpcConnector.ContainerMetricsInput.Ctx).Should(Receive(&ctx))
-				_, ok := ctx.Deadline()
-				Expect(ok).To(BeTrue())
-
-				Eventually(ctx.Err).Should(HaveOccurred())
-				Expect(recorder.Code).To(Equal(http.StatusServiceUnavailable))
-			})
 		})
 
 		Context("if the path is not valid", func() {
