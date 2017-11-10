@@ -10,5 +10,5 @@ fi
 
 bosh create-release --force
 bosh -e $env_name upload-release --rebase
-bosh -e $env_name deploy -n -d loggregator templates/loggregator.yml \
+bosh -e $env_name deploy -n -d loggregator manifests/loggregator.yml \
     --vars-store=/tmp/loggregator-vars.yml
