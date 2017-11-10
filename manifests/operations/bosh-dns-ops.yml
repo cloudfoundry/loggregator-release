@@ -6,9 +6,9 @@
 - type: remove
   path: /instance_groups/name=doppler/jobs/name=consul_agent
 - type: remove
-  path: /instance_groups/name=log-api/jobs/name=consul_agent
+  path: /instance_groups/name=log-api?/jobs/name=consul_agent
 - type: remove
-  path: /instance_groups/name=loggregator-acceptance-tests/jobs/name=consul_agent
+  path: /instance_groups/name=loggregator-acceptance-tests?/jobs/name=consul_agent
 - type: remove
   path: /instance_groups/name=reverse_log_proxy/jobs/name=consul_agent
 
@@ -16,16 +16,17 @@
   path: /instance_groups/name=doppler/jobs/name=metron_agent/properties/metron_agent/bosh_dns?
   value: true
 - type: replace
-  path: /instance_groups/name=log-api/jobs/name=metron_agent/properties/metron_agent/bosh_dns?
+  path: /instance_groups/name=log-api?/jobs/name=metron_agent/properties/metron_agent/bosh_dns?
   value: true
 - type: replace
   path: /instance_groups/name=reverse_log_proxy/jobs/name=metron_agent/properties/metron_agent/bosh_dns?
   value: true
+
 - type: replace
-  path: /instance_groups/name=loggregator-acceptance-tests/jobs/name=metron_agent/properties/metron_agent/bosh_dns?
+  path: /instance_groups/name=loggregator-acceptance-tests?/jobs/name=metron_agent/properties/metron_agent/bosh_dns?
   value: true
 - type: replace
-  path: /instance_groups/name=loggregator-acceptance-tests/jobs/name=loggregator-acceptance-tests/properties/loggregator_acceptance_tests?/bosh_dns?
+  path: /instance_groups/name=loggregator-acceptance-tests?/jobs/name=loggregator-acceptance-tests/properties/loggregator_acceptance_tests?/bosh_dns?
   value: true
 
 - type: replace
@@ -34,10 +35,10 @@
     name: bosh-dns
     release: bosh-dns
 - type: replace
-  path: /instance_groups/name=log-api/jobs/-
+  path: /instance_groups/name=log-api?/jobs/-
   value: *bosh_dns_job
 - type: replace
-  path: /instance_groups/name=loggregator-acceptance-tests/jobs/-
+  path: /instance_groups/name=loggregator-acceptance-tests?/jobs/-
   value: *bosh_dns_job
 - type: replace
   path: /instance_groups/name=reverse_log_proxy/jobs/-

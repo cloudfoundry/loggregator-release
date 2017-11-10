@@ -93,6 +93,26 @@ Metrics README](docs/metric_descriptions.md).
 For components of Cloud Foundry or standalone BOSH deployments, Loggregator
 provides a set of tools for emitting Logs and Metrics.
 
+## Standalone Loggregator
+
+Standalone Loggregator provides logging support for services that do not
+require a CloudFoundry.
+
+### Deploying without TrafficController
+
+TrafficController has several CloudFoundry concerns. Therefore, there is an
+[operations file](./manifests/operations/no-traffic-controller.yml) to deploy
+standalone Loggregator without it.
+
+##### Example bosh lite deploy
+
+```
+bosh -e lite deploy -n -d loggregator manifests/loggregator.yml \
+    -o manifests/operations/no-traffic-controller.yml \
+    -o manifests/operations/bosh-dns-ops.yml \
+    --vars-store=/tmp/loggregator-vars.yml
+```
+
 ### Loggregator API
 
 The Loggregator API is a replacement of the [Dropsonde
