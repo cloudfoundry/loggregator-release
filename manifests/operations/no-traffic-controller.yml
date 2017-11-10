@@ -1,0 +1,5 @@
+---
+- type: remove
+  path: /instance_groups/name=log-api
+- type: remove
+  path: /instance_groups/name=loggregator-acceptance-tests
