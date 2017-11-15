@@ -107,9 +107,8 @@ standalone Loggregator without it.
 ##### Example bosh lite deploy
 
 ```
-bosh -e lite deploy -n -d loggregator manifests/loggregator.yml \
+bosh -e lite deploy -d loggregator manifests/loggregator.yml \
     -o manifests/operations/no-traffic-controller.yml \
-    -o manifests/operations/bosh-dns-ops.yml \
     --vars-store=/tmp/loggregator-vars.yml
 ```
 

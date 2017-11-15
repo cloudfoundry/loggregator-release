@@ -8,62 +8,19 @@ stemcells:
 releases:
 - name: loggregator
   version: latest
-- name: consul
-  version: latest
+- name: bosh-dns
+  version: 0.0.11
+
+addons:
+- name: bosh-dns
+  include:
+    stemcell:
+    - os: ubuntu-trusty
+  jobs:
+  - name: bosh-dns
+    release: bosh-dns
 
 instance_groups:
-- name: consul
-  azs:
-  - z1
-  instances: 1
-  persistent_disk_type: 1GB
-  vm_type: minimal
-  stemcell: default
-  networks:
-  - name: default
-  jobs:
-  - name: consul_agent
-    release: consul
-    consumes:
-      consul: nil
-      consul_common: {from: consul_common_link}
-      consul_server: {from: consul_server_link}
-      consul_client: {from: consul_client_link}
-    provides:
-      consul_common: {as: consul_common_link, shared: true}
-      consul_server: {as: consul_server_link, shared: true}
-      consul_client: {as: consul_client_link, shared: true}
-    properties:
-      consul:
-        agent:
-          mode: server
-          domain: cf.internal
-        require_ssl: true
-        encrypt_keys:
-        - "((consul_encrypt_key))"
-        agent_cert: "((consul_agent.certificate))"
-        agent_key: "((consul_agent.private_key))"
-        ca_cert: "((consul_server.ca))"
-        server_cert: "((consul_server.certificate))"
-        server_key: "((consul_server.private_key))"
-  - name: metron_agent
-    release: loggregator
-    properties: &metron_agent_properties
-      doppler:
-        addr: doppler.service.cf.internal
-      metron_agent:
-        disable_udp: false
-        deployment: loggregator
-      loggregator:
-        tls:
-          ca_cert: "((loggregator_metron.ca))"
-          metron:
-            cert: "((loggregator_metron.certificate))"
-            key: "((loggregator_metron.private_key))"
-  update:
-    serial: true
-    max_in_flight: 1
-
 - name: loggregator-acceptance-tests
   azs:
   - z1
@@ -79,16 +36,21 @@ instance_groups:
     properties:
       traffic_controller:
         disable_access_control: true
-  - name: consul_agent
-    release: consul
-    consumes:
-      consul: nil
-      consul_common: {from: consul_common_link}
-      consul_server: nil
-      consul_client: {from: consul_client_link}
   - name: metron_agent
     release: loggregator
-    properties: *metron_agent_properties
+    properties: &metron_agent_properties
+      doppler:
+        addr: doppler.service.cf.internal
+      metron_agent:
+        disable_udp: false
+        deployment: loggregator
+        bosh_dns: true
+      loggregator:
+        tls:
+          ca_cert: "((loggregator_metron.ca))"
+          metron:
+            cert: "((loggregator_metron.certificate))"
+            key: "((loggregator_metron.private_key))"
 
 - name: doppler
   azs:
@@ -100,19 +62,6 @@ instance_groups:
   networks:
   - name: default
   jobs:
-  - name: consul_agent
-    release: consul
-    consumes:
-      consul: nil
-      consul_common: {from: consul_common_link}
-      consul_server: nil
-      consul_client: {from: consul_client_link}
-    properties:
-      consul:
-        agent:
-          services:
-            doppler:
-              name: doppler
   - name: doppler
     release: loggregator
     properties:
@@ -140,18 +89,6 @@ instance_groups:
   networks:
   - name: default
   jobs:
-  - name: consul_agent
-    release: consul
-    consumes:
-      consul: nil
-      consul_common: {from: consul_common_link}
-      consul_server: nil
-      consul_client: {from: consul_client_link}
-    properties:
-      consul:
-        agent:
-          services:
-            loggregator_trafficcontroller: {}
   - name: loggregator_trafficcontroller
     release: loggregator
     properties:
@@ -195,18 +132,6 @@ instance_groups:
   networks:
   - name: default
   jobs:
-  - name: consul_agent
-    release: consul
-    consumes:
-      consul: nil
-      consul_common: {from: consul_common_link}
-      consul_server: nil
-      consul_client: {from: consul_client_link}
-    properties:
-      consul:
-        agent:
-          services:
-            reverse_log_proxy: {}
   - name: reverse_log_proxy
     release: loggregator
     provides:
@@ -260,29 +185,6 @@ variables:
   options:
     ca: loggregator_ca
     common_name: metron
-    extended_key_usage:
-    - client_auth
-    - server_auth
-- name: consul_encrypt_key
-  type: password
-- name: consul_agent_ca
-  type: certificate
-  options:
-    common_name: consulCA
-    is_ca: true
-- name: consul_agent
-  type: certificate
-  options:
-    ca: consul_agent_ca
-    common_name: consul_agent
-    extended_key_usage:
-    - client_auth
-    - server_auth
-- name: consul_server
-  type: certificate
-  options:
-    ca: consul_agent_ca
-    common_name: server.dc1.cf.internal
     extended_key_usage:
     - client_auth
     - server_auth
