@@ -11,7 +11,6 @@ files:
 - code.cloudfoundry.org/loggregator/plumbing/conversion/*.go # gosub
 - code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
 - github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
-- github.com/cloudfoundry/dropsonde/envelope_extensions/*.go # gosub
 - github.com/cloudfoundry/dropsonde/factories/*.go # gosub
 - github.com/cloudfoundry/dropsonde/instrumented_handler/*.go # gosub
 - github.com/cloudfoundry/noaa/*.go # gosub
