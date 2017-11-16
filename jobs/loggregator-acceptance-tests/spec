@@ -28,14 +28,7 @@ properties:
     description: ""
   loggregator_acceptance_tests.admin_password:
     description: ""
-  loggregator_acceptance_tests.bosh_dns:
-    description: Enable Bosh DNS. Disabling this implies Consul DNS.
-    default: false
 
   traffic_controller.disable_access_control:
     description: "Disable UAA/CC auth in traffic controller.  This **MUST** be set to true in the manifest for LATs to work."
     default: false
-
-  reverse_log_proxy.addr:
-    description: "The address of the RLP if bosh DNS is not enabled."
-    default: reverse-log-proxy.service.cf.internal:8082
