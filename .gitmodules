@@ -97,3 +97,6 @@
 [submodule "src/code.cloudfoundry.org/grpc-throughputlb"]
 	path = src/code.cloudfoundry.org/grpc-throughputlb
 	url = https://github.com/cloudfoundry-incubator/grpc-throughputlb
+[submodule "src/github.com/mailru/easyjson"]
+	path = src/github.com/mailru/easyjson
+	url = https://github.com/mailru/easyjson
