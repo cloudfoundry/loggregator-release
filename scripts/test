@@ -229,7 +229,7 @@ function run_linters {
     echo running go vet
     go vet "$loggregator_pkg/..."
     echo running deadcode
-    deadcode $dir
+    find "$loggregator_dir" -type d | xargs deadcode
     echo running golint
     golint "$loggregator_pkg/..."
     echo running aligncheck
