@@ -35,8 +35,8 @@
         a[:PPROFPort] = p("metron_agent.pprof_port")
         a[:HealthEndpointPort] = p("metron_agent.health_port")
         a[:GRPC] = grpcConfig
-        a[:DopplerAddr] = "#{doppler_addr}:#{p('doppler.grpc_port')}"
-        a[:DopplerAddrWithAZ] = "#{doppler_addr_with_az}:#{p('doppler.grpc_port')}"
+        a[:RouterAddr] = "#{doppler_addr}:#{p('doppler.grpc_port')}"
+        a[:RouterAddrWithAZ] = "#{doppler_addr_with_az}:#{p('doppler.grpc_port')}"
     end
 %>
 
