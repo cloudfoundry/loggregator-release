@@ -5,13 +5,9 @@ package main
 import (
 	"context"
 	"crypto/rand"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
-	"strconv"
-	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc"
@@ -23,12 +19,11 @@ import (
 
 var (
 	target   = flag.String("target", "localhost:3457", "the host:port of the target rlp")
-	httpAddr = flag.String("http-addr", "localhost:8081", "the host:port for HTTP to listen")
 	appID    = flag.String("app-id", "", "app-id to stream data")
 	certFile = flag.String("cert", "", "cert to use to connect to rlp")
 	keyFile  = flag.String("key", "", "key to use to connect to rlp")
 	caFile   = flag.String("ca", "", "ca cert to use to connect to rlp")
-	delay    = flag.Duration("delay", time.Second, "delay inbetween reading messages")
+	delay    = flag.Duration("delay", 0, "delay inbetween reading messages")
 )
 
 func main() {
@@ -50,8 +45,8 @@ func main() {
 		log.Fatal(err)
 	}
 	client := v2.NewEgressClient(conn)
-	receiver, err := client.Receiver(context.TODO(), &v2.EgressRequest{
-		ShardId: buildShardId(),
+	receiver, err := client.BatchedReceiver(context.TODO(), &v2.EgressBatchRequest{
+		ShardId: buildShardID(),
 		LegacySelector: &v2.Selector{
 			SourceId: *appID,
 			Message: &v2.Selector_Log{
@@ -64,39 +59,20 @@ func main() {
 		log.Fatal(err)
 	}
 
-	reporter := &idxReporter{}
-	go func() {
-		var lastIdx int64
-		for {
-			env, err := receiver.Recv()
-			if err != nil {
-				fmt.Printf("stopping reader, lastIdx: %d\n", lastIdx)
-				return
-			}
-			lastIdx, err = strconv.ParseInt(env.Tags["idx"], 10, 0)
-			if err != nil {
-				log.Fatal(err)
-			}
-			reporter.set(lastIdx)
-			time.Sleep(*delay)
+	for {
+		batch, err := receiver.Recv()
+		if err != nil {
+			log.Printf("stopping reader, got err: %s", err)
+			return
 		}
-	}()
-	log.Fatal(http.ListenAndServe(*httpAddr, reporter))
+		for _, e := range batch.Batch {
+			fmt.Printf("%+v\n", e)
+		}
+		time.Sleep(*delay)
+	}
 }
 
-type idxReporter struct {
-	lastIdx int64
-}
-
-func (r *idxReporter) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
-	json.NewEncoder(rw).Encode(atomic.LoadInt64(&r.lastIdx))
-}
-
-func (r *idxReporter) set(v int64) {
-	atomic.StoreInt64(&r.lastIdx, v)
-}
-
-func buildShardId() string {
+func buildShardID() string {
 	return "rlp-reader-" + randString()
 }
 
