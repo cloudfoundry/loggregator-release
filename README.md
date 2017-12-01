@@ -61,7 +61,7 @@ of logs in streams. That said, there is enough precision in the timestamp provid
 by diego that streaming clients can batch and order streams as they receive them. 
 This is done by the cf cli and most other streaming clients. 
 
-For syslog ingestion it also possible to ensure log order. See the details in [cf-syslog-drain-release](#) 
+For syslog ingestion it also possible to ensure log order. See the details in [cf-syslog-drain-release](https://github.com/cloudfoundry/cf-syslog-drain-release/blob/develop/README.md#log-ordering) 
 
 
 ## Consuming the Firehose
