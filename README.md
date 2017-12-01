@@ -57,10 +57,12 @@ the [Cloud Foundry docs][cf-docs] for more details.
 ### Log Ordering
 
 Loggregator does not provide any guaruntees around the order of delivery
-of logs. Because Loggregator is a distributed system this means that logs
-appear out of order in the stream. To improve this the CLI will hold and order
-logs based on thier source timestamp as do most syslog servers. If you are using
-Java a popular [work around exists using the Logback library](docs/java-multi-line-work-around.md).
+of logs in streams. That said, there is enough precision in the timestamp provided
+by diego that streaming clients can batch and order streams as they receive them. 
+This is done by the cf cli and most other streaming clients. 
+
+For syslog ingestion it also possible to ensure log order. See the details in [cf-syslog-drain-release](#) 
+
 
 ## Consuming the Firehose
 
