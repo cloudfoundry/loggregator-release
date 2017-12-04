@@ -8,7 +8,6 @@ files:
 - code.cloudfoundry.org/loggregator/lats/*.go # gosub
 - code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
 - code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
-- code.cloudfoundry.org/loggregator/plumbing/conversion/*.go # gosub
 - code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
 - github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
 - github.com/cloudfoundry/dropsonde/factories/*.go # gosub
