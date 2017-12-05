@@ -64,6 +64,8 @@ instance_groups:
   jobs:
   - name: doppler
     release: loggregator
+    provides:
+      doppler: {as: doppler, shared: true}
     properties:
       doppler:
         disable_announce: true
@@ -91,6 +93,8 @@ instance_groups:
   jobs:
   - name: loggregator_trafficcontroller
     release: loggregator
+    provides:
+      trafficcontroller: {as: trafficcontroller, shared: true}
     properties:
       cc:
         internal_service_hostname: ""
