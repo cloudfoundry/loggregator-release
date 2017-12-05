@@ -47,10 +47,10 @@ instance_groups:
         bosh_dns: true
       loggregator:
         tls:
-          ca_cert: "((loggregator_metron.ca))"
+          ca_cert: "((loggregator_agent.ca))"
           metron:
-            cert: "((loggregator_metron.certificate))"
-            key: "((loggregator_metron.private_key))"
+            cert: "((loggregator_agent.certificate))"
+            key: "((loggregator_agent.private_key))"
 
 - name: doppler
   azs:
@@ -73,10 +73,10 @@ instance_groups:
       loggregator:
         disable_syslog_drains: true
         tls:
-          ca_cert: "((loggregator_doppler.ca))"
+          ca_cert: "((loggregator_router.ca))"
           doppler:
-            cert: "((loggregator_doppler.certificate))"
-            key: "((loggregator_doppler.private_key))"
+            cert: "((loggregator_router.certificate))"
+            key: "((loggregator_router.private_key))"
   - name: metron_agent
     release: loggregator
     properties: *metron_agent_properties
@@ -160,11 +160,14 @@ variables:
   options:
     common_name: loggregatorCA
     is_ca: true
-- name: loggregator_doppler
+- name: loggregator_router
   type: certificate
   options:
     ca: loggregator_ca
-    common_name: doppler
+    common_name: router
+    alternative_names:
+    - router
+    - doppler
     extended_key_usage:
     - client_auth
     - server_auth
@@ -180,15 +183,21 @@ variables:
   type: certificate
   options:
     ca: loggregator_ca
-    common_name: reverselogproxy
+    common_name: rlp
+    alternative_names:
+    - rlp
+    - reverselogproxy
     extended_key_usage:
     - client_auth
     - server_auth
-- name: loggregator_metron
+- name: loggregator_agent
   type: certificate
   options:
     ca: loggregator_ca
-    common_name: metron
+    common_name: agent
+    alternative_names:
+    - agent
+    - metron
     extended_key_usage:
     - client_auth
     - server_auth
