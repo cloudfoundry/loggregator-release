@@ -48,7 +48,19 @@ instance_groups:
             key: "((loggregator_doppler.private_key))"
   - name: metron_agent
     release: loggregator
-    properties: *metron_agent_properties
+    properties: &metron_agent_properties
+      doppler:
+        addr: ~
+      metron_agent:
+        disable_udp: false
+        deployment: loggregator
+        bosh_dns: true
+      loggregator:
+        tls:
+          ca_cert: "((loggregator_metron.ca))"
+          metron:
+            cert: "((loggregator_metron.certificate))"
+            key: "((loggregator_metron.private_key))"
 
 - name: log-api
   azs:
