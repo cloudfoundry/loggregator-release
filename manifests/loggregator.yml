@@ -21,37 +21,6 @@ addons:
     release: bosh-dns
 
 instance_groups:
-- name: loggregator-acceptance-tests
-  azs:
-  - z1
-  instances: 1
-  vm_type: minimal
-  stemcell: default
-  lifecycle: errand
-  networks:
-  - name: default
-  jobs:
-  - name: loggregator-acceptance-tests
-    release: loggregator
-    properties:
-      traffic_controller:
-        disable_access_control: true
-  - name: metron_agent
-    release: loggregator
-    properties: &metron_agent_properties
-      doppler:
-        addr: ~
-      metron_agent:
-        disable_udp: false
-        deployment: loggregator
-        bosh_dns: true
-      loggregator:
-        tls:
-          ca_cert: "((loggregator_metron.ca))"
-          metron:
-            cert: "((loggregator_metron.certificate))"
-            key: "((loggregator_metron.private_key))"
-
 - name: doppler
   azs:
   - z1
