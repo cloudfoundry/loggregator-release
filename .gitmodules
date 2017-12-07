@@ -97,3 +97,6 @@
 [submodule "src/github.com/cloudfoundry/loggregator-api"]
 	path = src/github.com/cloudfoundry/loggregator-api
 	url = https://github.com/cloudfoundry/loggregator-api
+[submodule "src/code.cloudfoundry.org/go-diodes"]
+	path = src/code.cloudfoundry.org/go-diodes
+	url = https://github.com/cloudfoundry/go-diodes

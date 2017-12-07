@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	gendiodes "code.cloudfoundry.org/go-diodes"
+
 	v2 "plumbing/v2"
 
 	"google.golang.org/grpc"
@@ -83,7 +85,7 @@ func Setup(opts ...SetOpts) {
 		opt(conf)
 	}
 
-	batchBuffer = diodes.NewManyToOneEnvelopeV2(1000, diodes.AlertFunc(func(missed int) {
+	batchBuffer = diodes.NewManyToOneEnvelopeV2(1000, gendiodes.AlertFunc(func(missed int) {
 		log.Printf("dropped metrics %d", missed)
 	}))
 

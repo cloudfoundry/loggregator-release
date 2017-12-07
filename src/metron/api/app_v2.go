@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"metric"
 
+	gendiodes "code.cloudfoundry.org/go-diodes"
+
 	clientpool "metron/clientpool/v2"
 	egress "metron/egress/v2"
 	ingress "metron/ingress/v2"
@@ -39,7 +41,7 @@ func (a *AppV2) Start() {
 		log.Panic("Failed to load TLS server config")
 	}
 
-	envelopeBuffer := diodes.NewManyToOneEnvelopeV2(10000, diodes.AlertFunc(func(missed int) {
+	envelopeBuffer := diodes.NewManyToOneEnvelopeV2(10000, gendiodes.AlertFunc(func(missed int) {
 		// TODO: add tag "ingress"
 		metric.IncCounter("dropped", metric.WithIncrement(uint64(missed)))
 		log.Printf("Dropped %d v2 envelopes", missed)

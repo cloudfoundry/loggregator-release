@@ -24,6 +24,8 @@ import (
 	"profiler"
 	"signalmanager"
 
+	gendiodes "code.cloudfoundry.org/go-diodes"
+
 	"code.cloudfoundry.org/localip"
 	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/dropsonde"
@@ -103,7 +105,7 @@ func main() {
 	errChan := make(chan error)
 	var wg sync.WaitGroup
 	dropsondeUnmarshallerCollection := dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(conf.UnmarshallerCount)
-	envelopeBuffer := diodes.NewManyToOneEnvelope(10000, diodes.AlertFunc(func(missed int) {
+	envelopeBuffer := diodes.NewManyToOneEnvelope(10000, gendiodes.AlertFunc(func(missed int) {
 		log.Printf("Shed %d envelopes", missed)
 		batcher.BatchCounter("doppler.shedEnvelopes").Add(uint64(missed))
 		metric.IncCounter("dropped") // TODO: add "egress" tag
