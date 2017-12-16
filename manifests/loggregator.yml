@@ -72,6 +72,17 @@ instance_groups:
   networks:
   - name: default
   jobs:
+  - name: reverse_log_proxy
+    release: loggregator
+    provides:
+      reverse_log_proxy: {as: reverse_log_proxy, shared: true}
+    properties:
+      loggregator:
+        tls:
+          ca_cert: "((loggregator_rlp.ca))"
+          reverse_log_proxy:
+            cert: "((loggregator_rlp.certificate))"
+            key: "((loggregator_rlp.private_key))"
   - name: loggregator_trafficcontroller
     release: loggregator
     provides:
@@ -100,34 +111,6 @@ instance_groups:
           client_secret: "some-secret"
       ssl:
         skip_cert_verify: false
-  - name: metron_agent
-    release: loggregator
-    properties: *metron_agent_properties
-  update:
-    max_in_flight: 1
-    serial: true
-
-- name: reverse_log_proxy
-  azs:
-  - z1
-  instances: 1
-  persistent_disk_type: 5GB
-  vm_type: minimal
-  stemcell: default
-  networks:
-  - name: default
-  jobs:
-  - name: reverse_log_proxy
-    release: loggregator
-    provides:
-      reverse_log_proxy: {as: reverse_log_proxy, shared: true}
-    properties:
-      loggregator:
-        tls:
-          ca_cert: "((loggregator_rlp.ca))"
-          reverse_log_proxy:
-            cert: "((loggregator_rlp.certificate))"
-            key: "((loggregator_rlp.private_key))"
   - name: metron_agent
     release: loggregator
     properties: *metron_agent_properties
