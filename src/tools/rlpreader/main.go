@@ -18,12 +18,13 @@ import (
 )
 
 var (
-	target   = flag.String("target", "localhost:3457", "the host:port of the target rlp")
-	appID    = flag.String("app-id", "", "app-id to stream data")
-	certFile = flag.String("cert", "", "cert to use to connect to rlp")
-	keyFile  = flag.String("key", "", "key to use to connect to rlp")
-	caFile   = flag.String("ca", "", "ca cert to use to connect to rlp")
-	delay    = flag.Duration("delay", 0, "delay inbetween reading messages")
+	target        = flag.String("target", "localhost:3457", "the host:port of the target rlp")
+	appID         = flag.String("app-id", "", "app-id to stream data")
+	certFile      = flag.String("cert", "", "cert to use to connect to rlp")
+	keyFile       = flag.String("key", "", "key to use to connect to rlp")
+	caFile        = flag.String("ca", "", "ca cert to use to connect to rlp")
+	delay         = flag.Duration("delay", 0, "delay inbetween reading messages")
+	preferredTags = flag.Bool("preferred-tags", false, "use preferred tags")
 )
 
 func main() {
@@ -53,7 +54,7 @@ func main() {
 				Log: &v2.LogSelector{},
 			},
 		},
-		UsePreferredTags: true,
+		UsePreferredTags: *preferredTags,
 	})
 	if err != nil {
 		log.Fatal(err)
