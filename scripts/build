@@ -7,6 +7,3 @@ for line in rlp agent trafficcontroller router; do
   echo building $line
   go build -o bin/$line code.cloudfoundry.org/loggregator/$line
 done
-
-echo building lats
-go test -c -o bin/lats code.cloudfoundry.org/loggregator/lats

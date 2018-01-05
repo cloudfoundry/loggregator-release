@@ -3,17 +3,9 @@
   value: default
 
 - type: replace
-  path: /instance_groups/name=loggregator-acceptance-tests/persistent_disk_type?
-  value: default
-
-- type: replace
   path: /instance_groups/name=log-api/persistent_disk_type?
   value: default
 
 - type: replace
   path: /instance_groups/name=doppler/persistent_disk_type?
-  value: default
-
-- type: replace
-  path: /instance_groups/name=reverse_log_proxy/persistent_disk_type?
   value: default

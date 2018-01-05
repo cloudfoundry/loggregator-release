@@ -1,48 +1,18 @@
 [submodule "src/github.com/gogo/protobuf"]
 	path = src/github.com/gogo/protobuf
 	url = https://github.com/gogo/protobuf
-[submodule "src/github.com/howeyc/fsnotify"]
-	path = src/github.com/howeyc/fsnotify
-	url = https://github.com/howeyc/fsnotify
 [submodule "src/github.com/nu7hatch/gouuid"]
 	path = src/github.com/nu7hatch/gouuid
 	url = https://github.com/nu7hatch/gouuid.git
-[submodule "src/github.com/onsi/ginkgo"]
-	path = src/github.com/onsi/ginkgo
-	url = https://github.com/onsi/ginkgo
-[submodule "src/github.com/onsi/gomega"]
-	path = src/github.com/onsi/gomega
-	url = https://github.com/onsi/gomega
 [submodule "src/github.com/gorilla/websocket"]
 	path = src/github.com/gorilla/websocket
 	url = https://github.com/gorilla/websocket
-[submodule "src/github.com/cloudfoundry/dropsonde"]
-	path = src/github.com/cloudfoundry/dropsonde
-	url = https://github.com/cloudfoundry/dropsonde
-[submodule "src/github.com/cloudfoundry/noaa"]
-	path = src/github.com/cloudfoundry/noaa
-	url = https://github.com/cloudfoundry/noaa.git
-[submodule "src/github.com/cloudfoundry/sonde-go"]
-	path = src/github.com/cloudfoundry/sonde-go
-	url = https://github.com/cloudfoundry/sonde-go
-[submodule "src/github.com/tedsuo/ifrit"]
-	path = src/github.com/tedsuo/ifrit
-	url = https://github.com/tedsuo/ifrit.git
-[submodule "src/github.com/ugorji/go"]
-	path = src/github.com/ugorji/go
-	url = https://github.com/ugorji/go
-[submodule "src/github.com/apoydence/eachers"]
-	path = src/github.com/apoydence/eachers
-	url = https://github.com/apoydence/eachers
 [submodule "src/github.com/gorilla/mux"]
 	path = src/github.com/gorilla/mux
 	url = http://github.com/gorilla/mux
 [submodule "src/github.com/gorilla/context"]
 	path = src/github.com/gorilla/context
 	url = http://github.com/gorilla/context
-[submodule "src/github.com/op/go-logging"]
-	path = src/github.com/op/go-logging
-	url = https://github.com/op/go-logging
 [submodule "src/gopkg.in/yaml.v2"]
 	path = src/gopkg.in/yaml.v2
 	url = https://gopkg.in/yaml.v2
@@ -58,24 +28,9 @@
 [submodule "src/github.com/golang/protobuf"]
 	path = src/github.com/golang/protobuf
 	url = https://github.com/golang/protobuf
-[submodule "src/code.cloudfoundry.org/workpool"]
-	path = src/code.cloudfoundry.org/workpool
-	url = https://github.com/cloudfoundry/workpool
-[submodule "src/code.cloudfoundry.org/clock"]
-	path = src/code.cloudfoundry.org/clock
-	url = https://github.com/cloudfoundry/clock
-[submodule "src/github.com/kisielk/gotool"]
-	path = src/github.com/kisielk/gotool
-	url = https://github.com/kisielk/gotool
 [submodule "src/github.com/codegangsta/cli"]
 	path = src/github.com/codegangsta/cli
 	url = https://github.com/codegangsta/cli
-[submodule "src/github.com/vito/gosub"]
-	path = src/github.com/vito/gosub
-	url = https://github.com/vito/gosub
-[submodule "src/github.com/cloudfoundry/loggregator-api"]
-	path = src/github.com/cloudfoundry/loggregator-api
-	url = https://github.com/cloudfoundry/loggregator-api
 [submodule "src/google.golang.org/genproto"]
 	path = src/google.golang.org/genproto
 	url = https://github.com/google/go-genproto
@@ -100,6 +55,30 @@
 [submodule "src/github.com/prometheus/procfs"]
 	path = src/github.com/prometheus/procfs
 	url = https://github.com/prometheus/procfs
+[submodule "src/github.com/onsi/ginkgo"]
+	path = src/github.com/onsi/ginkgo
+	url = https://github.com/onsi/ginkgo
+[submodule "src/github.com/onsi/gomega"]
+	path = src/github.com/onsi/gomega
+	url = https://github.com/onsi/gomega
+[submodule "src/github.com/vito/gosub"]
+	path = src/github.com/vito/gosub
+	url = https://github.com/vito/gosub
+[submodule "src/github.com/apoydence/eachers"]
+	path = src/github.com/apoydence/eachers
+	url = https://github.com/apoydence/eachers
+[submodule "src/github.com/cloudfoundry/loggregator-api"]
+	path = src/github.com/cloudfoundry/loggregator-api
+	url = https://github.com/cloudfoundry/loggregator-api
+[submodule "src/github.com/cloudfoundry/dropsonde"]
+	path = src/github.com/cloudfoundry/dropsonde
+	url = https://github.com/cloudfoundry/dropsonde
+[submodule "src/github.com/cloudfoundry/noaa"]
+	path = src/github.com/cloudfoundry/noaa
+	url = https://github.com/cloudfoundry/noaa.git
+[submodule "src/github.com/cloudfoundry/sonde-go"]
+	path = src/github.com/cloudfoundry/sonde-go
+	url = https://github.com/cloudfoundry/sonde-go
 [submodule "src/code.cloudfoundry.org/go-diodes"]
 	path = src/code.cloudfoundry.org/go-diodes
 	url = https://github.com/cloudfoundry/go-diodes
@@ -115,3 +94,9 @@
 [submodule "src/code.cloudfoundry.org/go-envstruct"]
 	path = src/code.cloudfoundry.org/go-envstruct
 	url = https://github.com/cloudfoundry/go-envstruct
+[submodule "src/code.cloudfoundry.org/grpc-throughputlb"]
+	path = src/code.cloudfoundry.org/grpc-throughputlb
+	url = https://github.com/cloudfoundry-incubator/grpc-throughputlb
+[submodule "src/github.com/mailru/easyjson"]
+	path = src/github.com/mailru/easyjson
+	url = https://github.com/mailru/easyjson

@@ -5,7 +5,7 @@ trap "echo Exited!; exit 1;" SIGINT SIGTERM
 PROJECT_DIR="$(cd "$(dirname "$0")/.."; pwd)"
 
 function print_usage {
-    echo "usage: test [subcommand] [ginkgo args]"
+    echo "usage: test [subcommand] [go test args]"
     echo
     echo -e "\033[1mSubcommands:\033[0m"
     echo "   all               Run all the tests, excluding linters (default)"
@@ -13,6 +13,7 @@ function print_usage {
     echo "   cleaners          Run tools that clean the code base"
     echo "   unit              Run the unit tests"
     echo "   integration       Run the integration tests"
+    echo "   ~integration      Run everything except the integration tests"
     echo "   multiplatform     Run the multiplatform sanity checks"
     echo "   templates         Run the template specs"
     echo "   linters           Run common linters against the project"
@@ -25,27 +26,15 @@ function print_checkpoint {
 }
 
 function green {
-    if [[ -n "$TERM" ]]; then
-        echo -e "$(tput setaf 2)$1$(tput sgr0)"
-    else
-        echo ":) $1"
-    fi
+    echo -e "\033[32m$1\033[0m"
 }
 
 function red {
-    if [[ -n "$TERM" ]]; then
-        echo -e "$(tput setaf 1)$1$(tput sgr0)"
-    else
-        echo ":( $1"
-    fi
+    echo -e "\033[31m$1\033[0m"
 }
 
 function bold_blue {
-    if [[ -n "$TERM" ]]; then
-        echo -e "$(tput setaf 6; tput bold)$1$(tput sgr0)"
-    else
-        echo "$1"
-    fi
+    echo -e "\033[1;34m$1\033[0m"
 }
 
 function check_output {
@@ -63,6 +52,8 @@ function exit_on_failure {
 
 function run_cleaners {
     print_checkpoint "Running Cleaners"
+
+    go get github.com/kisielk/gotool
 
     if ! which goimports > /dev/null 2>&1; then
         echo installing goimports
@@ -130,59 +121,51 @@ function run_build {
 }
 
 function run_unit {
-    pushd $PROJECT_DIR/src/tools
+    pushd $PROJECT_DIR/src/tools > /dev/null
         print_checkpoint "Running Tool Unit Tests"
-        ginkgo \
-            -r \
-            --race \
-            --tags=~deprecated \
-            --randomizeAllSpecs \
-            --slowSpecThreshold 20 \
+        go test -race ./... \
+            -ginkgo.randomizeAllSpecs \
+            -ginkgo.slowSpecThreshold 20 \
             $@
         exit_code=$?
-    popd
+    popd > /dev/null
     if [ $exit_code -ne 0 ]; then
         return $exit_code
     fi
 
-    pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator
-        local not_unit_tests="integration_tests,lats"
+    pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator > /dev/null
         print_checkpoint "Running Unit Tests"
-        ginkgo \
-            -r \
-            --race \
-            --tags=~deprecated \
-            --randomizeAllSpecs \
-            --slowSpecThreshold 20 \
-            --skipPackage="$not_unit_tests" \
+        go test -race $(go list ./... | grep -v integration_tests) \
+            -ginkgo.randomizeAllSpecs \
+            -ginkgo.slowSpecThreshold 20 \
             $@
         exit_code=$?
-   popd
-   return $exit_code
+    popd > /dev/null
+    return $exit_code
 }
 
 function run_integration {
     print_checkpoint "Running Integration Tests"
-    pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator
-        ginkgo \
-            -r \
-            --race \
-            --tags=~deprecated \
-            --randomizeAllSpecs \
-            --slowSpecThreshold 20 \
-            $@ \
-            integration_tests
+    pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator/integration_tests > /dev/null
+        go test -race ./... \
+            -ginkgo.randomizeAllSpecs \
+            -ginkgo.slowSpecThreshold 20 \
+            $@
         exit_code=$?
-   popd
-   return $exit_code
+    popd > /dev/null
+    return $exit_code
 }
 
-function run_all {
+function run_~integration {
     check_output run_cleaners
     check_output run_build
     check_output run_multiplatform
     check_output run_templates
     check_output run_unit $@
+}
+
+function run_all {
+    run_~integration $@
     check_output run_integration $@
 }
 
@@ -198,7 +181,7 @@ function parse_argc {
             print_usage
             exit 0
             ;;
-        all|unit|integration|build|cleaners|multiplatform|templates|linters|install_tools)
+        all|unit|integration|~integration|build|cleaners|multiplatform|templates|linters|install_tools)
             command=run_$arg
             ;;
         *)
@@ -246,7 +229,7 @@ function run_linters {
     echo running go vet
     go vet "$loggregator_pkg/..."
     echo running deadcode
-    deadcode $dir
+    find "$loggregator_dir" -type d | xargs deadcode
     echo running golint
     golint "$loggregator_pkg/..."
     echo running aligncheck

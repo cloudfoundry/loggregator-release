@@ -1,3 +1,0 @@
-#!/bin/bash
-
-bosh -e lite -d loggregator run-errand loggregator-acceptance-tests

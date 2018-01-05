@@ -1,3 +1,0 @@
-set -e -x
-
-cp -a loggregator/src/common/* ${BOSH_INSTALL_TARGET}

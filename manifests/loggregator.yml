@@ -1,0 +1,178 @@
+name: loggregator
+
+stemcells:
+- alias: default
+  os: ubuntu-trusty
+  version: latest
+
+releases:
+- name: loggregator
+  version: latest
+- name: bosh-dns
+  version: 0.0.11
+
+addons:
+- name: bosh-dns
+  include:
+    stemcell:
+    - os: ubuntu-trusty
+  jobs:
+  - name: bosh-dns
+    release: bosh-dns
+
+instance_groups:
+- name: doppler
+  azs:
+  - z1
+  instances: 1
+  persistent_disk_type: 5GB
+  vm_type: minimal
+  stemcell: default
+  networks:
+  - name: default
+  jobs:
+  - name: doppler
+    release: loggregator
+    provides:
+      doppler: {as: doppler, shared: true}
+    properties:
+      doppler:
+        disable_announce: true
+        syslog_skip_cert_verify: true
+      loggregator:
+        disable_syslog_drains: true
+        tls:
+          ca_cert: "((loggregator_router.ca))"
+          doppler:
+            cert: "((loggregator_router.certificate))"
+            key: "((loggregator_router.private_key))"
+  - name: metron_agent
+    release: loggregator
+    properties: &metron_agent_properties
+      doppler:
+        addr: ~
+      metron_agent:
+        disable_udp: false
+        deployment: loggregator
+        bosh_dns: true
+      loggregator:
+        tls:
+          ca_cert: "((loggregator_agent.ca))"
+          metron:
+            cert: "((loggregator_agent.certificate))"
+            key: "((loggregator_agent.private_key))"
+
+- name: log-api
+  azs:
+  - z1
+  instances: 1
+  persistent_disk_type: 5GB
+  vm_type: minimal
+  stemcell: default
+  networks:
+  - name: default
+  jobs:
+  - name: reverse_log_proxy
+    release: loggregator
+    provides:
+      reverse_log_proxy: {as: reverse_log_proxy, shared: true}
+    properties:
+      loggregator:
+        tls:
+          ca_cert: "((loggregator_rlp.ca))"
+          reverse_log_proxy:
+            cert: "((loggregator_rlp.certificate))"
+            key: "((loggregator_rlp.private_key))"
+  - name: loggregator_trafficcontroller
+    release: loggregator
+    provides:
+      trafficcontroller: {as: trafficcontroller, shared: true}
+    properties:
+      cc:
+        internal_service_hostname: ""
+        tls_port: 0
+        mutual_tls:
+          ca_cert: "((loggregator_tc.ca))"
+      uaa:
+        url: ""
+      system_domain: unused
+      traffic_controller:
+        disable_access_control: true
+      loggregator:
+        tls:
+          ca_cert: "((loggregator_tc.ca))"
+          trafficcontroller:
+            cert: "((loggregator_tc.certificate))"
+            key: "((loggregator_tc.private_key))"
+          cc_trafficcontroller:
+            cert: "((loggregator_tc.certificate))"
+            key: "((loggregator_tc.private_key))"
+        uaa:
+          client_secret: "some-secret"
+      ssl:
+        skip_cert_verify: false
+  - name: metron_agent
+    release: loggregator
+    properties: *metron_agent_properties
+  update:
+    max_in_flight: 1
+    serial: true
+
+variables:
+- name: loggregator_ca
+  type: certificate
+  options:
+    common_name: loggregatorCA
+    is_ca: true
+- name: loggregator_router
+  type: certificate
+  options:
+    ca: loggregator_ca
+    common_name: router
+    alternative_names:
+    - router
+    - doppler
+    extended_key_usage:
+    - client_auth
+    - server_auth
+- name: loggregator_tc
+  type: certificate
+  options:
+    ca: loggregator_ca
+    common_name: trafficcontroller
+    extended_key_usage:
+    - client_auth
+    - server_auth
+- name: loggregator_rlp
+  type: certificate
+  options:
+    ca: loggregator_ca
+    common_name: rlp
+    alternative_names:
+    - rlp
+    - reverselogproxy
+    extended_key_usage:
+    - client_auth
+    - server_auth
+- name: loggregator_agent
+  type: certificate
+  options:
+    ca: loggregator_ca
+    common_name: agent
+    alternative_names:
+    - metron
+    - agent
+    - localhost
+    - 127.0.0.1
+    - ip6-localhost
+    - ::1
+    extended_key_usage:
+    - client_auth
+    - server_auth
+
+update:
+  canaries: 10
+  max_in_flight: 10
+  canary_watch_time: 30000-60000
+  update_watch_time: 5000-60000
+  serial: true

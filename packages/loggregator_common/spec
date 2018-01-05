@@ -1,6 +1,0 @@
----
-name: loggregator_common
-files:
-- loggregator/src/common/utils.sh
-- loggregator/src/common/pid_utils.sh
-- loggregator/src/common/syslog_utils.sh

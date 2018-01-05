@@ -15,8 +15,6 @@ ENVIRONMENT=/var/vcap/jobs/doppler/bin/environment.sh
 mkdir -p $RUN_DIR
 mkdir -p $LOG_DIR
 
-source /var/vcap/packages/loggregator_common/pid_utils.sh
-
 case $1 in
 
   start)
@@ -26,8 +24,6 @@ case $1 in
       killall -2 doppler
       killall -3 doppler
     set -e
-
-    pid_guard $PIDFILE "Loggregator"
 
     <% if p("doppler.locked_memory_limit") != "kernel" %>
     ulimit -l <%= p("doppler.locked_memory_limit") %>

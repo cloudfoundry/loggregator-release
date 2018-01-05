@@ -1,8 +1,9 @@
-golang/go1.9.1.linux-amd64.tar.gz:
-  size: 104197862
-  object_id: fa95120e-fae7-4e73-5882-a0149921a5b1
-  sha: sha256:07d81c6b6b4c2dcf1b5ef7c27aaebd3691cdb40548500941f92b221147c5d9c7
-golang/go1.9.1.windows-amd64.zip:
-  size: 109749924
-  object_id: 57096d98-64bc-4826-6b99-4c43730e408c
-  sha: sha256:8dc72a3881388e4e560c2e45f6be59860b623ad418e7da94e80fee012221cc81
+---
+golang/go1.9.2.linux-amd64.tar.gz:
+  size: 104247844
+  object_id: bef8a7e9-5ffb-4441-63ec-ffd3c315948c
+  sha: sha256:de874549d9a8d8d8062be05808509c09a88a248e77ec14eb77453530829ac02b
+golang/go1.9.2.windows-amd64.zip:
+  size: 109420764
+  object_id: f99b0ba0-98b6-4716-7225-4b8c8c14ba83
+  sha: sha256:682ec3626a9c45b657c2456e35cadad119057408d37f334c6c24d88389c2164c

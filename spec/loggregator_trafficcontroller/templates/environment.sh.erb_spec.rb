@@ -1,8 +1,4 @@
-require "json"
-require "yaml"
-require "bosh/template/test"
-
-include Bosh::Template::Test
+require "spec_helper"
 
 RSpec.describe "Traffic Controller Environment" do
   it "renders a full environment" do
@@ -50,7 +46,12 @@ RSpec.describe "Traffic Controller Environment" do
       }
     }
     spec = InstanceSpec.new(ip: "10.0.0.250")
-    config = render_template(properties, spec: spec)
+    config = render_template(
+      properties,
+      spec: spec,
+      job: "loggregator_trafficcontroller",
+      template: "bin/environment.sh"
+    )
 
     expected_config = {
       "AGENT_UDP_ADDRESS" => "10.0.0.1:2222",
@@ -95,7 +96,12 @@ RSpec.describe "Traffic Controller Environment" do
           }
         }
       )]
-      config = render_template(required_properties, links: links)
+      config = render_template(
+        required_properties,
+        links: links,
+        job: "loggregator_trafficcontroller",
+        template: "bin/environment.sh"
+      )
 
       expect(config["ROUTER_ADDRS"]).to eq("doppler-1.service.cf.internal:1111,doppler-2.service.cf.internal:1111")
     end
@@ -115,7 +121,11 @@ RSpec.describe "Traffic Controller Environment" do
           }
         }
       }
-      config = render_template(required_properties.merge(properties))
+      config = render_template(
+        required_properties.merge(properties),
+        job: "loggregator_trafficcontroller",
+        template: "bin/environment.sh"
+      )
 
       expect(config["ROUTER_ADDRS"]).to eq("10.0.0.1:1111")
     end
@@ -131,7 +141,11 @@ RSpec.describe "Traffic Controller Environment" do
           }
         }
       }
-      config = render_template(required_properties.merge(properties))
+      config = render_template(
+        required_properties.merge(properties),
+        job: "loggregator_trafficcontroller",
+        template: "bin/environment.sh"
+      )
 
       expect(config["TRAFFIC_CONTROLLER_UAA_CLIENT"]).to eq("some-client")
       expect(config["TRAFFIC_CONTROLLER_UAA_CLIENT_SECRET"]).to eq("some-secret")
@@ -148,7 +162,11 @@ RSpec.describe "Traffic Controller Environment" do
           }
         }
       }
-      config = render_template(required_properties.merge(properties))
+      config = render_template(
+        required_properties.merge(properties),
+        job: "loggregator_trafficcontroller",
+        template: "bin/environment.sh"
+      )
 
       expect(config["TRAFFIC_CONTROLLER_UAA_CLIENT"]).to eq("old-name")
     end
@@ -159,24 +177,13 @@ RSpec.describe "Traffic Controller Environment" do
           "internal_url" => "uaa.cf.service.internal"
         }
       }
-      config = render_template(required_properties.merge(properties))
+      config = render_template(
+        required_properties.merge(properties),
+        job: "loggregator_trafficcontroller",
+        template: "bin/environment.sh"
+      )
 
       expect(config["TRAFFIC_CONTROLLER_UAA_CA_CERT"]).to eq("/var/vcap/jobs/loggregator_trafficcontroller/config/certs/uaa_ca.crt")
-    end
-  end
-
-  def render_template(properties, spec: InstanceSpec.new, links: [])
-    release_path = File.join(File.dirname(__FILE__), '../../../')
-    release = Bosh::Template::Test::ReleaseDir.new(release_path)
-    job = release.job('loggregator_trafficcontroller')
-    template = job.template('bin/environment.sh')
-    rendered = template.render(properties, spec: spec, consumes: links)
-
-    rendered.split("\n").each_with_object({}) do |str, h|
-      if str != ""
-        k, v = str.split("=")
-        h[k.gsub("export ", "")] = v.gsub("\"", "")
-      end
     end
   end
 

@@ -9,8 +9,6 @@ if [ ! $(which gosub) ]; then
     exit 1
 fi
 
-loggregator_root=${GOPATH}
-
 function sync_package() {
   bosh_pkg=${1}
 
@@ -24,10 +22,11 @@ function sync_package() {
     {
       cat spec | grep -v '# gosub'
       gosub list "$@" | \
-        sed -e 's|\(.*\)|- loggregator/src/\1/*.go # gosub|g'
+        sed -e 's|\(.*\)|- \1/*.go # gosub|g'
     } > spec.new
 
     mv spec.new spec
+
   )
 }
 
@@ -36,6 +35,5 @@ sync_package metron_agent_windows          -app  code.cloudfoundry.org/loggregat
 sync_package doppler                       -app  code.cloudfoundry.org/loggregator/router &
 sync_package loggregator_trafficcontroller -app  code.cloudfoundry.org/loggregator/trafficcontroller &
 sync_package reverse_log_proxy             -app  code.cloudfoundry.org/loggregator/rlp &
-sync_package loggregator-acceptance-tests  -test code.cloudfoundry.org/loggregator/lats &
 
 wait
