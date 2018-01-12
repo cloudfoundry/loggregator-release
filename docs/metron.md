@@ -17,6 +17,9 @@ man-in-the-middle attacks and ensures data integrity.
 ## Compatability
 ![https://docs.google.com/document/d/1RbcRpBzKT95oicscJFa3-cassonf_xsdpv-Jmon840E/edit](Metron_Compatability_Table_-_Google_Docs.png)
 
+In version 101+ if you elect to use Bosh DNS you will loose zone affinity
+if services are using a version of Metron prior to 101. 
+
 ## Architecture Within Loggregator
 
 ![Loggregator Diagram](metron.png)
