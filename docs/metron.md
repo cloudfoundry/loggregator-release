@@ -14,6 +14,9 @@ Metron only listens to local network interfaces and all logs and metrics are
 immediately signed before forwarding to Dopplers. This prevents
 man-in-the-middle attacks and ensures data integrity.
 
+## Compatability
+![https://docs.google.com/document/d/1RbcRpBzKT95oicscJFa3-cassonf_xsdpv-Jmon840E/edit](Metron_Compatability_Table_-_Google_Docs.png)
+
 ## Architecture Within Loggregator
 
 ![Loggregator Diagram](metron.png)
