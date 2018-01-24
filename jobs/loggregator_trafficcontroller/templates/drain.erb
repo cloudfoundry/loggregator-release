@@ -1,0 +1,32 @@
+#!/bin/bash
+
+set -euo pipefail
+
+pidfile=/var/vcap/sys/run/loggregator_trafficcontroller/loggregator_trafficcontroller.pid
+logdir=/var/vcap/sys/log/loggregator_trafficcontroller
+jobdir=/var/vcap/jobs/loggregator_trafficcontroller
+
+exec 3>&1
+
+mkdir -p "${logdir}"
+
+exec 1>> ${logdir}/drain.log
+exec 2>> ${logdir}/drain.log
+
+if [ ! -f $pidfile ]; then
+  echo "$(date): loggregator_trafficcontroller is not running"
+  echo 0 >&3
+  exit 0
+fi
+
+pid=$(cat $pidfile)
+
+if kill -0 $pid; then
+  echo "$(date): triggering drain"
+  ${jobdir}/bin/loggregator_trafficcontroller_ctl stop
+  echo 5 >&3
+else
+  echo "$(date): loggregator_trafficcontroller is not running"
+  echo 0 >&3
+  exit 0
+fi
