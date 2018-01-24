@@ -11,6 +11,7 @@ templates:
   mutual_tls_ca.crt.erb: config/certs/mutual_tls_ca.crt
   uaa_ca.crt.erb: config/certs/uaa_ca.crt
   dns_health_check.erb: bin/dns_health_check
+  drain.erb: bin/drain
 
 packages:
 - loggregator_trafficcontroller
