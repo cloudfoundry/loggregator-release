@@ -9,7 +9,7 @@ quickly as possible:
   - We may have advice to give you or requests for your final solution.
 2. Include at least one test in your PR.
   - For bugs, it's also useful to provide a failing test in your issue.
-3. Run [LATs](https://github.com/cloudfoundry/logging-acceptance-tests) in a
+3. Run [LATs](https://github.com/cloudfoundry/logging-acceptance-tests-release) in a
    [standalone loggregator](https://github.com/cloudfoundry/loggregator-release#standalone-loggregator)
    deployment on `bosh-lite`.
 
