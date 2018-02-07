@@ -1,7 +1,7 @@
 ---
 name: metron_agent_windows
 dependencies:
-- golang1.9.2-windows
+- golang1.9.4-windows
 files:
 - exiter.ps1
 - code.cloudfoundry.org/go-batching/*.go # gosub
