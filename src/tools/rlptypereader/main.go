@@ -12,8 +12,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator/plumbing"
-	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 )
 
 var (
@@ -44,9 +44,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	client := v2.NewEgressClient(conn)
+	client := loggregator_v2.NewEgressClient(conn)
 
-	req := &v2.EgressRequest{
+	req := &loggregator_v2.EgressRequest{
 		ShardId:          *shardID,
 		UsePreferredTags: true,
 	}
@@ -69,9 +69,9 @@ func main() {
 	}
 }
 
-func buildSelectors(types string) []*v2.Selector {
+func buildSelectors(types string) []*loggregator_v2.Selector {
 	chunks := strings.Split(types, ",")
-	var selectors []*v2.Selector
+	var selectors []*loggregator_v2.Selector
 	for _, c := range chunks {
 		selectors = append(selectors, stringToSelector(c))
 	}
@@ -79,36 +79,36 @@ func buildSelectors(types string) []*v2.Selector {
 	return selectors
 }
 
-func stringToSelector(selectorType string) *v2.Selector {
+func stringToSelector(selectorType string) *loggregator_v2.Selector {
 	switch strings.TrimSpace(strings.ToLower(selectorType)) {
 	case "log":
-		return &v2.Selector{
-			Message: &v2.Selector_Log{
-				Log: &v2.LogSelector{},
+		return &loggregator_v2.Selector{
+			Message: &loggregator_v2.Selector_Log{
+				Log: &loggregator_v2.LogSelector{},
 			},
 		}
 	case "counter":
-		return &v2.Selector{
-			Message: &v2.Selector_Counter{
-				Counter: &v2.CounterSelector{},
+		return &loggregator_v2.Selector{
+			Message: &loggregator_v2.Selector_Counter{
+				Counter: &loggregator_v2.CounterSelector{},
 			},
 		}
 	case "gauge":
-		return &v2.Selector{
-			Message: &v2.Selector_Gauge{
-				Gauge: &v2.GaugeSelector{},
+		return &loggregator_v2.Selector{
+			Message: &loggregator_v2.Selector_Gauge{
+				Gauge: &loggregator_v2.GaugeSelector{},
 			},
 		}
 	case "timer":
-		return &v2.Selector{
-			Message: &v2.Selector_Timer{
-				Timer: &v2.TimerSelector{},
+		return &loggregator_v2.Selector{
+			Message: &loggregator_v2.Selector_Timer{
+				Timer: &loggregator_v2.TimerSelector{},
 			},
 		}
 	case "event":
-		return &v2.Selector{
-			Message: &v2.Selector_Event{
-				Event: &v2.EventSelector{},
+		return &loggregator_v2.Selector{
+			Message: &loggregator_v2.Selector_Event{
+				Event: &loggregator_v2.EventSelector{},
 			},
 		}
 	default:

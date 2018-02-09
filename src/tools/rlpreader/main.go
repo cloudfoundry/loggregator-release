@@ -13,8 +13,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator/plumbing"
-	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 )
 
 var (
@@ -45,13 +45,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	client := v2.NewEgressClient(conn)
-	receiver, err := client.BatchedReceiver(context.TODO(), &v2.EgressBatchRequest{
+	client := loggregator_v2.NewEgressClient(conn)
+	receiver, err := client.BatchedReceiver(context.TODO(), &loggregator_v2.EgressBatchRequest{
 		ShardId: buildShardID(),
-		LegacySelector: &v2.Selector{
+		LegacySelector: &loggregator_v2.Selector{
 			SourceId: *appID,
-			Message: &v2.Selector_Log{
-				Log: &v2.LogSelector{},
+			Message: &loggregator_v2.Selector_Log{
+				Log: &loggregator_v2.LogSelector{},
 			},
 		},
 		UsePreferredTags: *preferredTags,
