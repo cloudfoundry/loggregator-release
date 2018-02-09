@@ -5,13 +5,13 @@ dependencies:
 files:
 - code.cloudfoundry.org/go-batching/*.go # gosub
 - code.cloudfoundry.org/go-envstruct/*.go # gosub
+- code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2/*.go # gosub
 - code.cloudfoundry.org/grpc-throughputlb/*.go # gosub
 - code.cloudfoundry.org/loggregator/healthendpoint/*.go # gosub
 - code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
 - code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
 - code.cloudfoundry.org/loggregator/plumbing/batching/*.go # gosub
 - code.cloudfoundry.org/loggregator/plumbing/conversion/*.go # gosub
-- code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
 - code.cloudfoundry.org/loggregator/profiler/*.go # gosub
 - code.cloudfoundry.org/loggregator/rlp/*.go # gosub
 - code.cloudfoundry.org/loggregator/rlp/app/*.go # gosub

@@ -7,6 +7,7 @@ files:
 - code.cloudfoundry.org/go-batching/*.go # gosub
 - code.cloudfoundry.org/go-diodes/*.go # gosub
 - code.cloudfoundry.org/go-envstruct/*.go # gosub
+- code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2/*.go # gosub
 - code.cloudfoundry.org/grpc-throughputlb/*.go # gosub
 - code.cloudfoundry.org/loggregator/agent/*.go # gosub
 - code.cloudfoundry.org/loggregator/agent/app/*.go # gosub
