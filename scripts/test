@@ -121,17 +121,17 @@ function run_build {
 }
 
 function run_unit {
-    # pushd $PROJECT_DIR/src/tools > /dev/null
-    #     print_checkpoint "Running Tool Unit Tests"
-    #     go test -race ./... \
-    #         -ginkgo.randomizeAllSpecs \
-    #         -ginkgo.slowSpecThreshold 20 \
-    #         $@
-    #     exit_code=$?
-    # popd > /dev/null
-    # if [ $exit_code -ne 0 ]; then
-    #     return $exit_code
-    # fi
+    pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator-agent > /dev/null
+        print_checkpoint "Running Agent Unit Tests"
+        go test -race ./... \
+            -ginkgo.randomizeAllSpecs \
+            -ginkgo.slowSpecThreshold 20 \
+            $@
+        exit_code=$?
+    popd > /dev/null
+    if [ $exit_code -ne 0 ]; then
+        return $exit_code
+    fi
 
     pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator > /dev/null
         print_checkpoint "Running Unit Tests"
