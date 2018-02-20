@@ -103,3 +103,6 @@
 [submodule "src/code.cloudfoundry.org/go-loggregator"]
 	path = src/code.cloudfoundry.org/go-loggregator
 	url = https://github.com/cloudfoundry/go-loggregator
+[submodule "src/code.cloudfoundry.org/loggregator-agent"]
+	path = src/code.cloudfoundry.org/loggregator-agent
+	url = https://github.com/cloudfoundry/loggregator-agent.git
