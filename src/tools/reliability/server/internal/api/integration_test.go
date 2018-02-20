@@ -43,7 +43,7 @@ func initiateTest(createTestHandler http.Handler) *httptest.ResponseRecorder {
 }
 
 func attachWorker(workerHandler http.Handler) func() {
-	d := wstest.NewDialer(workerHandler)
+	d := wstest.NewDialer(workerHandler, nil)
 	c, _, err := d.Dial("ws://localhost:8080/ws", nil)
 	Expect(err).ToNot(HaveOccurred())
 	return func() {
