@@ -7,9 +7,10 @@ import (
 	"time"
 	"tools/reliability/server/internal/api"
 
+	"github.com/posener/wstest"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/posener/wstest"
 )
 
 // TODO: assert against json being written to websocket connection
@@ -43,7 +44,7 @@ func initiateTest(createTestHandler http.Handler) *httptest.ResponseRecorder {
 }
 
 func attachWorker(workerHandler http.Handler) func() {
-	d := wstest.NewDialer(workerHandler, nil)
+	d := wstest.NewDialer(workerHandler)
 	c, _, err := d.Dial("ws://localhost:8080/ws", nil)
 	Expect(err).ToNot(HaveOccurred())
 	return func() {
