@@ -4,7 +4,7 @@ components with the design goal of each component having a single metric to
 scale that component horizontally. Specific scaling recommendations are
 covered later in the document.
 
-For a walk through fo a message delivery and monitoring approaches see this
+For a walk-through of message delivery and monitoring approaches see this
 [video](https://www.youtube.com/watch?v=vR2wl22sU6Q)
 
 ![Loggregator System Design](./loggregatornew.png) **note** this diagram
@@ -23,20 +23,22 @@ buffers emits metrics for ingress, egress, and dropped.
 The metron agent process manages all ingress into the
 Loggregator system and must be co-located with any job that wants to emit
 metrics. The metron agent accomplishes this by listening on localhost for two
-protocols. The UDP protocols supports the use of the dropsonde protocol which
+protocols. The UDP protocol supports the use of the dropsonde protocol which
 is used to support many of the existing metrics on the platform. Recent
-versions of Metron Agent now also support the use of gRPC protocol using the
+versions of Metron Agent now also support the use of the gRPC protocol using the
 go-loggregator client. This new protocol is being used for application logs
 from diego, and metrics from statsd-injector. Since this component is an agent
-collocated with other processes on the platform there are no scaling
+co-located with other processes on the platform there are no scaling
 considerations.
 
-## Stads-injector
-The statsd-injector is an optional job that supported that
+## Statsd-injector
+The statsd-injector is an optional job that
 can be co-located with a process to support metrics using the statsd protocol.
 This component is maintained by the Loggregator team and uses the gRPC ingress
-point into Metron. Since this components is optionally colocated with the
-specific processes it does not have scaling considerations.  Doppler Forwarder
+point into Metron. Since this component is optionally co-located with the
+specific processes it does not have scaling considerations.
+
+## Doppler Forwarder
 The doppler component acts as a highly-available routing mechanism for logs
 and metrics flowing through loggregator. Each envelop that ingresses into
 Doppler is duplicated, and routed to multiple destinations known as sinks. The
@@ -50,7 +52,7 @@ following is a breakdown of potential sinks each envelope can route to:
  - Container Metrics Cache - Container metrics for an application used during
    cf push.
 
-Doppler is scaling is complex, and relies on a variety of factors but,
+Doppler scaling is complex, and relies on a variety of factors but,
 primarily it scales with the overall log and metric volume on your platform.
 
 ## Traffic Controller
@@ -60,7 +62,7 @@ provides the interface for container metrics and recent logs calls. Rather
 than using a diode it does this by notifying the system of slow consumers.
 
 ## Syslog Drain Binders
-The Reverse Log Proxy, and a set of additional
-components for syslog drain binders is managed in a seperate but releated
+A set of additional
+components for syslog drain binders is managed in a separate but related
 release known as the [cf syslog drain
 release](https://github.com/cloudfoundry/cf-syslog-drain-release).
