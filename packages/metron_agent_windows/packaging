@@ -9,7 +9,7 @@ $env:GOROOT="C:\var\vcap\packages\golang1.9.4-windows\go"
 $env:GOPATH="${BOSH_INSTALL_TARGET}"
 $env:PATH="${env:GOROOT}\bin;${env:PATH}"
 $pkg_name="metron"
-$pkg_path="code.cloudfoundry.org/loggregator/agent"
+$pkg_path="code.cloudfoundry.org/loggregator-agent/cmd/agent"
 
 # Create GOPATH
 New-Item -ItemType "directory" -Force "${BOSH_INSTALL_TARGET}\src"
