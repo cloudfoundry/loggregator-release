@@ -60,9 +60,3 @@ Traffic Controller manages the rate of egress from the
 Loggregator system for the Firehose and 'cf logs' stream. Additionally it
 provides the interface for container metrics and recent logs calls. Rather
 than using a diode it does this by notifying the system of slow consumers.
-
-## Syslog Drain Binders
-A set of additional
-components for syslog drain binders is managed in a separate but related
-release known as the [cf syslog drain
-release](https://github.com/cloudfoundry/cf-syslog-drain-release).
