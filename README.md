@@ -61,10 +61,10 @@ the [Cloud Foundry docs][cf-docs] for more details.
 
 Loggregator does not provide any guaruntees around the order of delivery
 of logs in streams. That said, there is enough precision in the timestamp provided
-by diego that streaming clients can batch and order streams as they receive them. 
-This is done by the cf cli and most other streaming clients. 
+by diego that streaming clients can batch and order streams as they receive them.
+This is done by the cf cli and most other streaming clients.
 
-For syslog ingestion it also possible to ensure log order. See the details in [cf-syslog-drain-release](https://github.com/cloudfoundry/cf-syslog-drain-release/blob/develop/README.md#log-ordering) 
+For syslog ingestion it also possible to ensure log order. See the details in [cf-syslog-drain-release](https://github.com/cloudfoundry/cf-syslog-drain-release/blob/develop/README.md#log-ordering)
 
 
 ## Consuming the Firehose
@@ -103,17 +103,16 @@ provides a set of tools for emitting Logs and Metrics.
 Standalone Loggregator provides logging support for services that do not
 require a CloudFoundry.
 
-### Deploying without TrafficController
-
 TrafficController has several CloudFoundry concerns. Therefore, there is an
 [operations file](./manifests/operations/no-traffic-controller.yml) to deploy
 standalone Loggregator without it.
+
+### Deploying with TrafficController
 
 ##### Example bosh lite deploy
 
 ```
 bosh -e lite deploy -d loggregator manifests/loggregator.yml \
-    -o manifests/operations/no-traffic-controller.yml \
     --vars-store=/tmp/loggregator-vars.yml
 ```
 
