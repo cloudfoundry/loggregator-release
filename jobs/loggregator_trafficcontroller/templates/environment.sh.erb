@@ -37,7 +37,7 @@ export TRAFFIC_CONTROLLER_SYSTEM_DOMAIN="<%= p("system_domain") %>"
 export TRAFFIC_CONTROLLER_SKIP_CERT_VERIFY="<%= p("ssl.skip_cert_verify") %>"
 export TRAFFIC_CONTROLLER_UAA_HOST="<%= uaa_host %>"
 export TRAFFIC_CONTROLLER_UAA_CLIENT="<%= uaa_client %>"
-export TRAFFIC_CONTROLLER_UAA_CLIENT_SECRET="<%= p("loggregator.uaa.client_secret") %>"
+export TRAFFIC_CONTROLLER_UAA_CLIENT_SECRET='<%= p("loggregator.uaa.client_secret") %>'
 export TRAFFIC_CONTROLLER_PPROF_PORT="<%= p("traffic_controller.pprof_port") %>"
 export TRAFFIC_CONTROLLER_METRIC_EMITTER_INTERVAL="<%= p('metric_emitter.interval') %>"
 export TRAFFIC_CONTROLLER_HEALTH_ADDR="<%= p('traffic_controller.health_addr') %>"
