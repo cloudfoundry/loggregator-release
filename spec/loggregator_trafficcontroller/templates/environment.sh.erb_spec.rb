@@ -71,7 +71,7 @@ RSpec.describe "Traffic Controller Environment" do
       "TRAFFIC_CONTROLLER_SKIP_CERT_VERIFY" => "false",
       "TRAFFIC_CONTROLLER_UAA_HOST" => "uaa.service.cf.internal",
       "TRAFFIC_CONTROLLER_UAA_CLIENT" => "some-client",
-      "TRAFFIC_CONTROLLER_UAA_CLIENT_SECRET" => "some-secret",
+      "TRAFFIC_CONTROLLER_UAA_CLIENT_SECRET" => "'some-secret'",
       "TRAFFIC_CONTROLLER_UAA_CA_CERT" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/uaa_ca.crt",
       "TRAFFIC_CONTROLLER_SECURITY_EVENT_LOG" => "/var/vcap/sys/log/loggregator_trafficcontroller/loggregator_trafficcontroller_security_events.log",
       "TRAFFIC_CONTROLLER_PPROF_PORT" => "6666",
@@ -148,7 +148,7 @@ RSpec.describe "Traffic Controller Environment" do
       )
 
       expect(config["TRAFFIC_CONTROLLER_UAA_CLIENT"]).to eq("some-client")
-      expect(config["TRAFFIC_CONTROLLER_UAA_CLIENT_SECRET"]).to eq("some-secret")
+      expect(config["TRAFFIC_CONTROLLER_UAA_CLIENT_SECRET"]).to eq("'some-secret'")
       expect(config["TRAFFIC_CONTROLLER_UAA_CA_CERT"]).to be_nil
     end
 
