@@ -6,6 +6,7 @@ RSpec.describe "Reverse Log Proxy Environment" do
       "reverse_log_proxy" => {
         "egress" => {
           "port" => "1111",
+          "max_streams" => "1000",
         },
         "pprof" => {
           "port" => "2222",
@@ -42,6 +43,7 @@ RSpec.describe "Reverse Log Proxy Environment" do
 
     expected_config = {
       "RLP_PORT" => "1111",
+      "MAX_EGRESS_STREAMS" => "1000",
       "RLP_CERT_FILE" => "/var/vcap/jobs/reverse_log_proxy/config/certs/reverse_log_proxy.crt",
       "RLP_KEY_FILE" => "/var/vcap/jobs/reverse_log_proxy/config/certs/reverse_log_proxy.key",
       "RLP_CA_FILE" => "/var/vcap/jobs/reverse_log_proxy/config/certs/mutual_tls_ca.crt",
