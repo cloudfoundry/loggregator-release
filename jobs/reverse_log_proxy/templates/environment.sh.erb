@@ -11,6 +11,7 @@
     }
 %>
 export RLP_PORT="<%= p('reverse_log_proxy.egress.port') %>"
+export MAX_EGRESS_STREAMS="<%= p('reverse_log_proxy.egress.max_streams') %>"
 export RLP_CERT_FILE="/var/vcap/jobs/reverse_log_proxy/config/certs/reverse_log_proxy.crt"
 export RLP_KEY_FILE="/var/vcap/jobs/reverse_log_proxy/config/certs/reverse_log_proxy.key"
 export RLP_CA_FILE="/var/vcap/jobs/reverse_log_proxy/config/certs/mutual_tls_ca.crt"

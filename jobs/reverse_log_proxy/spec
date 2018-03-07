@@ -27,6 +27,10 @@ properties:
   reverse_log_proxy.egress.port:
     description: "The port of Loggregator's v2 API"
     default: 8082
+  reverse_log_proxy.egress.max_streams:
+    description: |
+      Maximum allowed streams open from a single reverse log proxy.
+    default: 500
   reverse_log_proxy.pprof.port:
     descripts: "The port of pprof endpoint"
     default: 0
