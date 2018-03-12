@@ -1,0 +1,85 @@
+name: loggregator
+version: "101.7"
+commit_hash: b114c593
+uncommitted_changes: false
+jobs:
+- name: doppler
+  version: db7060286ea26e4c848488b7947f7bf69329a9f03d34b82e964bcdab67c9249a
+  fingerprint: db7060286ea26e4c848488b7947f7bf69329a9f03d34b82e964bcdab67c9249a
+  sha1: sha256:8b4079e71271d48bfa874eb51355f0b27bad1e72dea8fd9c07819deadae5e23a
+- name: loggregator-acceptance-tests
+  version: e7316ed008baefc2c9cfb55f144ae23e515a994a67c4f5b6627f0e3a8188ee35
+  fingerprint: e7316ed008baefc2c9cfb55f144ae23e515a994a67c4f5b6627f0e3a8188ee35
+  sha1: sha256:843cde6081092484a8b9b6fc43baf666049a81140df08ee307ae22dc6e328f57
+- name: loggregator_trafficcontroller
+  version: ea73a651671dc9a43ea0381097a9b7a3cab9dd2192522e84e329651915e6905a
+  fingerprint: ea73a651671dc9a43ea0381097a9b7a3cab9dd2192522e84e329651915e6905a
+  sha1: sha256:52b602012cde77aa4460355f6e6fb8c4ffd572c031a01f871684f5cb59ab6521
+- name: metron_agent
+  version: 2cf073f372221bc58c791770890f9116165577f99e6f42d8e2c1f9db5bcb5d4c
+  fingerprint: 2cf073f372221bc58c791770890f9116165577f99e6f42d8e2c1f9db5bcb5d4c
+  sha1: sha256:656250b090dbe9f615a8b647c2a38aa29617eb4ce916f8f9f46dbbb35c3bbcc3
+- name: metron_agent_windows
+  version: b4ecddabeace5e335ddfa74972b64abbfc8cbffe0cf0e7279775af76a71e1789
+  fingerprint: b4ecddabeace5e335ddfa74972b64abbfc8cbffe0cf0e7279775af76a71e1789
+  sha1: sha256:df82df2f170349f00baeefb856a702760eaafbd93be73fd05313c131ca2179de
+- name: reverse_log_proxy
+  version: bd99b7fbb4c73953460b360ba2e42130ed7419d78191d1097b926e3321a6c6d7
+  fingerprint: bd99b7fbb4c73953460b360ba2e42130ed7419d78191d1097b926e3321a6c6d7
+  sha1: sha256:a0f61fc15b1ad7c1568e2977f624b7b46d0ef598e504d04a71a8e886b276dc16
+packages:
+- name: doppler
+  version: f85da2b1a2cc316040d37e1c13206c3cc6ea6e3a8b5b6c9394075796089eb1db
+  fingerprint: f85da2b1a2cc316040d37e1c13206c3cc6ea6e3a8b5b6c9394075796089eb1db
+  sha1: sha256:884c51b649598ca76f3c4e60b6e7e555770a1de68f37bef012f6d56abb7c6680
+  dependencies:
+  - golang1.9.1
+- name: golang1.9.1
+  version: a506863a7b055eddee2183cd96f9e2687b48e45e318d3f5b217e5ad2407e456f
+  fingerprint: a506863a7b055eddee2183cd96f9e2687b48e45e318d3f5b217e5ad2407e456f
+  sha1: sha256:d5c8cac4830f609c6c12b9a2d3e96555d741ab4094c7d789b82e8e4fc920e497
+  dependencies: []
+- name: golang1.9.1-windows
+  version: 37a304249e5acbf868b5ab96c6d48ebbc68b37ac8bd1af190a08b5eb6fb5f5ef
+  fingerprint: 37a304249e5acbf868b5ab96c6d48ebbc68b37ac8bd1af190a08b5eb6fb5f5ef
+  sha1: sha256:286b7dd101da1dabf612d2e982645bc2a768c16c542bf2e7ef2c466bf5b3ee0a
+  dependencies: []
+- name: loggregator-acceptance-tests
+  version: 81c04f5e5e8d983088e225cc317079562bc157359e1dbe01e50b94e3fa9f916e
+  fingerprint: 81c04f5e5e8d983088e225cc317079562bc157359e1dbe01e50b94e3fa9f916e
+  sha1: sha256:619599e1bf2f861c14933ff4332c907f49392efb856a8340704eb7457c6afe75
+  dependencies:
+  - golang1.9.1
+- name: loggregator_common
+  version: 78e159edd239bd4bfcf5ce323ec987d65e4e095c8e0f149bbed7087aa4207b58
+  fingerprint: 78e159edd239bd4bfcf5ce323ec987d65e4e095c8e0f149bbed7087aa4207b58
+  sha1: sha256:0d9ac6d4513fd998b64c2287a571db2502193903576f37c0ad6c1cfc534cb879
+  dependencies: []
+- name: loggregator_trafficcontroller
+  version: fe2b5b55a3ff81101c3dbf96749826c1c6726ee350912676d464176a81095b6f
+  fingerprint: fe2b5b55a3ff81101c3dbf96749826c1c6726ee350912676d464176a81095b6f
+  sha1: sha256:d8de4e1589e01fddad76162ffb202c3f4ae92d088b3ea7bbc71ff2bd54cb0576
+  dependencies:
+  - golang1.9.1
+- name: metron_agent
+  version: 1d28d7ab18c0fbfd94a9eb8fc08ecf6c3607b78e40bb4ff25b29e88c9a8f9589
+  fingerprint: 1d28d7ab18c0fbfd94a9eb8fc08ecf6c3607b78e40bb4ff25b29e88c9a8f9589
+  sha1: sha256:762b28ce10250b6ada01abcc2c73206dfc47f3f63e7086690c002a60270c1af2
+  dependencies:
+  - golang1.9.1
+- name: metron_agent_windows
+  version: 6c7a2dc61779bba3ca31b07d2f58795b380ff111cda6544ec463ef2f22d1c919
+  fingerprint: 6c7a2dc61779bba3ca31b07d2f58795b380ff111cda6544ec463ef2f22d1c919
+  sha1: sha256:40ead88c4264ba6fc234fd4dcd7ce0f0a9f97d660c56de019b90d5e222aa78a0
+  dependencies:
+  - golang1.9.1-windows
+- name: reverse_log_proxy
+  version: 64e549754fd0ca1bf41e8849884b8f1a1c5ddb2ca195db00d4b9ecdfe5bea66a
+  fingerprint: 64e549754fd0ca1bf41e8849884b8f1a1c5ddb2ca195db00d4b9ecdfe5bea66a
+  sha1: sha256:c23f477724ecdfc43ab0fc2b4f7ef53eec90a115ccf9e3d7898ea69ac581a1c4
+  dependencies:
+  - golang1.9.1
+license:
+  version: d4a2bd86ff115561d022fa7e15881342e6bac7a3737e0eb0c88e276dd70e58d8
+  fingerprint: d4a2bd86ff115561d022fa7e15881342e6bac7a3737e0eb0c88e276dd70e58d8
+  sha1: sha256:85bf0e70cea90197a87c6729e415467906d37ce084216c7387115d2bf113d53a
