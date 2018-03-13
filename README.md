@@ -205,5 +205,5 @@ Items marked as "In Flight" on the Roadmap are tracked as new Features in
 [health-nozzle-proposal]:   https://docs.google.com/document/d/1rqlSDssaNk7B9TUmHhjUsn1-FeUNX8odslc-T_3ixck/edit
 [road-map]:                 https://docs.google.com/spreadsheets/d/1bM1bInPQeC2xLayLsFb0aBuD3_HFNfJj9mEJZygnuWo/edit#gid=0
 [loggregator-tracker]:      https://www.pivotaltracker.com/n/projects/993188
-[ci-badge]:                 https://loggregator.ci.cf-app.com/api/v1/pipelines/loggregator/jobs/loggregator-tests/badge
+[ci-badge]:                 https://loggregator.ci.cf-app.com/api/v1/pipelines/products/jobs/loggregator-tests/badge
 [ci-pipeline]:              https://loggregator.ci.cf-app.com/
