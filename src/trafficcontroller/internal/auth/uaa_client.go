@@ -30,7 +30,10 @@ func NewUaaClient(address, id, secret string) uaaClient {
 func (client *uaaClient) GetAuthData(token string) (*AuthData, error) {
 
 	formValues := url.Values{"token": []string{token}}
-	req, _ := http.NewRequest("POST", client.address+"/check_token", strings.NewReader(formValues.Encode()))
+	req, err := http.NewRequest("POST", client.address+"/check_token", strings.NewReader(formValues.Encode()))
+	if err != nil {
+		return nil, err
+	}
 	req.SetBasicAuth(client.id, client.secret)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 

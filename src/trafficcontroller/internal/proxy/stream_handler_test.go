@@ -45,7 +45,7 @@ var _ = Describe("StreamHandler", func() {
 		It("returns a not found status", func() {
 			auth.Result = AuthorizerResult{Status: http.StatusForbidden, ErrorMessage: http.StatusText(http.StatusForbidden)}
 
-			req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+			req, _ := http.NewRequest("GET", "/apps/8de7d390-9044-41ff-ab76-432299923511/stream", nil)
 			req.Header.Add("Authorization", "token")
 
 			dopplerProxy.ServeHTTP(recorder, req)
@@ -58,7 +58,7 @@ var _ = Describe("StreamHandler", func() {
 		It("returns a not found status", func() {
 			auth.Result = AuthorizerResult{Status: http.StatusNotFound, ErrorMessage: http.StatusText(http.StatusNotFound)}
 
-			req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+			req, _ := http.NewRequest("GET", "/apps/8de7d390-9044-41ff-ab76-432299923511/stream", nil)
 			req.Header.Add("Authorization", "token")
 
 			dopplerProxy.ServeHTTP(recorder, req)
@@ -71,7 +71,7 @@ var _ = Describe("StreamHandler", func() {
 		It("returns an Internal Server Error", func() {
 			auth.Result = AuthorizerResult{Status: http.StatusInternalServerError, ErrorMessage: "some bad error"}
 
-			req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+			req, _ := http.NewRequest("GET", "/apps/8de7d390-9044-41ff-ab76-432299923511/stream", nil)
 			req.Header.Add("Authorization", "token")
 
 			dopplerProxy.ServeHTTP(recorder, req)
@@ -84,13 +84,13 @@ var _ = Describe("StreamHandler", func() {
 		It("returns an unauthorized status and sets the WWW-Authenticate header", func() {
 			auth.Result = AuthorizerResult{Status: http.StatusUnauthorized, ErrorMessage: "Error: Invalid authorization"}
 
-			req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+			req, _ := http.NewRequest("GET", "/apps/8de7d390-9044-41ff-ab76-432299923511/stream", nil)
 			req.Header.Add("Authorization", "token")
 
 			dopplerProxy.ServeHTTP(recorder, req)
 
 			Expect(auth.TokenParam).To(Equal("token"))
-			Expect(auth.Target).To(Equal("abc123"))
+			Expect(auth.Target).To(Equal("8de7d390-9044-41ff-ab76-432299923511"))
 
 			Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
 			Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
@@ -99,7 +99,7 @@ var _ = Describe("StreamHandler", func() {
 		It("does not attempt to connect to doppler", func() {
 			auth.Result = AuthorizerResult{Status: http.StatusUnauthorized, ErrorMessage: "Authorization Failed"}
 
-			req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+			req, _ := http.NewRequest("GET", "/apps/8de7d390-9044-41ff-ab76-432299923511/stream", nil)
 			req.Header.Add("Authorization", "token")
 
 			dopplerProxy.ServeHTTP(recorder, req)
@@ -111,7 +111,7 @@ var _ = Describe("StreamHandler", func() {
 	It("can read the authorization information from a cookie", func() {
 		auth.Result = AuthorizerResult{Status: http.StatusUnauthorized, ErrorMessage: "Authorization Failed"}
 
-		req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+		req, _ := http.NewRequest("GET", "/apps/8de7d390-9044-41ff-ab76-432299923511/stream", nil)
 
 		req.AddCookie(&http.Cookie{Name: "authorization", Value: "cookie-token"})
 
@@ -121,7 +121,7 @@ var _ = Describe("StreamHandler", func() {
 	})
 
 	It("connects to doppler servers with correct parameters", func() {
-		req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+		req, _ := http.NewRequest("GET", "/apps/8de7d390-9044-41ff-ab76-432299923511/stream", nil)
 		req.Header.Add("Authorization", "token")
 
 		dopplerProxy.ServeHTTP(recorder, req)
@@ -129,14 +129,14 @@ var _ = Describe("StreamHandler", func() {
 		Expect(connector.subscriptions.request).To(Equal(
 			&plumbing.SubscriptionRequest{
 				Filter: &plumbing.Filter{
-					AppID: "abc123",
+					AppID: "8de7d390-9044-41ff-ab76-432299923511",
 				},
 			},
 		))
 	})
 
 	It("closes the context when the client closes its connection", func() {
-		req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+		req, _ := http.NewRequest("GET", "/apps/8de7d390-9044-41ff-ab76-432299923511/stream", nil)
 		req.Header.Add("Authorization", "token")
 
 		dopplerProxy.ServeHTTP(recorder, req)
