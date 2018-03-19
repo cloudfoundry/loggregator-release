@@ -72,7 +72,7 @@ var _ = Describe("DopplerProxy", func() {
 	Describe("metrics", func() {
 		It("emits latency value metric for recentlogs request", func() {
 			mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
-			req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
+			req, _ := http.NewRequest("GET", "/apps/12bdb5e8-ba61-48e3-9dda-30ecd1446663/recentlogs", nil)
 			metricName := "doppler_proxy.recent_logs_latency"
 			requestStart := time.Now()
 
@@ -86,7 +86,7 @@ var _ = Describe("DopplerProxy", func() {
 		It("emits latency value metric for containermetrics request", func() {
 			mockGrpcConnector.ContainerMetricsOutput.Ret0 <- nil
 
-			req, _ := http.NewRequest("GET", "/apps/appID123/containermetrics", nil)
+			req, _ := http.NewRequest("GET", "/apps/12bdb5e8-ba61-48e3-9dda-30ecd1446663/containermetrics", nil)
 			metricName := "dopplerProxy.containermetricsLatency"
 			requestStart := time.Now()
 
@@ -125,7 +125,7 @@ var _ = Describe("DopplerProxy", func() {
 			}
 			Eventually(f).Should(Equal(uint64(1)))
 		},
-			Entry("stream requests", "/apps/appID123/stream", "stream"),
+			Entry("stream requests", "/apps/12bdb5e8-ba61-48e3-9dda-30ecd1446663/stream", "stream"),
 			Entry("firehose requests", "/firehose/streamID", "firehose"),
 		)
 
@@ -144,11 +144,11 @@ var _ = Describe("DopplerProxy", func() {
 
 	It("returns the requested container metrics", func(done Done) {
 		defer close(done)
-		req, _ := http.NewRequest("GET", "/apps/abc123/containermetrics", nil)
+		req, _ := http.NewRequest("GET", "/apps/8de7d390-9044-41ff-ab76-432299923511/containermetrics", nil)
 		req.Header.Add("Authorization", "token")
 		now := time.Now()
-		_, envBytes1 := buildContainerMetric("abc123", now)
-		_, envBytes2 := buildContainerMetric("abc123", now.Add(-5*time.Minute))
+		_, envBytes1 := buildContainerMetric("8de7d390-9044-41ff-ab76-432299923511", now)
+		_, envBytes2 := buildContainerMetric("8de7d390-9044-41ff-ab76-432299923511", now.Add(-5*time.Minute))
 		containerResp := [][]byte{
 			envBytes1,
 			envBytes2,
@@ -172,7 +172,7 @@ var _ = Describe("DopplerProxy", func() {
 	})
 
 	It("returns the requested recent logs", func() {
-		req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs", nil)
+		req, _ := http.NewRequest("GET", "/apps/8de7d390-9044-41ff-ab76-432299923511/recentlogs", nil)
 		req.Header.Add("Authorization", "token")
 		recentLogResp := [][]byte{
 			[]byte("log1"),
@@ -200,7 +200,7 @@ var _ = Describe("DopplerProxy", func() {
 	})
 
 	It("returns the requested recent logs with limit", func() {
-		req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs?limit=2", nil)
+		req, _ := http.NewRequest("GET", "/apps/8de7d390-9044-41ff-ab76-432299923511/recentlogs?limit=2", nil)
 		req.Header.Add("Authorization", "token")
 		recentLogResp := [][]byte{
 			[]byte("log1"),
@@ -228,8 +228,24 @@ var _ = Describe("DopplerProxy", func() {
 		Expect(count).To(Equal(2))
 	})
 
+	It("rejects badly-formed app GUIDs", func() {
+
+		req, _ := http.NewRequest("GET", "/apps/not-a-valid-guid/recentlogs?limit=2", nil)
+		req.Header.Add("Authorization", "token")
+		recentLogResp := [][]byte{
+			[]byte("log1"),
+			[]byte("log2"),
+			[]byte("log3"),
+		}
+		mockGrpcConnector.RecentLogsOutput.Ret0 <- recentLogResp
+
+		dopplerProxy.ServeHTTP(recorder, req)
+		Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
+
+	})
+
 	It("ignores limit if it is negative", func() {
-		req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs?limit=-2", nil)
+		req, _ := http.NewRequest("GET", "/apps/8de7d390-9044-41ff-ab76-432299923511/recentlogs?limit=-2", nil)
 		req.Header.Add("Authorization", "token")
 		recentLogResp := [][]byte{
 			[]byte("log1"),
