@@ -183,7 +183,6 @@ var _ = Describe("DopplerProxy", func() {
 	})
 
 	It("rejects badly-formed app GUIDs", func() {
-
 		req, _ := http.NewRequest("GET", "/apps/not-a-valid-guid/recentlogs?limit=2", nil)
 		req.Header.Add("Authorization", "token")
 		recentLogResp := [][]byte{
@@ -195,7 +194,6 @@ var _ = Describe("DopplerProxy", func() {
 
 		dopplerProxy.ServeHTTP(recorder, req)
 		Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
-
 	})
 
 	It("ignores limit if it is negative", func() {
