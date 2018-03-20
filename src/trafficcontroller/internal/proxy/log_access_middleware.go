@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"net/http"
+	"regexp"
 	"trafficcontroller/internal/auth"
 
 	"github.com/gorilla/mux"
@@ -18,8 +19,13 @@ func NewLogAccessMiddleware(authorize auth.LogAccessAuthorizer) *LogAccessMiddle
 }
 
 func (m *LogAccessMiddleware) Wrap(h http.Handler) http.Handler {
+	guid := regexp.MustCompile("^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		appID := mux.Vars(r)["appID"]
+		if !guid.MatchString(appID) {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 		authToken := getAuthToken(r)
 
 		status, _ := m.authorize(authToken, appID)

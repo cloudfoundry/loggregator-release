@@ -30,7 +30,10 @@ func NewLogAccessAuthorizer(disableAccessControl bool, apiHost string) LogAccess
 			return http.StatusUnauthorized, errors.New(NO_AUTH_TOKEN_PROVIDED_ERROR_MESSAGE)
 		}
 
-		req, _ := http.NewRequest("GET", apiHost+"/internal/log_access/"+target, nil)
+		req, err := http.NewRequest("GET", apiHost+"/internal/log_access/"+target, nil)
+		if err != nil {
+			return http.StatusInternalServerError, err
+		}
 		req.Header.Set("Authorization", authToken)
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
@@ -42,7 +45,7 @@ func NewLogAccessAuthorizer(disableAccessControl bool, apiHost string) LogAccess
 
 		err = nil
 		if res.StatusCode != 200 {
-			log.Printf("Non 200 response from CC API: %d for %s", res.StatusCode, target)
+			log.Printf("Non 200 response from CC API: %d for %q", res.StatusCode, target)
 			err = errors.New(http.StatusText(res.StatusCode))
 		}
 

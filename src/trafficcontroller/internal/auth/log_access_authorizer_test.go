@@ -70,6 +70,15 @@ var _ = Describe("LogAccessAuthorizer", func() {
 			Expect(status).To(Equal(http.StatusNotFound))
 			Expect(err).To(MatchError(http.StatusText(http.StatusNotFound)))
 		})
+
+		It("denies access when the target contains invalid characters", func() {
+			authorizer := auth.NewLogAccessAuthorizer(false, server.URL)
+
+			status, err := authorizer("bearer something", "myApp%Id")
+			Expect(status).To(Equal(http.StatusInternalServerError))
+			Expect(err).To(HaveOccurred())
+
+		})
 	})
 
 	Context("Server uses SSL without valid certificate", func() {
