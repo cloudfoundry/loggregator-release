@@ -97,6 +97,16 @@ var _ = Describe("UaaClient", func() {
 		})
 	})
 
+	Context("the UAA address is invalid", func() {
+		It("returns a server error", func() {
+			uaaClient := auth.NewUaaClient(client, "%%m*+broken", "bob", "yourUncle")
+
+			_, err := uaaClient.GetAuthData("iAmAnAdmin")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal(`parse %%m*+broken/check_token: invalid URL escape "%%m"`))
+		})
+	})
+
 	Context("insecure skip verify is false", func() {
 		BeforeEach(func() {
 			transport.TLSClientConfig.InsecureSkipVerify = false
