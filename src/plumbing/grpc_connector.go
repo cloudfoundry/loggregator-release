@@ -333,6 +333,7 @@ func (c *GRPCConnector) readStream(s plumbingReceiver, cs *consumerState) error 
 			// slow consumers of the TrafficController API.
 			cs.batcher.BatchAddCounter("grpcConnector.slowConsumers", 1)
 			writeError(errors.New("GRPCConnector: slow consumer"), cs.errs)
+			timer.Reset(time.Second)
 		}
 	}
 }

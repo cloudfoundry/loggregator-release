@@ -344,10 +344,17 @@ var _ = Describe("GRPCConnector", func() {
 
 					time.Sleep(2 * time.Second)
 
+					for i := 0; i < 50; i++ {
+						senderA.Send(&plumbing.Response{
+							Payload: []byte(fmt.Sprintf("some-data-a-%d", i)),
+						})
+					}
+
 					f := func() error {
 						_, err := r()
 						return err
 					}
+
 					Eventually(f).Should(Not(BeNil()))
 					Eventually(mockBatcher.BatchAddCounterInput).Should(
 						BeCalled(With(
@@ -355,6 +362,7 @@ var _ = Describe("GRPCConnector", func() {
 							BeNumerically("==", 1),
 						)),
 					)
+					Consistently(f).Should(BeNil())
 				})
 			})
 
