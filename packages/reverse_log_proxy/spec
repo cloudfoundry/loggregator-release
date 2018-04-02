@@ -4,20 +4,20 @@ dependencies:
 - golang1.9.4
 files:
 - code.cloudfoundry.org/go-batching/*.go # gosub
-- code.cloudfoundry.org/go-envstruct/*.go # gosub
-- code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2/*.go # gosub
-- code.cloudfoundry.org/grpc-throughputlb/*.go # gosub
 - code.cloudfoundry.org/loggregator/healthendpoint/*.go # gosub
 - code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
 - code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
 - code.cloudfoundry.org/loggregator/plumbing/batching/*.go # gosub
 - code.cloudfoundry.org/loggregator/plumbing/conversion/*.go # gosub
+- code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
 - code.cloudfoundry.org/loggregator/profiler/*.go # gosub
 - code.cloudfoundry.org/loggregator/rlp/*.go # gosub
 - code.cloudfoundry.org/loggregator/rlp/app/*.go # gosub
 - code.cloudfoundry.org/loggregator/rlp/internal/egress/*.go # gosub
 - code.cloudfoundry.org/loggregator/rlp/internal/ingress/*.go # gosub
 - github.com/beorn7/perks/quantile/*.go # gosub
+- github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
+- github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
 - github.com/cloudfoundry/sonde-go/events/*.go # gosub
 - github.com/gogo/protobuf/gogoproto/*.go # gosub
 - github.com/gogo/protobuf/proto/*.go # gosub
