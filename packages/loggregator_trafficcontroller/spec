@@ -3,29 +3,18 @@ name: loggregator_trafficcontroller
 dependencies:
 - golang1.9.4
 files:
+- code.cloudfoundry.org/go-envstruct/*.go # gosub
+- code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2/*.go # gosub
+- code.cloudfoundry.org/grpc-throughputlb/*.go # gosub
 - code.cloudfoundry.org/loggregator/healthendpoint/*.go # gosub
 - code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
 - code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
-- code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
 - code.cloudfoundry.org/loggregator/profiler/*.go # gosub
 - code.cloudfoundry.org/loggregator/trafficcontroller/*.go # gosub
 - code.cloudfoundry.org/loggregator/trafficcontroller/app/*.go # gosub
 - code.cloudfoundry.org/loggregator/trafficcontroller/internal/auth/*.go # gosub
 - code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy/*.go # gosub
 - github.com/beorn7/perks/quantile/*.go # gosub
-- github.com/cloudfoundry/dropsonde/*.go # gosub
-- github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
-- github.com/cloudfoundry/dropsonde/envelope_sender/*.go # gosub
-- github.com/cloudfoundry/dropsonde/envelopes/*.go # gosub
-- github.com/cloudfoundry/dropsonde/factories/*.go # gosub
-- github.com/cloudfoundry/dropsonde/instrumented_handler/*.go # gosub
-- github.com/cloudfoundry/dropsonde/instrumented_round_tripper/*.go # gosub
-- github.com/cloudfoundry/dropsonde/log_sender/*.go # gosub
-- github.com/cloudfoundry/dropsonde/logs/*.go # gosub
-- github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
-- github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
-- github.com/cloudfoundry/dropsonde/metrics/*.go # gosub
-- github.com/cloudfoundry/dropsonde/runtime_stats/*.go # gosub
 - github.com/cloudfoundry/sonde-go/events/*.go # gosub
 - github.com/gogo/protobuf/gogoproto/*.go # gosub
 - github.com/gogo/protobuf/proto/*.go # gosub
@@ -42,7 +31,6 @@ files:
 - github.com/mailru/easyjson/jlexer/*.go # gosub
 - github.com/mailru/easyjson/jwriter/*.go # gosub
 - github.com/matttproud/golang_protobuf_extensions/pbutil/*.go # gosub
-- github.com/nu7hatch/gouuid/*.go # gosub
 - github.com/prometheus/client_golang/prometheus/*.go # gosub
 - github.com/prometheus/client_golang/prometheus/promhttp/*.go # gosub
 - github.com/prometheus/client_model/go/*.go # gosub
