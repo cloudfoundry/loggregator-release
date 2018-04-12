@@ -1,7 +1,0 @@
----
-name: backpressure-test
-health-check-type: none
-buildpack: binary_buildpack
-command: ./backpressure
-env:
-  DATADOG_API_KEY:
