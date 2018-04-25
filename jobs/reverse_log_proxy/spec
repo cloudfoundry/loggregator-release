@@ -11,6 +11,7 @@ templates:
 
 packages:
 - reverse_log_proxy
+- profiler
 
 consumes:
 - name: doppler

@@ -1,22 +1,15 @@
 #!/bin/bash -e
 
-RUN_DIR=/var/vcap/sys/run/reverse_log_proxy
-LOG_DIR=/var/vcap/sys/log/reverse_log_proxy
-PIDFILE=${RUN_DIR}/reverse_log_proxy.pid
-JOB_DIR=/var/vcap/jobs/reverse_log_proxy
-CERT_DIR=$JOB_DIR/config/certs
-
-PACKAGE_DIR=/var/vcap/packages/reverse_log_proxy
-ENVIRONMENT=/var/vcap/jobs/reverse_log_proxy/bin/environment.sh
+source /var/vcap/jobs/reverse_log_proxy/bin/environment.sh
 
 case $1 in
 
   start)
     set +e
-      killall -15 rlp
-      killall -9 rlp
-      killall -2 rlp
-      killall -3 rlp
+      killall -15 $PACKAGE_EXECUTABLE
+      killall -9 $PACKAGE_EXECUTABLE
+      killall -2 $PACKAGE_EXECUTABLE
+      killall -3 $PACKAGE_EXECUTABLE
     set -e
 
     mkdir -p $RUN_DIR $LOG_DIR
@@ -26,26 +19,30 @@ case $1 in
 
     ulimit -n 8192
 
-    source $ENVIRONMENT
     echo $$ > $PIDFILE
-    exec chpst -u vcap:vcap ./rlp &>> ${LOG_DIR}/rlp.log
+    exec chpst -u vcap:vcap ./$PACKAGE_EXECUTABLE &>> ${LOG_DIR}/$PACKAGE_EXECUTABLE.log
 
     ;;
 
   stop)
     set +e
-      killall -15 rlp
-      killall -9 rlp
-      killall -2 rlp
-      killall -3 rlp
+      killall -15 $PACKAGE_EXECUTABLE
+      killall -9 $PACKAGE_EXECUTABLE
+      killall -2 $PACKAGE_EXECUTABLE
+      killall -3 $PACKAGE_EXECUTABLE
     set -e
 
     rm -f $PIDFILE
 
     ;;
 
+  profile)
+    exec chpst -u vcap:vcap $PROFILE_EXECUTABLE
+
+    ;;
+
   *)
-    echo "Usage: reverse_log_proxy_ctl {start|stop}"
+    echo "Usage: reverse_log_proxy_ctl {start|stop|profile}"
 
     ;;
 

@@ -1,0 +1,7 @@
+---
+name: profiler
+
+dependencies: []
+
+files:
+- profiler.sh

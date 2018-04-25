@@ -1,3 +1,12 @@
+export RUN_DIR="/var/vcap/sys/run/loggregator_trafficcontroller"
+export LOG_DIR="/var/vcap/sys/log/loggregator_trafficcontroller"
+export PIDFILE="$RUN_DIR/loggregator_trafficcontroller.pid"
+export JOB_DIR="/var/vcap/jobs/loggregator_trafficcontroller"
+export CERT_DIR="$JOB_DIR/config/certs"
+export PACKAGE_DIR="/var/vcap/packages/loggregator_trafficcontroller"
+export PACKAGE_EXECUTABLE="trafficcontroller"
+export PROFILE_EXECUTABLE="/var/vcap/packages/profiler/profiler.sh"
+
 <%
     router_addrs = []
 
@@ -17,17 +26,18 @@
 
     uaa_host = p("uaa.internal_url")
 %>
+
 export AGENT_UDP_ADDRESS="<%= p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.dropsonde_port').to_s %>"
 export AGENT_GRPC_ADDRESS="<%= p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.grpc_port').to_s %>"
 
 export ROUTER_ADDRS="<%= router_addrs.join(",") %>"
-export ROUTER_CA_FILE="/var/vcap/jobs/loggregator_trafficcontroller/config/certs/loggregator_ca.crt"
-export ROUTER_CERT_FILE="/var/vcap/jobs/loggregator_trafficcontroller/config/certs/trafficcontroller.crt"
-export ROUTER_KEY_FILE="/var/vcap/jobs/loggregator_trafficcontroller/config/certs/trafficcontroller.key"
+export ROUTER_CA_FILE="$CERT_DIR/loggregator_ca.crt"
+export ROUTER_CERT_FILE="$CERT_DIR/trafficcontroller.crt"
+export ROUTER_KEY_FILE="$CERT_DIR/trafficcontroller.key"
 
-export CC_CERT_FILE="/var/vcap/jobs/loggregator_trafficcontroller/config/certs/cc_trafficcontroller.crt"
-export CC_KEY_FILE="/var/vcap/jobs/loggregator_trafficcontroller/config/certs/cc_trafficcontroller.key"
-export CC_CA_FILE="/var/vcap/jobs/loggregator_trafficcontroller/config/certs/mutual_tls_ca.crt"
+export CC_CERT_FILE="$CERT_DIR/cc_trafficcontroller.crt"
+export CC_KEY_FILE="$CERT_DIR/cc_trafficcontroller.key"
+export CC_CA_FILE="$CERT_DIR/mutual_tls_ca.crt"
 export CC_SERVER_NAME="<%= p('cc.internal_service_hostname') %>"
 
 export TRAFFIC_CONTROLLER_IP="<%= spec.ip %>"
@@ -44,7 +54,7 @@ export TRAFFIC_CONTROLLER_HEALTH_ADDR="<%= p('traffic_controller.health_addr') %
 export TRAFFIC_CONTROLLER_DISABLE_ACCESS_CONTROL="<%= p("traffic_controller.disable_access_control") %>"
 
 <% if !uaa_host.empty? %>
-export TRAFFIC_CONTROLLER_UAA_CA_CERT="/var/vcap/jobs/loggregator_trafficcontroller/config/certs/uaa_ca.crt"
+export TRAFFIC_CONTROLLER_UAA_CA_CERT="$CERT_DIR/uaa_ca.crt"
 <% end %>
 
 <% if p("traffic_controller.security_event_logging.enabled") %>

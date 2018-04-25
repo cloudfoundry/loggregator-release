@@ -11,6 +11,7 @@ templates:
 
 packages:
 - doppler
+- profiler
 
 provides:
 - name: doppler

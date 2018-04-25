@@ -15,6 +15,7 @@ templates:
 
 packages:
 - loggregator_trafficcontroller
+- profiler
 
 provides:
 - name: trafficcontroller

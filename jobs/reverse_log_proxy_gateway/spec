@@ -11,6 +11,7 @@ templates:
 
 packages:
 - reverse_log_proxy_gateway
+- profiler
 
 consumes:
 - name: reverse_log_proxy
