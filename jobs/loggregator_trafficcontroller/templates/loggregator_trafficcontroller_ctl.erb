@@ -7,10 +7,7 @@
     end
 %>
 
-RUN_DIR=/var/vcap/sys/run/loggregator_trafficcontroller
-LOG_DIR=/var/vcap/sys/log/loggregator_trafficcontroller
-PIDFILE=$RUN_DIR/loggregator_trafficcontroller.pid
-ENVIRONMENT=/var/vcap/jobs/loggregator_trafficcontroller/bin/environment.sh
+source /var/vcap/jobs/loggregator_trafficcontroller/bin/environment.sh
 
 mkdir -p $RUN_DIR
 mkdir -p $LOG_DIR
@@ -35,8 +32,7 @@ case $1 in
 
     chown -R vcap:vcap $LOG_DIR
 
-    source $ENVIRONMENT
-    chpst -u vcap:vcap /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller 2>&1 | \
+    chpst -u vcap:vcap $PACKAGE_DIR/$PACKAGE_EXECUTABLE 2>&1 | \
          tee -a "$LOG_DIR/trafficcontroller.log" | \
          logger -t "vcap.trafficcontroller" -p user.error &
 
@@ -56,8 +52,13 @@ case $1 in
 
     ;;
 
+  profile)
+    exec chpst -u vcap:vcap $PROFILE_EXECUTABLE
+
+    ;;
+
   *)
-    echo "Usage: loggregator_trafficcontroller {start|stop}"
+    echo "Usage: loggregator_trafficcontroller_ctl {start|stop|profile}"
 
     ;;
 

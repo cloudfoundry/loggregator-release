@@ -1,13 +1,6 @@
 #!/bin/bash -e
 
-RUN_DIR=/var/vcap/sys/run/reverse_log_proxy_gateway
-LOG_DIR=/var/vcap/sys/log/reverse_log_proxy_gateway
-PIDFILE=${RUN_DIR}/reverse_log_proxy_gateway.pid
-JOB_DIR=/var/vcap/jobs/reverse_log_proxy_gateway
-CERT_DIR=$JOB_DIR/config/certs
-
-PACKAGE_DIR=/var/vcap/packages/reverse_log_proxy_gateway
-ENVIRONMENT=/var/vcap/jobs/reverse_log_proxy_gateway/bin/environment.sh
+source /var/vcap/jobs/reverse_log_proxy_gateway/bin/environment.sh
 
 case $1 in
 
@@ -26,7 +19,6 @@ case $1 in
 
     ulimit -n 8192
 
-    source $ENVIRONMENT
     echo $$ > $PIDFILE
     exec chpst -u vcap:vcap ./rlp-gateway &>> ${LOG_DIR}/rlp-gateway.log
 
@@ -44,8 +36,13 @@ case $1 in
 
     ;;
 
+  profile)
+    exec chpst -u vcap:vcap $PROFILE_EXECUTABLE
+
+    ;;
+
   *)
-    echo "Usage: reverse_log_proxy_gateway_ctl {start|stop}"
+    echo "Usage: reverse_log_proxy_gateway_ctl {start|stop|profile}"
 
     ;;
 

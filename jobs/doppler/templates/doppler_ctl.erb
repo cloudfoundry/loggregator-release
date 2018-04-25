@@ -7,10 +7,7 @@
     end
 %>
 
-RUN_DIR=/var/vcap/sys/run/doppler
-LOG_DIR=/var/vcap/sys/log/doppler
-PIDFILE=$RUN_DIR/doppler.pid
-ENVIRONMENT=/var/vcap/jobs/doppler/bin/environment.sh
+source /var/vcap/jobs/doppler/bin/environment.sh
 
 mkdir -p $RUN_DIR
 mkdir -p $LOG_DIR
@@ -32,7 +29,6 @@ case $1 in
 
     chown -R vcap:vcap $LOG_DIR
 
-    source $ENVIRONMENT
     chpst -u vcap:vcap /var/vcap/packages/doppler/doppler 2>&1 | \
          tee -a "$LOG_DIR/doppler.log" | \
          logger -t "vcap.doppler" -p user.error &
@@ -51,8 +47,13 @@ case $1 in
 
     ;;
 
+  profile)
+    exec chpst -u vcap:vcap $PROFILE_EXECUTABLE
+
+    ;;
+
   *)
-    echo "Usage: doppler {start|stop}"
+    echo "Usage: doppler {start|stop|profile}"
 
     ;;
 

@@ -10,6 +10,7 @@ templates:
 
 packages:
 - reverse_log_proxy_gateway_cf_auth_proxy
+- profiler
 
 provides:
 - name: log_gateway_cf_auth_proxy
@@ -45,4 +46,3 @@ properties:
     description: "The CA for internal UAA api"
   uaa.internal_addr:
     description: "The endpoint used for the internal UAA api"
-

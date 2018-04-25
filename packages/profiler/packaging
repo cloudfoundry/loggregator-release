@@ -1,0 +1,4 @@
+set -e
+
+cp profiler.sh "${BOSH_INSTALL_TARGET}"
+chmod +x "${BOSH_INSTALL_TARGET}/profiler.sh"

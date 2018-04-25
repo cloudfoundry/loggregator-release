@@ -37,11 +37,19 @@ RSpec.describe "Doppler Environment" do
     )
 
     expected_config = {
+      "CERT_DIR" => "$JOB_DIR/config/certs",
+      "JOB_DIR" => "/var/vcap/jobs/doppler",
+      "LOG_DIR" => "/var/vcap/sys/log/doppler",
+      "PACKAGE_DIR" => "/var/vcap/packages/doppler",
+      "PACKAGE_EXECUTABLE" => "doppler",
+      "PIDFILE" => "${RUN_DIR}/doppler.pid",
+      "PROFILE_EXECUTABLE" => "/var/vcap/packages/profiler/profiler.sh",
+      "RUN_DIR" => "/var/vcap/sys/run/doppler",
       "AGENT_GRPC_ADDRESS" => "10.0.0.10:5555",
       "ROUTER_PORT" => "1111",
-      "ROUTER_CERT_FILE" => "/var/vcap/jobs/doppler/config/certs/doppler.crt",
-      "ROUTER_KEY_FILE" => "/var/vcap/jobs/doppler/config/certs/doppler.key",
-      "ROUTER_CA_FILE" => "/var/vcap/jobs/doppler/config/certs/loggregator_ca.crt",
+      "ROUTER_CERT_FILE" => "$CERT_DIR/doppler.crt",
+      "ROUTER_KEY_FILE" => "$CERT_DIR/doppler.key",
+      "ROUTER_CA_FILE" => "$CERT_DIR/loggregator_ca.crt",
       "ROUTER_CIPHER_SUITES" => "a,b",
       "ROUTER_MAX_RETAINED_LOG_MESSAGES" => "100",
       "ROUTER_CONTAINER_METRIC_TTL_SECONDS" => "60",
