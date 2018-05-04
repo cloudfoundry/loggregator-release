@@ -3,7 +3,7 @@ set -e -x
 mkdir -p ${BOSH_INSTALL_TARGET}/src
 cp -a . ${BOSH_INSTALL_TARGET}/src
 
-export GOROOT=$(readlink -nf /var/vcap/packages/golang1.9.4)
+export GOROOT=$(readlink -nf /var/vcap/packages/golang1.10.2)
 export GOPATH=$BOSH_INSTALL_TARGET
 export PATH=$GOROOT/bin:$PATH
 
