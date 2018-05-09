@@ -9,7 +9,7 @@ releases:
 - name: loggregator
   version: latest
 - name: bosh-dns
-  version: latest
+  version: 0.2.0
 
 addons:
 - name: bosh-dns
