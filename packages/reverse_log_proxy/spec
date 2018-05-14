@@ -54,9 +54,14 @@ files:
 - golang.org/x/text/unicode/norm/*.go # gosub
 - google.golang.org/genproto/googleapis/rpc/status/*.go # gosub
 - google.golang.org/grpc/*.go # gosub
+- google.golang.org/grpc/balancer/*.go # gosub
+- google.golang.org/grpc/balancer/base/*.go # gosub
+- google.golang.org/grpc/balancer/roundrobin/*.go # gosub
 - google.golang.org/grpc/codes/*.go # gosub
 - google.golang.org/grpc/connectivity/*.go # gosub
 - google.golang.org/grpc/credentials/*.go # gosub
+- google.golang.org/grpc/encoding/*.go # gosub
+- google.golang.org/grpc/encoding/proto/*.go # gosub
 - google.golang.org/grpc/grpclb/grpc_lb_v1/messages/*.go # gosub
 - google.golang.org/grpc/grpclog/*.go # gosub
 - google.golang.org/grpc/internal/*.go # gosub
@@ -64,6 +69,9 @@ files:
 - google.golang.org/grpc/metadata/*.go # gosub
 - google.golang.org/grpc/naming/*.go # gosub
 - google.golang.org/grpc/peer/*.go # gosub
+- google.golang.org/grpc/resolver/*.go # gosub
+- google.golang.org/grpc/resolver/dns/*.go # gosub
+- google.golang.org/grpc/resolver/passthrough/*.go # gosub
 - google.golang.org/grpc/stats/*.go # gosub
 - google.golang.org/grpc/status/*.go # gosub
 - google.golang.org/grpc/tap/*.go # gosub
