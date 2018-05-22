@@ -37,7 +37,6 @@ RSpec.describe "Doppler Environment" do
     )
 
     expected_config = {
-      "AGENT_UDP_ADDRESS" => "10.0.0.10:4444",
       "AGENT_GRPC_ADDRESS" => "10.0.0.10:5555",
       "ROUTER_PORT" => "1111",
       "ROUTER_CERT_FILE" => "/var/vcap/jobs/doppler/config/certs/doppler.crt",

@@ -1,4 +1,3 @@
-export AGENT_UDP_ADDRESS="<%= p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.dropsonde_port').to_s %>"
 export AGENT_GRPC_ADDRESS="<%= p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.grpc_port').to_s %>"
 
 export ROUTER_PORT="<%= p("doppler.grpc_port") %>"
