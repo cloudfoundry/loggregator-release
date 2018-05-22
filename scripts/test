@@ -107,32 +107,12 @@ function run_build {
         return $exit_code
     fi
 
-    print_checkpoint "Make Sure Tool Packages Compile"
-    go get -t tools/...
-    go test -run xxxxxxxxxxxxxxxxx tools/... > /dev/null
-    exit_code=$?
-    if [ $exit_code -ne 0 ]; then
-        return $exit_code
-    fi
-
     print_checkpoint "Building Binaries"
     "$(dirname $0)/build"
     return $?
 }
 
 function run_unit {
-    pushd $PROJECT_DIR/src/tools > /dev/null
-        print_checkpoint "Running Tool Unit Tests"
-        go test -race ./... \
-            -ginkgo.randomizeAllSpecs \
-            -ginkgo.slowSpecThreshold 20 \
-            $@
-        exit_code=$?
-    popd > /dev/null
-    if [ $exit_code -ne 0 ]; then
-        return $exit_code
-    fi
-
     pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator > /dev/null
         print_checkpoint "Running Unit Tests"
         go test -race $(go list ./... | grep -v integration_tests) \
@@ -181,7 +161,7 @@ function parse_argc {
             print_usage
             exit 0
             ;;
-        all|unit|integration|~integration|build|cleaners|multiplatform|templates|linters|install_tools)
+        all|unit|integration|~integration|build|cleaners|multiplatform|templates|linters)
             command=run_$arg
             ;;
         *)
