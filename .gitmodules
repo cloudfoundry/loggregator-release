@@ -109,3 +109,6 @@
 [submodule "src/github.com/posener/wstest"]
 	path = src/github.com/posener/wstest
 	url = https://github.com/posener/wstest
+[submodule "src/code.cloudfoundry.org/rfc5424"]
+	path = src/code.cloudfoundry.org/rfc5424
+	url = https://github.com/cloudfoundry-incubator/rfc5424
