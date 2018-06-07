@@ -24,6 +24,7 @@ files:
 - code.cloudfoundry.org/loggregator-agent/pkg/plumbing/*.go # gosub
 - code.cloudfoundry.org/loggregator-agent/pkg/plumbing/batching/*.go # gosub
 - code.cloudfoundry.org/loggregator-agent/pkg/plumbing/v2/*.go # gosub
+- code.cloudfoundry.org/rfc5424/*.go # gosub
 - github.com/beorn7/perks/quantile/*.go # gosub
 - github.com/cloudfoundry/sonde-go/events/*.go # gosub
 - github.com/gogo/protobuf/gogoproto/*.go # gosub

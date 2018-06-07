@@ -25,6 +25,7 @@ files:
 - code.cloudfoundry.org/loggregator/router/internal/server/v1/*.go # gosub
 - code.cloudfoundry.org/loggregator/router/internal/server/v2/*.go # gosub
 - code.cloudfoundry.org/loggregator/router/internal/sinks/*.go # gosub
+- code.cloudfoundry.org/rfc5424/*.go # gosub
 - github.com/beorn7/perks/quantile/*.go # gosub
 - github.com/cloudfoundry/sonde-go/events/*.go # gosub
 - github.com/gogo/protobuf/gogoproto/*.go # gosub
