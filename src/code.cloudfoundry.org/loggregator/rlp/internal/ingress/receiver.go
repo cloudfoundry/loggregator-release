@@ -3,6 +3,8 @@ package ingress
 import (
 	"log"
 
+	gendiodes "code.cloudfoundry.org/diodes"
+	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
@@ -41,11 +43,21 @@ func (r *Receiver) Receive(ctx context.Context, req *v2.EgressRequest) (rx func(
 		return nil, err
 	}
 
+	conversionBuffer := diodes.NewManyToOne(10000, gendiodes.AlertFunc(func(missed int) {
+		log.Printf("Shed %d envelopes", missed)
+	}))
+
 	return func() (*v2.Envelope, error) {
-		data, err := v1Rx()
+		env, err := v1Rx()
 		if err != nil {
 			log.Printf("Subscription receiver error: %s", err)
 			return nil, err
+		}
+
+		conversionBuffer.Set(env)
+		data, ok := conversionBuffer.TryNext()
+		if !ok {
+			return nil, nil
 		}
 
 		v2e, err := r.envConverter.Convert(data, req.UsePreferredTags)
