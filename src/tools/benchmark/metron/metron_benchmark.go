@@ -133,7 +133,7 @@ func createEnvelope() []byte {
 
 	data, err := proto.Marshal(e)
 	if err != nil {
-		log.Panic("Failed to marshal envelope: %s", err)
+		log.Panicf("Failed to marshal envelope: %s", err)
 	}
 
 	return data

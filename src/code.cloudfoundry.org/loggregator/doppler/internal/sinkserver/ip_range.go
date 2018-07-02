@@ -40,7 +40,7 @@ func ValidateIpAddresses(ranges []IPRange) error {
 func IpOutsideOfRanges(testURL url.URL, ranges []IPRange) (bool, error) {
 	if len(testURL.Host) == 0 {
 		return false, errors.New(fmt.Sprintf("Incomplete URL %s. "+
-			"This could be caused by an URL without slashes or protocol.", testURL))
+			"This could be caused by an URL without slashes or protocol.", testURL.String()))
 	}
 
 	host := strings.Split(testURL.Host, ":")[0]
