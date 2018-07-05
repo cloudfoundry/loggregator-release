@@ -112,3 +112,6 @@
 [submodule "src/code.cloudfoundry.org/rfc5424"]
 	path = src/code.cloudfoundry.org/rfc5424
 	url = https://github.com/cloudfoundry-incubator/rfc5424
+[submodule "src/github.com/wfernandes/app-metrics-plugin"]
+	path = src/github.com/wfernandes/app-metrics-plugin
+	url = https://github.com/wfernandes/app-metrics-plugin
