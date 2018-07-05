@@ -17,6 +17,13 @@ provides:
   type: doppler
   properties:
   - doppler.grpc_port
+- name: loggregator
+  type: loggregator
+  properties:
+  - loggregator.tls.ca_cert
+  - loggregator.tls.doppler.cert
+  - loggregator.tls.doppler.key
+  - metron_endpoint.grpc_port
 
 properties:
   doppler.maxRetainedLogMessages:

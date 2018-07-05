@@ -35,6 +35,7 @@ instance_groups:
     release: loggregator
     provides:
       doppler: {as: doppler, shared: true}
+      loggregator: {as: loggregator, shared: true}
     properties:
       doppler:
         disable_announce: true
