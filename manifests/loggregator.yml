@@ -9,7 +9,9 @@ releases:
 - name: loggregator
   version: latest
 - name: bosh-dns
-  version: 0.2.0
+  sha1: bb7f1cf29c4186fdba4a049fb6feb5638227d9a4
+  url: https://bosh.io/d/github.com/cloudfoundry/bosh-dns-release?v=1.6.0
+  version: 1.6.0
 
 addons:
 - name: bosh-dns
