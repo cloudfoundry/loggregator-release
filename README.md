@@ -206,4 +206,4 @@ Items marked as "In Flight" on the Roadmap are tracked as new Features in
 [road-map]:                 https://docs.google.com/spreadsheets/d/1bM1bInPQeC2xLayLsFb0aBuD3_HFNfJj9mEJZygnuWo/edit#gid=0
 [loggregator-tracker]:      https://www.pivotaltracker.com/n/projects/993188
 [ci-badge]:                 https://loggregator.ci.cf-app.com/api/v1/pipelines/loggregator/jobs/loggregator-tests/badge
-[ci-pipeline]:              https://loggregator.ci.cf-app.com/
+[ci-pipeline]:              https://loggregator.ci.cf-app.com/teams/main/pipelines/loggregator
