@@ -35,31 +35,35 @@ fi
 go get -v github.com/square/certstrap
 
 # CA to distribute to loggregator certs
-certstrap --depot-path ${depot_path} init --passphrase '' --common-name loggregatorCA
+certstrap --depot-path ${depot_path} init --passphrase '' --common-name loggregatorCA --expires "25 years"
 mv -f ${depot_path}/loggregatorCA.crt ${depot_path}/loggregator-ca.crt
 mv -f ${depot_path}/loggregatorCA.key ${depot_path}/loggregator-ca.key
 mv -f ${depot_path}/loggregatorCA.crl ${depot_path}/loggregator-ca.crl
 
 # Doppler certificate
 certstrap --depot-path ${depot_path} request-cert --passphrase '' --common-name doppler
-certstrap --depot-path ${depot_path} sign doppler --CA loggregator-ca
+certstrap --depot-path ${depot_path} sign doppler --CA loggregator-ca --expires "25 years"
 
 # Traffic Controller certificate
 certstrap --depot-path ${depot_path} request-cert --passphrase '' --common-name trafficcontroller
-certstrap --depot-path ${depot_path} sign trafficcontroller --CA loggregator-ca
+certstrap --depot-path ${depot_path} sign trafficcontroller --CA loggregator-ca --expires "25 years"
 
 # Traffic Controller<->CAPI mutual TLS certificate
 certstrap --depot-path ${depot_path} request-cert --passphrase '' --common-name cc_trafficcontroller
-certstrap --depot-path ${depot_path} sign cc_trafficcontroller --CA ${bbs_ca_name}
+certstrap --depot-path ${depot_path} sign cc_trafficcontroller --CA ${bbs_ca_name} --expires "25 years"
 
 # Metron certificate
 certstrap --depot-path ${depot_path} request-cert --passphrase '' --common-name metron
-certstrap --depot-path ${depot_path} sign metron --CA loggregator-ca
+certstrap --depot-path ${depot_path} sign metron --CA loggregator-ca --expires "25 years"
 
 # Reverse Log Proxy certificate
 certstrap --depot-path ${depot_path} request-cert --passphrase '' --common-name reverselogproxy
-certstrap --depot-path ${depot_path} sign reverselogproxy --CA loggregator-ca
+certstrap --depot-path ${depot_path} sign reverselogproxy --CA loggregator-ca --expires "25 years"
 
 # Syslog drain binder certificate
 certstrap --depot-path ${depot_path} request-cert --passphrase '' --common-name syslogdrainbinder
-certstrap --depot-path ${depot_path} sign syslogdrainbinder --CA ${bbs_ca_name}
+certstrap --depot-path ${depot_path} sign syslogdrainbinder --CA ${bbs_ca_name} --expires "25 years"
+
+# Reverse Log Proxy Gateway certificate
+certstrap --depot-path ${depot_path} request-cert --passphrase '' --common-name rlpgateway
+certstrap --depot-path ${depot_path} sign rlpgateway --CA ${bbs_ca_name} --expires "25 years"
