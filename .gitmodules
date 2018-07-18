@@ -115,3 +115,6 @@
 [submodule "src/github.com/wfernandes/app-metrics-plugin"]
 	path = src/github.com/wfernandes/app-metrics-plugin
 	url = https://github.com/wfernandes/app-metrics-plugin
+[submodule "src/github.com/gorilla/handlers"]
+	path = src/github.com/gorilla/handlers
+	url = https://github.com/gorilla/handlers
