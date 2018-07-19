@@ -1,0 +1,21 @@
+- type: replace
+  path: /instance_groups/name=log-api/jobs/-
+  value:
+    name: reverse_log_proxy_gateway
+    release: loggregator
+    properties:
+      logs_provider:
+        ca_cert: "((loggregator_rlp_gateway.ca))"
+        client_cert: "((loggregator_rlp_gateway.certificate))"
+        client_key: "((loggregator_rlp_gateway.private_key))"
+
+- type: replace
+  path: /variables/-
+  value:
+    name: loggregator_rlp_gateway
+    type: certificate
+    options:
+      ca: loggregator_ca
+      common_name: rlp_gateway
+      extended_key_usage:
+      - client_auth
