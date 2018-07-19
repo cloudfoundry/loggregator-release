@@ -1,0 +1,52 @@
+#!/bin/bash -e
+
+RUN_DIR=/var/vcap/sys/run/reverse_log_proxy_gateway
+LOG_DIR=/var/vcap/sys/log/reverse_log_proxy_gateway
+PIDFILE=${RUN_DIR}/reverse_log_proxy_gateway.pid
+JOB_DIR=/var/vcap/jobs/reverse_log_proxy_gateway
+CERT_DIR=$JOB_DIR/config/certs
+
+PACKAGE_DIR=/var/vcap/packages/reverse_log_proxy_gateway
+ENVIRONMENT=/var/vcap/jobs/reverse_log_proxy_gateway/bin/environment.sh
+
+case $1 in
+
+  start)
+    set +e
+      killall -15 rlp-gateway
+      killall -9 rlp-gateway
+      killall -2 rlp-gateway
+      killall -3 rlp-gateway
+    set -e
+
+    mkdir -p $RUN_DIR $LOG_DIR
+    chown -R vcap:vcap $RUN_DIR $LOG_DIR
+
+    cd $PACKAGE_DIR
+
+    ulimit -n 8192
+
+    source $ENVIRONMENT
+    echo $$ > $PIDFILE
+    exec chpst -u vcap:vcap ./rlp-gateway &>> ${LOG_DIR}/rlp-gateway.log
+
+    ;;
+
+  stop)
+    set +e
+      killall -15 rlp-gateway
+      killall -9 rlp-gateway
+      killall -2 rlp-gateway
+      killall -3 rlp-gateway
+    set -e
+
+    rm -f $PIDFILE
+
+    ;;
+
+  *)
+    echo "Usage: reverse_log_proxy_gateway_ctl {start|stop}"
+
+    ;;
+
+esac

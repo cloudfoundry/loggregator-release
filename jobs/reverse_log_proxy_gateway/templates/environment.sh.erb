@@ -1,0 +1,6 @@
+export LOGS_PROVIDER_ADDR="127.0.0.1:<%= link('reverse_log_proxy').p('reverse_log_proxy.egress.port') %>"
+export LOGS_PROVIDER_CLIENT_CERT_PATH="/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/reverse_log_proxy_gateway.crt"
+export LOGS_PROVIDER_CLIENT_KEY_PATH="/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/reverse_log_proxy_gateway.key"
+export LOGS_PROVIDER_CA_PATH="/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/mutual_tls_ca.crt"
+export LOGS_PROVIDER_COMMON_NAME="<%= p('logs_provider.common_name') %>"
+export GATEWAY_ADDR="<%= p('http.address') %>"

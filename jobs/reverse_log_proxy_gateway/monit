@@ -1,0 +1,5 @@
+check process reverse_log_proxy_gateway
+  with pidfile /var/vcap/sys/run/reverse_log_proxy_gateway/reverse_log_proxy_gateway.pid
+  start program "/var/vcap/jobs/reverse_log_proxy_gateway/bin/reverse_log_proxy_gateway_ctl start"
+  stop program "/var/vcap/jobs/reverse_log_proxy_gateway/bin/reverse_log_proxy_gateway_ctl stop"
+  group vcap

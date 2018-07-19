@@ -1,0 +1,38 @@
+---
+name: reverse_log_proxy_gateway
+
+templates:
+  reverse_log_proxy_gateway_ctl.erb: bin/reverse_log_proxy_gateway_ctl
+  reverse_log_proxy_gateway.crt.erb: config/certs/reverse_log_proxy_gateway.crt
+  reverse_log_proxy_gateway.key.erb: config/certs/reverse_log_proxy_gateway.key
+  mutual_tls_ca.crt.erb: config/certs/mutual_tls_ca.crt
+  environment.sh.erb: bin/environment.sh
+  drain.erb: bin/drain
+
+packages:
+- reverse_log_proxy_gateway
+
+consumes:
+- name: reverse_log_proxy
+  type: reverse_log_proxy
+
+provides:
+- name: log_gateway
+  type: log_gateway
+  properties:
+  - http.address
+
+properties:
+  http.address:
+    description: "HTTP address for the gateway to listen on"
+    default: "127.0.0.1:8088"
+
+  logs_provider.ca_cert:
+    description: "CA root required for key/cert verification"
+  logs_provider.client_cert:
+    description: "TLS client certificate for connecting to logs provider"
+  logs_provider.client_key:
+    description: "TLS client key for connecting to logs provider"
+  logs_provider.common_name:
+    description: "TLS common name for logs provider"
+    default: "reverselogproxy"

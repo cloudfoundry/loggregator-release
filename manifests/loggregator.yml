@@ -112,6 +112,13 @@ instance_groups:
           reverse_log_proxy:
             cert: "((loggregator_rlp.certificate))"
             key: "((loggregator_rlp.private_key))"
+  - name: reverse_log_proxy_gateway
+    release: loggregator
+    properties:
+      logs_provider:
+        ca_cert: "((loggregator_rlp_gateway.ca))"
+        client_cert: "((loggregator_rlp_gateway.certificate))"
+        client_key: "((loggregator_rlp_gateway.private_key))"
   - name: loggregator_trafficcontroller
     release: loggregator
     provides:
@@ -183,6 +190,13 @@ variables:
     extended_key_usage:
     - client_auth
     - server_auth
+- name: loggregator_rlp_gateway
+  type: certificate
+  options:
+    ca: loggregator_ca
+    common_name: rlp_gateway
+    extended_key_usage:
+    - client_auth
 - name: loggregator_agent
   type: certificate
   options:
