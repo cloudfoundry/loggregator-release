@@ -1,14 +1,14 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-set -e -x
+set -ex
 
-env_name=$1
-if [ "$env_name" == '' ]
-then
-    env_name=lite
-fi
+env_name="${1:-lite}"
 
 bosh create-release --force
-bosh -e $env_name upload-release --rebase
-bosh -e $env_name deploy -n -d loggregator manifests/loggregator.yml \
-    --vars-store=/tmp/loggregator-vars.yml
+bosh upload-release --environment="$env_name" --rebase
+bosh deploy manifests/loggregator.yml \
+    --ops-file=manifests/operations/no-traffic-controller.yml \
+    --vars-store=/tmp/loggregator-vars.yml \
+    --environment="$env_name" \
+    --deployment=loggregator \
+    --non-interactive
