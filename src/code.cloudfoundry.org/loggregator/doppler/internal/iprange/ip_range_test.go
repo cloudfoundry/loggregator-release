@@ -78,7 +78,7 @@ var _ = Describe("IPRange", func() {
 			for _, testURL := range cases {
 				_, err := iprange.IpOutsideOfRanges(testURL, ranges)
 				if err == nil {
-					GinkgoT().Fatal(fmt.Sprintf("There should be an error about malformatted URL for %s", testURL))
+					GinkgoT().Fatal(fmt.Sprintf("There should be an error about malformatted URL for %s", testURL.String()))
 				}
 			}
 		})

@@ -282,7 +282,7 @@ func sendMessagesToWebsocket(endpoint string, envelopes []*events.Envelope, webs
 
 		err = websocketConnection.WriteMessage(gorilla.BinaryMessage, envelopeBytes)
 		if err != nil {
-			log.Printf("Websocket Server %s: Error when trying to send data to sink %s. Err: %v", websocketConnection.RemoteAddr(), err)
+			log.Printf("Websocket Server: Error when trying to send data to sink %s. Err: %v", websocketConnection.RemoteAddr(), err)
 			continue
 		}
 		// metric-documentation-v1: (sentEnvelopes) Number of envelopes sent outbound across
