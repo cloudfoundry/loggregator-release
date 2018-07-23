@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"strconv"
 	"time"
 
 	"code.cloudfoundry.org/loggregator/metricemitter"
@@ -97,28 +98,29 @@ func (t *Transponder) write(batch []*v2.Envelope) {
 }
 
 func (t *Transponder) addTags(e *v2.Envelope) {
-	if e.DeprecatedTags == nil {
-		e.DeprecatedTags = make(map[string]*v2.Value)
+	if e.Tags == nil {
+		e.Tags = make(map[string]string)
 	}
 
-	// Move non-deprecated tags to deprecated tags. This is required
-	// for backwards compatibility purposes and should be removed once
-	// deprecated tags are fully removed.
-	for k, v := range e.GetTags() {
-		e.DeprecatedTags[k] = &v2.Value{
-			Data: &v2.Value_Text{
-				Text: v,
-			},
+	// Move deprecated tags to tags.
+	for k, v := range e.GetDeprecatedTags() {
+		switch v.Data.(type) {
+		case *v2.Value_Text:
+			e.Tags[k] = v.GetText()
+		case *v2.Value_Integer:
+			e.Tags[k] = strconv.FormatInt(v.GetInteger(), 10)
+		case *v2.Value_Decimal:
+			e.Tags[k] = strconv.FormatFloat(v.GetDecimal(), 'f', -1, 64)
+		default:
+			e.Tags[k] = v.String()
 		}
 	}
 
 	for k, v := range t.tags {
-		if _, ok := e.DeprecatedTags[k]; !ok {
-			e.DeprecatedTags[k] = &v2.Value{
-				Data: &v2.Value_Text{
-					Text: v,
-				},
-			}
+		if _, ok := e.Tags[k]; !ok {
+			e.Tags[k] = v
 		}
 	}
+
+	e.DeprecatedTags = nil
 }

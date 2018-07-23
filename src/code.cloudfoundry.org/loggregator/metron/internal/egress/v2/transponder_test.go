@@ -138,8 +138,8 @@ var _ = Describe("Transponder", func() {
 			Eventually(writer.WriteInput.Msg).Should(Receive(&output))
 
 			Expect(output).To(HaveLen(1))
-			Expect(output[0].DeprecatedTags["tag-one"].GetText()).To(Equal("value-one"))
-			Expect(output[0].DeprecatedTags["tag-two"].GetText()).To(Equal("value-two"))
+			Expect(output[0].Tags["tag-one"]).To(Equal("value-one"))
+			Expect(output[0].Tags["tag-two"]).To(Equal("value-two"))
 		})
 
 		It("does not write over tags if they already exist", func() {
@@ -172,16 +172,17 @@ var _ = Describe("Transponder", func() {
 			Eventually(writer.WriteInput.Msg).Should(Receive(&output))
 			Expect(output).To(HaveLen(1))
 
-			Expect(output[0].DeprecatedTags["existing-tag"].GetText()).To(Equal("existing-value"))
+			Expect(output[0].DeprecatedTags).To(BeEmpty())
+			Expect(output[0].Tags["existing-tag"]).To(Equal("existing-value"))
 		})
 
-		// This is required for backwards compatibility purposes.
-		// It should be removed once DeprecatedTags are removed.
-		It("moves Tags to DeprecatedTags", func() {
+		It("moves DesprecatedTags to Tags", func() {
 			input := &v2.Envelope{
 				SourceId: "uuid",
-				Tags: map[string]string{
-					"non-deprecated-tag": "some-new-value",
+				DeprecatedTags: map[string]*v2.Value{
+					"text-tag":    {Data: &v2.Value_Text{Text: "text-value"}},
+					"integer-tag": {Data: &v2.Value_Integer{Integer: 502}},
+					"decimal-tag": {Data: &v2.Value_Decimal{Decimal: 0.23}},
 				},
 			}
 			nexter := newMockNexter()
@@ -200,8 +201,9 @@ var _ = Describe("Transponder", func() {
 			Eventually(writer.WriteInput.Msg).Should(Receive(&output))
 			Expect(output).To(HaveLen(1))
 
-			Expect(output[0].DeprecatedTags["non-deprecated-tag"].GetText()).To(Equal("some-new-value"))
-
+			Expect(output[0].Tags["text-tag"]).To(Equal("text-value"))
+			Expect(output[0].Tags["integer-tag"]).To(Equal("502"))
+			Expect(output[0].Tags["decimal-tag"]).To(Equal("0.23"))
 		})
 	})
 })
