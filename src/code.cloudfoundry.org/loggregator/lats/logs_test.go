@@ -6,6 +6,7 @@ import (
 
 	"code.cloudfoundry.org/loggregator/lats/helpers"
 
+	uuid "github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -24,16 +25,27 @@ const (
 )
 
 var _ = Describe("Logs", func() {
+	var (
+		appID string
+	)
+
+	BeforeEach(func() {
+		guid, err := uuid.NewV4()
+		Expect(err).ToNot(HaveOccurred())
+
+		appID = guid.String()
+	})
+
 	Describe("emit v1 and consume via traffic controller", func() {
 		It("gets through recent logs", func() {
-			env := createLogEnvelopeV1("Recent log message", "foo")
+			env := createLogEnvelopeV1("Recent log message", appID)
 			helpers.EmitToMetronV1(env)
 
 			tlsConfig := &tls.Config{InsecureSkipVerify: true}
 			consumer := consumer.New(config.DopplerEndpoint, tlsConfig, nil)
 
 			getRecentLogs := func() []*events.LogMessage {
-				envelopes, err := consumer.RecentLogs("foo", "")
+				envelopes, err := consumer.RecentLogs(appID, "")
 				Expect(err).NotTo(HaveOccurred())
 				return envelopes
 			}
@@ -42,12 +54,12 @@ var _ = Describe("Logs", func() {
 		})
 
 		It("sends log messages for a specific app through the stream endpoint", func() {
-			msgChan, errorChan := helpers.ConnectToStream("foo")
+			msgChan, errorChan := helpers.ConnectToStream(appID)
 
-			env := createLogEnvelopeV1("Stream message", "foo")
+			env := createLogEnvelopeV1("Stream message", appID)
 			helpers.EmitToMetronV1(env)
 
-			receivedEnvelope, err := helpers.FindMatchingEnvelopeByID("foo", msgChan)
+			receivedEnvelope, err := helpers.FindMatchingEnvelopeByID(appID, msgChan)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(receivedEnvelope.LogMessage).To(Equal(env.LogMessage))
@@ -58,14 +70,14 @@ var _ = Describe("Logs", func() {
 
 	Describe("emit v2 and consume via traffic controller", func() {
 		It("gets through recent logs", func() {
-			env := createLogEnvelopeV2("Recent log message", "foo")
+			env := createLogEnvelopeV2("Recent log message", appID)
 			helpers.EmitToMetronV2(env)
 
 			tlsConfig := &tls.Config{InsecureSkipVerify: true}
 			consumer := consumer.New(config.DopplerEndpoint, tlsConfig, nil)
 
 			getRecentLogs := func() []*events.LogMessage {
-				envelopes, err := consumer.RecentLogs("foo", "")
+				envelopes, err := consumer.RecentLogs(appID, "")
 				Expect(err).NotTo(HaveOccurred())
 				return envelopes
 			}
@@ -74,12 +86,12 @@ var _ = Describe("Logs", func() {
 		})
 
 		It("sends log messages for a specific app through the stream endpoint", func() {
-			msgChan, errorChan := helpers.ConnectToStream("foo-stream")
+			msgChan, errorChan := helpers.ConnectToStream(appID)
 
-			env := createLogEnvelopeV2("Stream message", "foo-stream")
+			env := createLogEnvelopeV2("Stream message", appID)
 			helpers.EmitToMetronV2(env)
 
-			receivedEnvelope, err := helpers.FindMatchingEnvelopeByID("foo-stream", msgChan)
+			receivedEnvelope, err := helpers.FindMatchingEnvelopeByID(appID, msgChan)
 			Expect(err).NotTo(HaveOccurred())
 
 			v1Env := conversion.ToV1(env)[0]
@@ -91,9 +103,9 @@ var _ = Describe("Logs", func() {
 
 	Describe("emit v1 and consume via reverse log proxy", func() {
 		It("sends log messages through rlp", func() {
-			msgChan := helpers.ReadFromRLP("rlp-stream-foo", false)
+			msgChan := helpers.ReadFromRLP(appID, false)
 
-			env := createLogEnvelopeV1("Stream message", "rlp-stream-foo")
+			env := createLogEnvelopeV1("Stream message", appID)
 			helpers.EmitToMetronV1(env)
 
 			v2Env := conversion.ToV2(env, false)
@@ -104,9 +116,9 @@ var _ = Describe("Logs", func() {
 		})
 
 		It("sends log messages through rlp with preferred tags", func() {
-			msgChan := helpers.ReadFromRLP("rlp-stream-foo", true)
+			msgChan := helpers.ReadFromRLP(appID, true)
 
-			env := createLogEnvelopeV1("Stream message", "rlp-stream-foo")
+			env := createLogEnvelopeV1("Stream message", appID)
 			helpers.EmitToMetronV1(env)
 
 			v2Env := conversion.ToV2(env, true)
@@ -119,9 +131,9 @@ var _ = Describe("Logs", func() {
 
 	Describe("emit v2 and consume via reverse log proxy", func() {
 		It("sends log messages through rlp", func() {
-			msgChan := helpers.ReadFromRLP("rlp-stream-foo", false)
+			msgChan := helpers.ReadFromRLP(appID, false)
 
-			env := createLogEnvelopeV2("Stream message", "rlp-stream-foo")
+			env := createLogEnvelopeV2("Stream message", appID)
 			helpers.EmitToMetronV2(env)
 
 			var outEnv *v2.Envelope
