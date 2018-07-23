@@ -4,16 +4,33 @@ import (
 	"code.cloudfoundry.org/loggregator/lats/helpers"
 
 	"github.com/cloudfoundry/sonde-go/events"
+	uuid "github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Sending metrics through loggregator", func() {
+	var (
+		appID      string
+		otherAppID string
+	)
+	BeforeEach(func() {
+		guid, err := uuid.NewV4()
+		Expect(err).ToNot(HaveOccurred())
+
+		otherGUID, err := uuid.NewV4()
+		Expect(err).ToNot(HaveOccurred())
+
+		appID = guid.String()
+		otherAppID = otherGUID.String()
+	})
+
 	Describe("Firehose", func() {
 		var (
 			msgChan   <-chan *events.Envelope
 			errorChan <-chan error
 		)
+
 		BeforeEach(func() {
 			msgChan, errorChan = helpers.ConnectToFirehose()
 		})
@@ -49,7 +66,7 @@ var _ = Describe("Sending metrics through loggregator", func() {
 		})
 
 		It("receives a container metric", func() {
-			envelope := createContainerMetric("test-id")
+			envelope := createContainerMetric(appID)
 			helpers.EmitToMetronV1(envelope)
 
 			receivedEnvelope := helpers.FindMatchingEnvelope(msgChan, envelope)
@@ -61,12 +78,12 @@ var _ = Describe("Sending metrics through loggregator", func() {
 
 	Describe("Stream", func() {
 		It("receives a container metric", func() {
-			msgChan, errorChan := helpers.ConnectToStream("test-id")
-			envelope := createContainerMetric("test-id")
-			helpers.EmitToMetronV1(createContainerMetric("alternate-id"))
+			msgChan, errorChan := helpers.ConnectToStream(appID)
+			envelope := createContainerMetric(appID)
+			helpers.EmitToMetronV1(createContainerMetric(otherAppID))
 			helpers.EmitToMetronV1(envelope)
 
-			receivedEnvelope, err := helpers.FindMatchingEnvelopeByID("test-id", msgChan)
+			receivedEnvelope, err := helpers.FindMatchingEnvelopeByID(appID, msgChan)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(receivedEnvelope).NotTo(BeNil())
 
