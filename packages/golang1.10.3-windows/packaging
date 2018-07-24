@@ -1,6 +1,6 @@
 . ./exiter.ps1
 
-$GOLANG_ZIP="golang/go1.9.6.windows-amd64.zip"
+$GOLANG_ZIP="golang/go1.10.3.windows-amd64.zip"
 try
 {
     Add-Type -AssemblyName System.IO.Compression.FileSystem
