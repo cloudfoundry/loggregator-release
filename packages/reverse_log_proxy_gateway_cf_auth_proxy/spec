@@ -2,7 +2,7 @@
 name: reverse_log_proxy_gateway_cf_auth_proxy
 
 dependencies:
-- golang1.9.6
+- golang1.10.3
 
 files:
 - code.cloudfoundry.org/go-envstruct/*.go # gosub
