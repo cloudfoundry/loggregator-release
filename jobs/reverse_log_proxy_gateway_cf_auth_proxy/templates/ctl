@@ -1,0 +1,52 @@
+#!/bin/bash -e
+
+RUN_DIR=/var/vcap/sys/run/reverse_log_proxy_gateway_cf_auth_proxy
+LOG_DIR=/var/vcap/sys/log/reverse_log_proxy_gateway_cf_auth_proxy
+PIDFILE=${RUN_DIR}/reverse_log_proxy_gateway_cf_auth_proxy.pid
+JOB_DIR=/var/vcap/jobs/reverse_log_proxy_gateway_cf_auth_proxy
+CERT_DIR=$JOB_DIR/config/certs
+
+PACKAGE_DIR=/var/vcap/packages/reverse_log_proxy_gateway_cf_auth_proxy
+ENVIRONMENT=/var/vcap/jobs/reverse_log_proxy_gateway_cf_auth_proxy/bin/environment.sh
+
+case $1 in
+
+  start)
+    set +e
+      killall -15 rlp-gateway-cf-auth-proxy
+      killall -9 rlp-gateway-cf-auth-proxy
+      killall -2 rlp-gateway-cf-auth-proxy
+      killall -3 rlp-gateway-cf-auth-proxy
+    set -e
+
+    mkdir -p $RUN_DIR $LOG_DIR
+    chown -R vcap:vcap $RUN_DIR $LOG_DIR
+
+    cd $PACKAGE_DIR
+
+    ulimit -n 8192
+
+    source $ENVIRONMENT
+    echo $$ > $PIDFILE
+    exec chpst -u vcap:vcap ./rlp-gateway-cf-auth-proxy &>> ${LOG_DIR}/rlp-gateway-cf-auth-proxy.log
+
+    ;;
+
+  stop)
+    set +e
+      killall -15 rlp-gateway-cf-auth-proxy
+      killall -9 rlp-gateway-cf-auth-proxy
+      killall -2 rlp-gateway-cf-auth-proxy
+      killall -3 rlp-gateway-cf-auth-proxy
+    set -e
+
+    rm -f $PIDFILE
+
+    ;;
+
+  *)
+    echo "Usage: ctl {start|stop}"
+
+    ;;
+
+esac

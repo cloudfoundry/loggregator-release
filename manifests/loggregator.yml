@@ -114,6 +114,8 @@ instance_groups:
             key: "((loggregator_rlp.private_key))"
   - name: reverse_log_proxy_gateway
     release: loggregator
+    provides:
+      reverse_log_proxy_gateway: {as: reverse_log_proxy_gateway, shared: true}
     properties:
       logs_provider:
         ca_cert: "((loggregator_rlp_gateway.ca))"

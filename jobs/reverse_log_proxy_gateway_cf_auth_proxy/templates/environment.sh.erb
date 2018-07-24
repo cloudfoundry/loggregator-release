@@ -1,0 +1,23 @@
+<%
+    log_gateway = link('log_gateway')
+    cc = link('cloud_controller')
+%>
+
+# External ADDR is plaintext because it assumes go-router is doing SSL
+# termination.
+export CAPI_ADDR_EXTERNAL="<%= "http://#{cc.address}:9022" %>"
+export CAPI_ADDR="<%= "https://#{cc.address}:9023" %>"
+export CAPI_CERT_PATH="/var/vcap/jobs/reverse_log_proxy_gateway_cf_auth_proxy/config/certs/cc.crt"
+export CAPI_KEY_PATH="/var/vcap/jobs/reverse_log_proxy_gateway_cf_auth_proxy/config/certs/cc.key"
+export CAPI_CA_PATH="/var/vcap/jobs/reverse_log_proxy_gateway_cf_auth_proxy/config/certs/cc_ca.crt"
+export CAPI_COMMON_NAME="<%= p('cc.common_name') %>"
+
+export UAA_CLIENT_ID="<%= p('uaa.client_id') %>"
+export UAA_CLIENT_SECRET="<%= p('uaa.client_secret') %>"
+export UAA_ADDR="<%= p('uaa.internal_addr') %>"
+export UAA_CA_PATH="/var/vcap/jobs/reverse_log_proxy_gateway_cf_auth_proxy/config/certs/uaa_ca.crt"
+
+export SKIP_CERT_VERIFY="<%= p('skip_cert_verify') %>"
+
+export RLP_GATEWAY_ADDR="<%= "http://#{log_gateway.p('http.address')}" %>"
+export ADDR="<%= ":#{p('proxy_port')}" %>"

@@ -1,0 +1,6 @@
+check process reverse_log_proxy_gateway_cf_auth_proxy
+  with pidfile
+/var/vcap/sys/run/reverse_log_proxy_gateway_cf_auth_proxy/reverse_log_proxy_gateway_cf_auth_proxy.pid
+  start program "/var/vcap/jobs/reverse_log_proxy_gateway_cf_auth_proxy/bin/ctl start"
+  stop program "/var/vcap/jobs/reverse_log_proxy_gateway_cf_auth_proxy/bin/ctl stop"
+  group vcap
