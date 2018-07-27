@@ -29,10 +29,12 @@ files:
 - github.com/gogo/protobuf/gogoproto/*.go # gosub
 - github.com/gogo/protobuf/proto/*.go # gosub
 - github.com/gogo/protobuf/protoc-gen-gogo/descriptor/*.go # gosub
+- github.com/golang/protobuf/jsonpb/*.go # gosub
 - github.com/golang/protobuf/proto/*.go # gosub
 - github.com/golang/protobuf/ptypes/*.go # gosub
 - github.com/golang/protobuf/ptypes/any/*.go # gosub
 - github.com/golang/protobuf/ptypes/duration/*.go # gosub
+- github.com/golang/protobuf/ptypes/struct/*.go # gosub
 - github.com/golang/protobuf/ptypes/timestamp/*.go # gosub
 - github.com/mailru/easyjson/*.go # gosub
 - github.com/mailru/easyjson/buffer/*.go # gosub
