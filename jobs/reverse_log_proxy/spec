@@ -30,7 +30,7 @@ properties:
   reverse_log_proxy.egress.max_streams:
     description: |
       Maximum allowed streams open from a single reverse log proxy.
-    default: 500
+    default: 1000
   reverse_log_proxy.pprof.port:
     descripts: "The port of pprof endpoint"
     default: 0
