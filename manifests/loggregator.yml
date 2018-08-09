@@ -8,45 +8,6 @@ stemcells:
 releases:
 - name: loggregator
   version: latest
-- name: bosh-dns
-  sha1: bb7f1cf29c4186fdba4a049fb6feb5638227d9a4
-  url: https://bosh.io/d/github.com/cloudfoundry/bosh-dns-release?v=1.6.0
-  version: 1.6.0
-
-addons:
-- name: bosh-dns
-  include:
-    stemcell:
-    - os: ubuntu-trusty
-  jobs:
-  - name: bosh-dns
-    release: bosh-dns
-    properties:
-      api:
-        client:
-          tls:
-            ca: ((dns_api_tls_ca.certificate))
-            certificate: ((dns_api_client_tls.certificate))
-            private_key: ((dns_api_client_tls.private_key))
-        server:
-          tls:
-            ca: ((dns_api_tls_ca.certificate))
-            certificate: ((dns_api_server_tls.certificate))
-            private_key: ((dns_api_server_tls.private_key))
-      cache:
-        enabled: true
-      health:
-        enabled: true
-        server:
-          tls:
-            ca: ((dns_healthcheck_tls_ca.certificate))
-            certificate: ((dns_healthcheck_server_tls.certificate))
-            private_key: ((dns_healthcheck_server_tls.private_key))
-        client:
-          tls:
-            ca: ((dns_healthcheck_tls_ca.certificate))
-            certificate: ((dns_healthcheck_client_tls.certificate))
-            private_key: ((dns_healthcheck_client_tls.private_key))
 
 instance_groups:
 - name: doppler
