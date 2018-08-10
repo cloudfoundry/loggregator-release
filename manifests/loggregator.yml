@@ -171,7 +171,6 @@ variables:
     - localhost
     - 127.0.0.1
     - ip6-localhost
-    - ::1
     extended_key_usage:
     - client_auth
     - server_auth
