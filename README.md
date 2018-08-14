@@ -99,7 +99,7 @@ For components of Cloud Foundry or standalone BOSH deployments, Loggregator
 provides a set of tools for emitting Logs and Metrics.
 
 ## Reverse Log Proxy (RLP)
-The RLP is the v2 implementation of the [Loggregator API](api-readme). This
+The RLP is the v2 implementation of the [Loggregator API][api-readme]. This
 component is intended to be a replacement for traffic controller.
 
 ### RLP Gateway
