@@ -105,7 +105,7 @@ component is intended to be a replacement for traffic controller.
 ### RLP Gateway
 By default, the RLP communicates with clients via gRPC over mutual TLS. To enable HTTP access to the Reverse Log
 Proxy, deploy the RLP Gateway. The RLP Gateway API is documented
-[here](./src/code.cloudfoundry.org/loggregator/docs/rlp_gateway.md)
+[in the Loggregatgor repository][loggregator]
 
 The RLP Gateway is deployed via [this
 ops-file](./manifests/operations/add-rlp-gateway-to-cf.yml):
@@ -212,6 +212,7 @@ Items marked as "In Flight" on the Roadmap are tracked as new Features in
 [cf-release]:               https://github.com/cloudfoundry/cf-release
 [uaa]:                      https://github.com/cloudfoundry/uaa
 [cli]:                      https://github.com/cloudfoundry/cli
+[loggregator]:              https://code.cloudfoundry.org/loggregator
 [cli-docs]:                 https://cli.cloudfoundry.org/en-US/cf/logs.html
 [cf-docs]:                  https://docs.cloudfoundry.org/devguide/services/log-management.html
 [dropsonde-protocol]:       https://github.com/cloudfoundry/dropsonde-protocol
