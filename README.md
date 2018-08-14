@@ -98,6 +98,23 @@ Metrics README](docs/metric_descriptions.md).
 For components of Cloud Foundry or standalone BOSH deployments, Loggregator
 provides a set of tools for emitting Logs and Metrics.
 
+## Reverse Log Proxy (RLP)
+The RLP is the v2 implementation of the [Loggregator API](api-readme). This
+component is intended to be a replacement for traffic controller.
+
+### RLP Gateway
+By default, the RLP communicates with clients via gRPC over mutual TLS. To enable HTTP access to the Reverse Log
+Proxy, deploy the RLP Gateway. The RLP Gateway API is documented
+[here](./src/code.cloudfoundry.org/loggregator/docs/rlp_gateway.md)
+
+The RLP Gateway is deployed via [this
+ops-file](./manifests/operations/add-rlp-gateway-to-cf.yml):
+
+```
+bosh -d cf deploy cf-deployment.yml -o manifests/operations/add-rlp-gateway-to-cf.yml
+
+```
+
 ## Standalone Loggregator
 
 Standalone Loggregator provides logging support for services that do not
@@ -163,16 +180,16 @@ planning tests.
 In addition to the scaling recommendations above, it is important that
 the resources for Loggregator are dedicate VM’s with similar footprints
 to those used in our capacity tests. Even if you are within the bounds of
-the scaling recommendations it may be useful to scale Loggregator and 
-Nozzle components aggressively to rule out scaling as a major cause log loss. 
+the scaling recommendations it may be useful to scale Loggregator and
+Nozzle components aggressively to rule out scaling as a major cause log loss.
 
 ### Noise
-Another common reason for log loss is due to an application producing a 
-large amount of logs that drown out the logs from other application on 
-the cell it is running on. To identify and monitor for this behavior the 
-Loggregator team has created a Noisy Neighbor Nozzle and CLI Tool. This 
-tool will help operators quickly identify and take action on noise 
-producing applications.  Instruction for deploying and using this nozzle 
+Another common reason for log loss is due to an application producing a
+large amount of logs that drown out the logs from other application on
+the cell it is running on. To identify and monitor for this behavior the
+Loggregator team has created a Noisy Neighbor Nozzle and CLI Tool. This
+tool will help operators quickly identify and take action on noise
+producing applications.  Instruction for deploying and using this nozzle
 are in the repo.
 
 ## More Resources and Documentation
