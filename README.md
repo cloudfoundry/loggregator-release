@@ -112,7 +112,6 @@ ops-file](./manifests/operations/add-rlp-gateway-to-cf.yml):
 
 ```
 bosh -d cf deploy cf-deployment.yml -o manifests/operations/add-rlp-gateway-to-cf.yml
-
 ```
 
 ## Standalone Loggregator
