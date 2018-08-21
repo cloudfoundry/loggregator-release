@@ -40,6 +40,9 @@ mv -f ${depot_path}/loggregatorCA.crt ${depot_path}/loggregator-ca.crt
 mv -f ${depot_path}/loggregatorCA.key ${depot_path}/loggregator-ca.key
 mv -f ${depot_path}/loggregatorCA.crl ${depot_path}/loggregator-ca.crl
 
+# CA to distribute to log-cache certs
+certstrap --depot-path ${depot_path} init --passphrase '' --common-name log-cache --expires "25 years"
+
 # Doppler certificate
 certstrap --depot-path ${depot_path} request-cert --passphrase '' --common-name doppler
 certstrap --depot-path ${depot_path} sign doppler --CA loggregator-ca --expires "25 years"
@@ -67,3 +70,11 @@ certstrap --depot-path ${depot_path} sign syslogdrainbinder --CA ${bbs_ca_name} 
 # Reverse Log Proxy Gateway certificate
 certstrap --depot-path ${depot_path} request-cert --passphrase '' --common-name rlpgateway
 certstrap --depot-path ${depot_path} sign rlpgateway --CA ${bbs_ca_name} --expires "25 years"
+
+# Log Cache certificate
+certstrap --depot-path ${depot_path} request-cert --passphrase '' --common-name log_cache
+certstrap --depot-path ${depot_path} sign log_cache --CA log-cache --expires "25 years"
+
+# Traffic Controller Log Cache certificate
+certstrap --depot-path ${depot_path} request-cert --passphrase '' --common-name log-cache-trafficcontroller
+certstrap --depot-path ${depot_path} sign log-cache-trafficcontroller --CA log-cache --expires "25 years"
