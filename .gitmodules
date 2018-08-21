@@ -118,3 +118,9 @@
 [submodule "src/github.com/gorilla/handlers"]
 	path = src/github.com/gorilla/handlers
 	url = https://github.com/gorilla/handlers
+[submodule "src/github.com/grpc-ecosystem/grpc-gateway"]
+	path = src/github.com/grpc-ecosystem/grpc-gateway
+	url = https://github.com/grpc-ecosystem/grpc-gateway
+[submodule "src/code.cloudfoundry.org/go-log-cache"]
+	path = src/code.cloudfoundry.org/go-log-cache
+	url = https://github.com/cloudfoundry/go-log-cache
