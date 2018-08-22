@@ -5,6 +5,9 @@ templates:
   environment.sh.erb: bin/environment.sh
   trafficcontroller.crt.erb: config/certs/trafficcontroller.crt
   trafficcontroller.key.erb: config/certs/trafficcontroller.key
+  logcache_ca.crt.erb: config/certs/logcache_ca.crt
+  logcache_trafficcontroller.crt.erb: config/certs/logcache_trafficcontroller.crt
+  logcache_trafficcontroller.key.erb: config/certs/logcache_trafficcontroller.key
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
   cc_trafficcontroller.crt.erb: config/certs/cc_trafficcontroller.crt
   cc_trafficcontroller.key.erb: config/certs/cc_trafficcontroller.key
@@ -27,6 +30,9 @@ consumes:
 - name: doppler
   type: doppler
   optional: true
+- name: log-cache
+  type: log-cache
+  optional: false
 
 properties:
   traffic_controller.disable_access_control:
@@ -68,6 +74,16 @@ properties:
   loggregator.tls.trafficcontroller.key:
     description: "TLS key for trafficcontroller"
 
+  logcache.tls.ca_cert:
+    description: "CA root required for key/cert verfication"
+  logcache.tls.cert:
+    description: "The client certificate used for mutual TLS to Log Cache"
+  logcache.tls.key:
+    description: "The client key used for mutual TLS to Log Cache"
+  logcache.tls.server_name:
+    description: "The common name of the Log Cache server"
+    default: "log-cache"
+
   loggregator.doppler.addrs:
     description: "The addresses of Dopplers (alternative to doppler link)"
     default: []
@@ -91,7 +107,6 @@ properties:
   traffic_controller.health_addr:
     description: "The host:port to expose health metrics for trafficcontroller"
     default: "localhost:14825"
-
 
   system_domain:
     description: "Domain reserved for CF operator, base URL where the login, uaa, and other non-user apps listen"

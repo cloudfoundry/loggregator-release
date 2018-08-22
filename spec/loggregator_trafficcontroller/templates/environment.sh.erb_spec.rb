@@ -1,6 +1,19 @@
 require 'spec_helper'
 
 RSpec.describe 'Traffic Controller Environment' do
+  let(:log_cache_link) do
+    Link.new(
+      name: 'log-cache',
+      instances: [
+        LinkInstance.new(address: 'log-cache-1.service.cf.internal'),
+        LinkInstance.new(address: 'log-cache-2.service.cf.internal')
+      ],
+      properties: {
+        'port' => 1234
+      }
+    )
+  end
+
   it 'renders a full environment' do
     properties = {
       'cc' => {
@@ -45,9 +58,11 @@ RSpec.describe 'Traffic Controller Environment' do
         'internal_url' => 'uaa.service.cf.internal'
       }
     }
+
     spec = InstanceSpec.new(ip: '10.0.0.250')
     config = render_template(
       properties,
+      links: [log_cache_link],
       spec: spec,
       job: 'loggregator_trafficcontroller',
       template: 'bin/environment.sh'
@@ -85,14 +100,19 @@ RSpec.describe 'Traffic Controller Environment' do
       'TRAFFIC_CONTROLLER_PPROF_PORT' => '6666',
       'TRAFFIC_CONTROLLER_METRIC_EMITTER_INTERVAL' => '1m',
       'TRAFFIC_CONTROLLER_HEALTH_ADDR' => 'localhost:7777',
-      'TRAFFIC_CONTROLLER_DISABLE_ACCESS_CONTROL' => 'true'
+      'TRAFFIC_CONTROLLER_DISABLE_ACCESS_CONTROL' => 'true',
+      'LOG_CACHE_ADDR' => 'link-address:1234', # Value is set in spec_helper.rb with monkey patch to Template#render
+      'LOG_CACHE_CA_FILE' => '$CERT_DIR/logcache_ca.crt',
+      'LOG_CACHE_CERT_FILE' => '$CERT_DIR/logcache_trafficcontroller.crt',
+      'LOG_CACHE_KEY_FILE' => '$CERT_DIR/logcache_trafficcontroller.key',
+      'LOG_CACHE_SERVER_NAME' => 'log-cache',
     }
     expect(config).to eq(expected_config)
   end
 
   describe 'Router configuration' do
     it 'consumes a Doppler link' do
-      links = [Link.new(
+      links = [log_cache_link, Link.new(
         name: 'doppler',
         instances: [
           LinkInstance.new(address: 'doppler-1.service.cf.internal'),
@@ -131,6 +151,7 @@ RSpec.describe 'Traffic Controller Environment' do
       }
       config = render_template(
         required_properties.merge(properties),
+        links: [log_cache_link],
         job: 'loggregator_trafficcontroller',
         template: 'bin/environment.sh'
       )
@@ -151,6 +172,7 @@ RSpec.describe 'Traffic Controller Environment' do
       }
       config = render_template(
         required_properties.merge(properties),
+        links: [log_cache_link],
         job: 'loggregator_trafficcontroller',
         template: 'bin/environment.sh'
       )
@@ -172,6 +194,7 @@ RSpec.describe 'Traffic Controller Environment' do
       }
       config = render_template(
         required_properties.merge(properties),
+        links: [log_cache_link],
         job: 'loggregator_trafficcontroller',
         template: 'bin/environment.sh'
       )
@@ -187,6 +210,7 @@ RSpec.describe 'Traffic Controller Environment' do
       }
       config = render_template(
         required_properties.merge(properties),
+        links: [log_cache_link],
         job: 'loggregator_trafficcontroller',
         template: 'bin/environment.sh'
       )

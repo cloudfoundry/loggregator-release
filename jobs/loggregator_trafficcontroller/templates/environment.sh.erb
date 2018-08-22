@@ -25,6 +25,8 @@ export PROFILE_EXECUTABLE="/var/vcap/packages/profiler/profiler.sh"
     end
 
     uaa_host = p("uaa.internal_url")
+
+    logcache = link("log-cache")
 %>
 
 export AGENT_UDP_ADDRESS="<%= p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.dropsonde_port').to_s %>"
@@ -34,6 +36,12 @@ export ROUTER_ADDRS="<%= router_addrs.join(",") %>"
 export ROUTER_CA_FILE="$CERT_DIR/loggregator_ca.crt"
 export ROUTER_CERT_FILE="$CERT_DIR/trafficcontroller.crt"
 export ROUTER_KEY_FILE="$CERT_DIR/trafficcontroller.key"
+
+export LOG_CACHE_ADDR="<%= logcache.address %>:<%= logcache.p('port') %>"
+export LOG_CACHE_CA_FILE="$CERT_DIR/logcache_ca.crt"
+export LOG_CACHE_CERT_FILE="$CERT_DIR/logcache_trafficcontroller.crt"
+export LOG_CACHE_KEY_FILE="$CERT_DIR/logcache_trafficcontroller.key"
+export LOG_CACHE_SERVER_NAME="<%= p('logcache.tls.server_name') %>"
 
 export CC_CERT_FILE="$CERT_DIR/cc_trafficcontroller.crt"
 export CC_KEY_FILE="$CERT_DIR/cc_trafficcontroller.key"

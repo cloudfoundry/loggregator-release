@@ -8,8 +8,49 @@ stemcells:
 releases:
 - name: loggregator
   version: latest
+- name: "log-cache"
+  version: "1.4.3"
+  url: "https://bosh.io/d/github.com/cloudfoundry/log-cache-release?v=1.4.3"
+  sha1: "0bea8311d021ca40daee57edf109d5ded863d658"
 
 instance_groups:
+- name: log-cache
+  azs:
+  - z1
+  instances: 1
+  vm_type: minimal
+  stemcell: default
+  networks:
+  - name: default
+  jobs:
+  - name: log-cache-group-reader
+    properties:
+      port: 8084
+    release: log-cache
+  - name: log-cache-scheduler
+    release: log-cache
+  - name: log-cache
+    provides:
+      log-cache: {shared: true}
+    properties:
+      egress_port: 8080
+      health_addr: localhost:6060
+      tls:
+        ca_cert: ((log_cache.ca))
+        cert: ((log_cache.certificate))
+        key: ((log_cache.private_key))
+    release: log-cache
+  - consumes:
+      reverse_log_proxy:
+        from: reverse_log_proxy
+    name: log-cache-nozzle
+    properties:
+      logs_provider:
+        tls:
+          ca_cert: ((logs_provider.ca))
+          cert: ((logs_provider.certificate))
+          key: ((logs_provider.private_key))
+    release: log-cache
 - name: doppler
   azs:
   - z1
@@ -20,37 +61,37 @@ instance_groups:
   networks:
   - name: default
   jobs:
-  - name: doppler
-    release: loggregator
-    provides:
-      doppler: {as: doppler, shared: true}
-      loggregator: {as: loggregator, shared: true}
-    properties:
-      doppler:
-        disable_announce: true
-        syslog_skip_cert_verify: true
-      loggregator:
-        disable_syslog_drains: true
-        tls:
-          ca_cert: "((loggregator_router.ca))"
-          doppler:
-            cert: "((loggregator_router.certificate))"
-            key: "((loggregator_router.private_key))"
-  - name: metron_agent
-    release: loggregator
-    properties: &metron_agent_properties
-      doppler:
-        addr: ~
-      metron_agent:
-        disable_udp: false
-        deployment: loggregator
-        bosh_dns: true
-      loggregator:
-        tls:
-          ca_cert: "((loggregator_agent.ca))"
-          metron:
-            cert: "((loggregator_agent.certificate))"
-            key: "((loggregator_agent.private_key))"
+   - name: doppler
+     release: loggregator
+     provides:
+       doppler: {as: doppler, shared: true}
+       loggregator: {as: loggregator, shared: true}
+     properties:
+       doppler:
+         disable_announce: true
+         syslog_skip_cert_verify: true
+       loggregator:
+         disable_syslog_drains: true
+         tls:
+           ca_cert: "((loggregator_router.ca))"
+           doppler:
+             cert: "((loggregator_router.certificate))"
+             key: "((loggregator_router.private_key))"
+   - name: metron_agent
+     release: loggregator
+     properties: &metron_agent_properties
+       doppler:
+         addr: ~
+       metron_agent:
+         disable_udp: false
+         deployment: loggregator
+         bosh_dns: true
+       loggregator:
+         tls:
+           ca_cert: "((loggregator_agent.ca))"
+           metron:
+             cert: "((loggregator_agent.certificate))"
+             key: "((loggregator_agent.private_key))"
 
 - name: log-api
   azs:
@@ -108,6 +149,11 @@ instance_groups:
             key: "((loggregator_tc.private_key))"
         uaa:
           client_secret: "some-secret"
+      logcache:
+        tls:
+          ca_cert: "((logcache_trafficcontroller.ca))"
+          cert: "((logcache_trafficcontroller.certificate))"
+          key: "((logcache_trafficcontroller.private_key))"
       ssl:
         skip_cert_verify: false
   - name: metron_agent
@@ -174,6 +220,38 @@ variables:
     extended_key_usage:
     - client_auth
     - server_auth
+- name: logs_provider
+  options:
+    ca: loggregator_ca
+    common_name: log-cache
+    extended_key_usage:
+    - client_auth
+    - server_auth
+  type: certificate
+- name: log_cache_ca
+  options:
+    common_name: log-cache
+    is_ca: true
+  type: certificate
+- name: log_cache
+  options:
+    alternative_names:
+    - log_cache
+    - log-cache
+    - logcache
+    ca: log_cache_ca
+    common_name: log-cache
+    extended_key_usage:
+    - client_auth
+    - server_auth
+  type: certificate
+- name: logcache_trafficcontroller
+  options:
+    ca: log_cache_ca
+    common_name: trafficcontroller
+    extended_key_usage:
+    - client_auth
+  type: certificate
 - name: dns_api_tls_ca
   options:
     common_name: dnsApiTlsCa

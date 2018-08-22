@@ -226,8 +226,6 @@ RSpec.describe "Metron Agent Environment" do
 
   describe "Bosh DNS is enabled" do
     it "uses bosh links to populate RouterAddr and RouterAddrWithAZ" do
-      pending "Links are not supported by bosh-template"
-
       instanceA = LinkInstance.new(
         name: 'doppler',
         az: 'az1',
@@ -249,8 +247,8 @@ RSpec.describe "Metron Agent Environment" do
         template: "bin/environment.sh"
       )
 
-      expect(config["ROUTER_ADDR"]).to eq("some-router-addr:8082")
-      expect(config["ROUTER_ADDR_WITH_AZ"]).to eq("az1.some-router-addr:8082")
+      expect(config["ROUTER_ADDR"]).to eq("link-address:8082")
+      expect(config["ROUTER_ADDR_WITH_AZ"]).to eq("link-address:8082")
     end
   end
 end
