@@ -32,7 +32,7 @@ consumes:
   optional: true
 - name: log-cache
   type: log-cache
-  optional: false
+  optional: true
 
 properties:
   traffic_controller.disable_access_control:
@@ -74,12 +74,6 @@ properties:
   loggregator.tls.trafficcontroller.key:
     description: "TLS key for trafficcontroller"
 
-  logcache.tls.ca_cert:
-    description: "CA root required for key/cert verfication"
-  logcache.tls.cert:
-    description: "The client certificate used for mutual TLS to Log Cache"
-  logcache.tls.key:
-    description: "The client key used for mutual TLS to Log Cache"
   logcache.tls.server_name:
     description: "The common name of the Log Cache server"
     default: "log-cache"

@@ -1,1 +1,3 @@
-<%= p('logcache.tls.cert') %>
+<% if_link("log-cache") do |logcache| %>
+<%= logcache.p('tls.cert') %>
+<% end %>
