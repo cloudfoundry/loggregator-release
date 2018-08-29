@@ -1,0 +1,2 @@
+- type: remove
+  path: /instance_groups/name=log-api/jobs/name=reverse_log_proxy_gateway
