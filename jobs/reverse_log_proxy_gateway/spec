@@ -7,7 +7,10 @@ templates:
   reverse_log_proxy_gateway.key.erb: config/certs/reverse_log_proxy_gateway.key
   mutual_tls_ca.crt.erb: config/certs/mutual_tls_ca.crt
   environment.sh.erb: bin/environment.sh
-  drain.erb: bin/drain
+  cc_ca.crt.erb: config/certs/cc_ca.crt
+  cc.crt.erb: config/certs/cc.crt
+  cc.key.erb: config/certs/cc.key
+  uaa_ca.crt.erb: config/certs/uaa_ca.crt
 
 packages:
 - reverse_log_proxy_gateway
@@ -16,6 +19,8 @@ packages:
 consumes:
 - name: reverse_log_proxy
   type: reverse_log_proxy
+- name: cloud_controller
+  type: cloud_controller
 
 provides:
 - name: log_gateway
@@ -26,7 +31,7 @@ provides:
 properties:
   http.address:
     description: "HTTP address for the gateway to listen on"
-    default: "127.0.0.1:8088"
+    default: ":8088"
 
   logs_provider.ca_cert:
     description: "CA root required for key/cert verification"
@@ -37,3 +42,25 @@ properties:
   logs_provider.common_name:
     description: "TLS common name for logs provider"
     default: "reverselogproxy"
+
+  cc.ca_cert:
+    description: "The CA for the internal api"
+  cc.cert:
+    description: "The cert used to authenticate against the internal CC api"
+  cc.key:
+    description: "The client private key used to authenticate against the internal CC api"
+  cc.common_name:
+    description: "The CN for the CA cert"
+
+  uaa.client_id:
+    description: "The client id to authenticate to UAA"
+  uaa.client_secret:
+    description: "The client secret to authenticate to UAA"
+  uaa.ca_cert:
+    description: "The CA for internal UAA api"
+  uaa.internal_addr:
+    description: "The endpoint used for the internal UAA api"
+
+  skip_cert_verify:
+    description: "Whether to accept certificates signed by an unknown CA"
+    default: false

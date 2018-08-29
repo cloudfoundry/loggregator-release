@@ -71,6 +71,14 @@ certstrap --depot-path ${depot_path} sign syslogdrainbinder --CA ${bbs_ca_name} 
 certstrap --depot-path ${depot_path} request-cert --passphrase '' --common-name rlpgateway
 certstrap --depot-path ${depot_path} sign rlpgateway --CA ${bbs_ca_name} --expires "25 years"
 
+# Test UAA certificate
+certstrap --depot-path ${depot_path} request-cert --passphrase '' --common-name uaa
+certstrap --depot-path ${depot_path} sign uaa --CA ${bbs_ca_name} --expires "25 years"
+
+# Test CAPI certificate
+certstrap --depot-path ${depot_path} request-cert --passphrase '' --common-name capi
+certstrap --depot-path ${depot_path} sign capi --CA ${bbs_ca_name} --expires "25 years"
+
 # Log Cache certificate
 certstrap --depot-path ${depot_path} request-cert --passphrase '' --common-name log_cache
 certstrap --depot-path ${depot_path} sign log_cache --CA log-cache --expires "25 years"
