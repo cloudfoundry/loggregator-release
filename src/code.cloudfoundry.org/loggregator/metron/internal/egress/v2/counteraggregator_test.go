@@ -161,8 +161,8 @@ func buildCounterEnvelope(delta uint64, name, origin string) []*plumbing.Envelop
 				Delta: delta,
 			},
 		},
-		DeprecatedTags: map[string]*plumbing.Value{
-			"origin": {Data: &plumbing.Value_Text{origin}},
+		Tags: map[string]string{
+			"origin": origin,
 		},
 	}}
 }
@@ -175,8 +175,8 @@ func buildCounterEnvelopeWithTotal(total uint64, name, origin string) []*plumbin
 				Total: total,
 			},
 		},
-		DeprecatedTags: map[string]*plumbing.Value{
-			"origin": {Data: &plumbing.Value_Text{origin}},
+		Tags: map[string]string{
+			"origin": origin,
 		},
 	}}
 }
