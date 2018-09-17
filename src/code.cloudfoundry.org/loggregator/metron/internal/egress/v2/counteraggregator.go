@@ -35,7 +35,7 @@ func (ca *CounterAggregator) Write(msgs []*plumbing.Envelope) error {
 
 			id := counterID{
 				name:     msgs[i].GetCounter().Name,
-				tagsHash: hashTags(msgs[i].GetDeprecatedTags()),
+				tagsHash: hashTags(msgs[i].GetTags()),
 			}
 
 			ca.counterTotals[id] = ca.counterTotals[id] + msgs[i].GetCounter().GetDelta()
@@ -54,11 +54,11 @@ func (ca *CounterAggregator) resetTotals() {
 // hashTags only uses the deprecated tags because metron only egresses
 // the deprecated tags. Therefore, when the deprecated tags are removed,
 // hashTags will have to be updated to receive the preferred tags.
-func hashTags(tags map[string]*plumbing.Value) string {
+func hashTags(tags map[string]string) string {
 	hash := ""
 	elements := []mapElement{}
 	for k, v := range tags {
-		elements = append(elements, mapElement{k, v.String()})
+		elements = append(elements, mapElement{k, v})
 	}
 	sort.Sort(byKey(elements))
 	for _, element := range elements {
