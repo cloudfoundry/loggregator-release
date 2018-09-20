@@ -38,7 +38,7 @@
     "AGENT_HEALTH_ENDPOINT_PORT" => "#{p("metron_agent.health_port")}",
     "AGENT_PPROF_PORT" => "#{p("metron_agent.pprof_port")}",
     "ROUTER_ADDR" => "#{router_addr}:#{p('doppler.grpc_port')}",
-    "ROUTER_ADDR_WITH_AZ" => "#{router_addr_with_az}:#{p('doppler.grpc_port')}",
+    "ROUTER_ADDR_WITH_AZ" => "'#{router_addr_with_az}:#{p('doppler.grpc_port')}'",
   }
 
   monit = {
