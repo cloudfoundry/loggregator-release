@@ -26,7 +26,7 @@ export AGENT_CERT_FILE="/var/vcap/jobs/metron_agent/config/certs/metron_agent.cr
 export AGENT_KEY_FILE="/var/vcap/jobs/metron_agent/config/certs/metron_agent.key"
 export AGENT_CIPHER_SUITES="<%= p("loggregator.tls.cipher_suites").split(":").join(",") %>"
 export AGENT_DEPLOYMENT="<%= deployment %>"
-export AGENT_ZONE="<%= instance_zone %>"
+export AGENT_ZONE='<%= instance_zone %>'
 export AGENT_JOB="<%= job_name %>"
 export AGENT_INDEX="<%= instance_id %>"
 export AGENT_IP="<%= spec.ip %>"

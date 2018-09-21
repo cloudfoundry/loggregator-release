@@ -44,7 +44,7 @@ RSpec.describe "Metron Agent Environment" do
       "AGENT_KEY_FILE" => "/var/vcap/jobs/metron_agent/config/certs/metron_agent.key",
       "AGENT_CIPHER_SUITES" => "a,b",
       "AGENT_DEPLOYMENT" => "some-deployment",
-      "AGENT_ZONE" => "some-az",
+      "AGENT_ZONE" => "'some-az'",
       "AGENT_JOB" => "some-job",
       "AGENT_INDEX" => "some-id",
       "AGENT_IP" => "127.0.0.1",
@@ -107,7 +107,7 @@ RSpec.describe "Metron Agent Environment" do
         template: "bin/environment.sh"
       )
 
-      expect(config["AGENT_ZONE"]).to eq("some-az")
+      expect(config["AGENT_ZONE"]).to eq("'some-az'")
     end
 
     it "uses the provided property" do
@@ -124,7 +124,7 @@ RSpec.describe "Metron Agent Environment" do
         template: "bin/environment.sh"
       )
 
-      expect(config["AGENT_ZONE"]).to eq("other-az")
+      expect(config["AGENT_ZONE"]).to eq("'other-az'")
     end
   end
 
