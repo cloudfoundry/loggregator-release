@@ -34,6 +34,8 @@ RSpec.describe "Parity with Windows" do
       .gsub("_windows", "")
     windows_config["AGENT_KEY_FILE"] = windows_config["AGENT_KEY_FILE"]
       .gsub("_windows", "")
+    windows_config["AGENT_ZONE"] = "'#{windows_config["AGENT_ZONE"]}'"
+    windows_config["ROUTER_ADDR_WITH_AZ"] = "'#{windows_config["ROUTER_ADDR_WITH_AZ"]}'"
 
     windows_config.reject! { |k| DIFFERENT_KEYS.include?(k) }
   end
