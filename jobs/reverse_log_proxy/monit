@@ -1,5 +1,5 @@
 check process reverse_log_proxy
-  with pidfile /var/vcap/sys/run/reverse_log_proxy/reverse_log_proxy.pid
-  start program "/var/vcap/jobs/reverse_log_proxy/bin/reverse_log_proxy_ctl start"
-  stop program "/var/vcap/jobs/reverse_log_proxy/bin/reverse_log_proxy_ctl stop"
+  with pidfile /var/vcap/sys/run/bpm/reverse_log_proxy/reverse_log_proxy.pid
+  start program "/var/vcap/jobs/bpm/bin/bpm start reverse_log_proxy"
+  stop program "/var/vcap/jobs/bpm/bin/bpm stop reverse_log_proxy" with timeout 60 seconds
   group vcap
