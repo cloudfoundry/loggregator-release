@@ -1,0 +1,19 @@
+processes:
+    - name: doppler
+      executable: /var/vcap/packages/doppler/doppler
+      env:
+        AGENT_GRPC_ADDRESS: "<%=  p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.grpc_port').to_s %>"
+
+        ROUTER_PORT: "<%=  p("doppler.grpc_port") %>"
+        ROUTER_CERT_FILE: "/var/vcap/jobs/doppler/config/certs/doppler.crt"
+        ROUTER_KEY_FILE: "/var/vcap/jobs/doppler/config/certs/doppler.key"
+        ROUTER_CA_FILE: "/var/vcap/jobs/doppler/config/certs/loggregator_ca.crt"
+        ROUTER_CIPHER_SUITES: "<%=  p("loggregator.tls.cipher_suites").split(":").join(',') %>"
+
+        ROUTER_MAX_RETAINED_LOG_MESSAGES: "<%=  p("doppler.maxRetainedLogMessages") %>"
+        ROUTER_CONTAINER_METRIC_TTL_SECONDS: "<%=  p("doppler.container_metric_ttl_seconds") %>"
+        ROUTER_SINK_INACTIVITY_TIMEOUT_SECONDS: "<%=  p("doppler.sink_inactivity_timeout_seconds") %>"
+        ROUTER_PPROF_PORT: "<%=  p("doppler.pprof_port") %>"
+        ROUTER_HEALTH_ADDR: "<%=  p("doppler.health_addr") %>"
+      limits:
+        open_files: 65536

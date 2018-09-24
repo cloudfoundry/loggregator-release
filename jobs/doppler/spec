@@ -2,8 +2,7 @@
 name: doppler
 
 templates:
-  doppler_ctl.erb: bin/doppler_ctl
-  environment.sh.erb: bin/environment.sh
+  bpm.yml.erb: config/bpm.yml
   doppler.crt.erb: config/certs/doppler.crt
   doppler.key.erb: config/certs/doppler.key
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
