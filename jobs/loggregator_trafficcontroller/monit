@@ -1,5 +1,5 @@
 check process loggregator_trafficcontroller
-  with pidfile /var/vcap/sys/run/loggregator_trafficcontroller/loggregator_trafficcontroller.pid
-  start program "/var/vcap/jobs/loggregator_trafficcontroller/bin/loggregator_trafficcontroller_ctl start"
-  stop program "/var/vcap/jobs/loggregator_trafficcontroller/bin/loggregator_trafficcontroller_ctl stop"
+  with pidfile /var/vcap/sys/run/bpm/loggregator_trafficcontroller/loggregator_trafficcontroller.pid
+  start program "/var/vcap/jobs/bpm/bin/bpm start loggregator_trafficcontroller"
+  stop program "/var/vcap/jobs/bpm/bin/bpm stop loggregator_trafficcontroller" with timeout 60 seconds
   group vcap

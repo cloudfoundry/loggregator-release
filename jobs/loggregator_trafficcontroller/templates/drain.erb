@@ -1,19 +1,5 @@
 #!/bin/bash
 
-set -euo pipefail
-
-logdir=/var/vcap/sys/log/loggregator_trafficcontroller
-jobdir=/var/vcap/jobs/loggregator_trafficcontroller
-
-exec 3>&1
-
-mkdir -p "${logdir}"
-
-exec 1>> ${logdir}/drain.log
-exec 2>> ${logdir}/drain.log
-
-echo "$(date): triggering drain"
-
-${jobdir}/bin/loggregator_trafficcontroller_ctl stop
-
-echo 5 >&3
+killall trafficcontroller
+echo 5
+exit 0
