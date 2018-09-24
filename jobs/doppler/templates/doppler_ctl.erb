@@ -1,12 +1,5 @@
 #!/bin/bash -e
 
-<%
-    lockedMem = p("doppler.locked_memory_limit")
-    if (!lockedMem.is_a? Numeric) && (!["kernel", "soft", "hard", "unlimited"].include? lockedMem) then
-        raise lockedMem + ": invalid locked_memory_limit"
-    end
-%>
-
 source /var/vcap/jobs/doppler/bin/environment.sh
 
 mkdir -p $RUN_DIR
@@ -22,9 +15,6 @@ case $1 in
       killall -3 doppler
     set -e
 
-    <% if p("doppler.locked_memory_limit") != "kernel" %>
-    ulimit -l <%= p("doppler.locked_memory_limit") %>
-    <% end %>
     ulimit -n 65536
 
     chown -R vcap:vcap $LOG_DIR

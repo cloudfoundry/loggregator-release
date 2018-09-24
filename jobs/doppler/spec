@@ -55,14 +55,6 @@ properties:
     description: "Interval before removing a sink due to inactivity"
     default: 3600
 
-
-  doppler.locked_memory_limit:
-    description: |
-      Size (KB) of shell's locked memory limit. Set to 'kernel' to use the
-      kernel's default. Non-numeric values other than 'kernel', 'soft', 'hard',
-      and 'unlimited' will result in an error.
-    default: "unlimited"
-
   doppler.pprof_port:
     description: "The pprof port for runtime profiling data"
     default: 0
