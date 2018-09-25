@@ -5,6 +5,15 @@ stemcells:
   os: ubuntu-trusty
   version: latest
 
+addons:
+- name: bpm
+  include:
+    stemcell:
+    - os: ubuntu-trusty
+  jobs:
+  - name: bpm
+    release: bpm
+
 releases:
 - name: loggregator
   version: latest
@@ -12,6 +21,10 @@ releases:
   version: "1.4.3"
   url: "https://bosh.io/d/github.com/cloudfoundry/log-cache-release?v=1.4.3"
   sha1: "0bea8311d021ca40daee57edf109d5ded863d658"
+- name: "bpm"
+  version: "0.12.3"
+  url: "https://bosh.io/d/github.com/cloudfoundry-incubator/bpm-release?v=0.12.3"
+  sha1: "313664d2e6d8485ffa0683979a401f7722f63a50"
 
 instance_groups:
 - name: log-cache
