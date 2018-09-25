@@ -2,11 +2,10 @@
 name: reverse_log_proxy_gateway
 
 templates:
-  reverse_log_proxy_gateway_ctl.erb: bin/reverse_log_proxy_gateway_ctl
+  bpm.yml.erb: config/bpm.yml
   reverse_log_proxy_gateway.crt.erb: config/certs/reverse_log_proxy_gateway.crt
   reverse_log_proxy_gateway.key.erb: config/certs/reverse_log_proxy_gateway.key
   mutual_tls_ca.crt.erb: config/certs/mutual_tls_ca.crt
-  environment.sh.erb: bin/environment.sh
   cc_ca.crt.erb: config/certs/cc_ca.crt
   cc.crt.erb: config/certs/cc.crt
   cc.key.erb: config/certs/cc.key
