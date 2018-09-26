@@ -103,9 +103,6 @@
 [submodule "src/code.cloudfoundry.org/go-loggregator"]
 	path = src/code.cloudfoundry.org/go-loggregator
 	url = https://github.com/cloudfoundry/go-loggregator
-[submodule "src/code.cloudfoundry.org/loggregator-agent"]
-	path = src/code.cloudfoundry.org/loggregator-agent
-	url = https://github.com/cloudfoundry/loggregator-agent.git
 [submodule "src/github.com/posener/wstest"]
 	path = src/github.com/posener/wstest
 	url = https://github.com/posener/wstest
