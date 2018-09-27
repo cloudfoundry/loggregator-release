@@ -25,6 +25,10 @@ releases:
   version: "0.12.3"
   url: "https://bosh.io/d/github.com/cloudfoundry-incubator/bpm-release?v=0.12.3"
   sha1: "313664d2e6d8485ffa0683979a401f7722f63a50"
+- name: "loggregator-agent"
+  version: "2.3"
+  url: "https://bosh.io/d/github.com/cloudfoundry/loggregator-agent-release?v=2.3"
+  sha1: "7532818b5d518b87b57cf36ddc2bf81758f606f9"
 
 instance_groups:
 - name: log-cache
@@ -90,19 +94,18 @@ instance_groups:
            doppler:
              cert: "((loggregator_router.certificate))"
              key: "((loggregator_router.private_key))"
-   - name: metron_agent
-     release: loggregator
-     properties: &metron_agent_properties
+   - name: loggregator_agent
+     release: loggregator-agent
+     properties: &agent_properties
+       disable_udp: false
+       deployment: loggregator
+       bosh_dns: true
        doppler:
          addr: ~
-       metron_agent:
-         disable_udp: false
-         deployment: loggregator
-         bosh_dns: true
        loggregator:
          tls:
            ca_cert: "((loggregator_agent.ca))"
-           metron:
+           agent:
              cert: "((loggregator_agent.certificate))"
              key: "((loggregator_agent.private_key))"
 
@@ -169,9 +172,9 @@ instance_groups:
           key: "((logcache_trafficcontroller.private_key))"
       ssl:
         skip_cert_verify: false
-  - name: metron_agent
-    release: loggregator
-    properties: *metron_agent_properties
+  - name: loggregator_agent
+    release: loggregator-agent
+    properties: *agent_properties
   update:
     max_in_flight: 1
     serial: true
