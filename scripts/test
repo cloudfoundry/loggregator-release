@@ -14,7 +14,6 @@ function print_usage {
     echo "   unit              Run the unit tests"
     echo "   integration       Run the integration tests"
     echo "   ~integration      Run everything except the integration tests"
-    echo "   multiplatform     Run the multiplatform sanity checks"
     echo "   templates         Run the template specs"
     echo "   linters           Run common linters against the project"
     echo "   install_tools     Install all necessary binaries for these scripts"
@@ -81,14 +80,6 @@ function run_cleaners {
     return 0
 }
 
-function run_multiplatform {
-    print_checkpoint "Running Multi-Platform Checks"
-    sed -n -e '/^properties:/,$p' jobs/metron_agent/spec > /tmp/a
-    sed -n -e '/^properties:/,$p' jobs/metron_agent_windows/spec > /tmp/b
-    sed '/# WINDOWS ONLY START/,/# WINDOWS ONLY END/d' /tmp/b > /tmp/c
-    diff /tmp/a /tmp/c
-    return $?
-}
 
 function run_templates {
     print_checkpoint "Running Template Specs"
@@ -113,18 +104,6 @@ function run_build {
 }
 
 function run_unit {
-    pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator-agent > /dev/null
-        print_checkpoint "Running Agent Unit Tests"
-        go test -race ./... \
-            -ginkgo.randomizeAllSpecs \
-            -ginkgo.slowSpecThreshold 20 \
-            $@
-        exit_code=$?
-    popd > /dev/null
-    if [ $exit_code -ne 0 ]; then
-        return $exit_code
-    fi
-
     pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator > /dev/null
         print_checkpoint "Running Unit Tests"
         go test -race $(go list ./... | grep -v integration_tests) \
@@ -151,7 +130,6 @@ function run_integration {
 function run_~integration {
     check_output run_cleaners
     check_output run_build
-    check_output run_multiplatform
     check_output run_templates
     check_output run_unit $@
 }
@@ -173,7 +151,7 @@ function parse_argc {
             print_usage
             exit 0
             ;;
-        all|unit|integration|~integration|build|cleaners|multiplatform|templates|linters|install_tools)
+        all|unit|integration|~integration|build|cleaners|templates|linters|install_tools)
             command=run_$arg
             ;;
         *)
