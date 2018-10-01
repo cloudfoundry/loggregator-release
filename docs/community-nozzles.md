@@ -12,3 +12,5 @@
     - Send CF component metrics, CF app logs, and CF app metrics to Splunk.
 * [honeycombio/cloudfoundry-honeycomb-nozzle](https://github.com/honeycombio/cloudfoundry-honeycomb-nozzle)
     - A Nozzle for draining logs and metrics from Cloud Foundry Loggregator firehose to Honeycomb.
+* [rakutentech/kafka-firehose-nozzle](https://github.com/rakutentech/kafka-firehose-nozzle)
+    - Nozzle to send logs and metrics to Kafka topics
