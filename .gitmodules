@@ -127,6 +127,3 @@
 [submodule "src/github.com/blang/semver"]
 	path = src/github.com/blang/semver
 	url = https://github.com/blang/semver
-[submodule "src/github.com/prometheus/prometheus"]
-	path = src/github.com/prometheus/prometheus
-	url = https://github.com/prometheus/prometheus
