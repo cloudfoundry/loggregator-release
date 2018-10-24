@@ -17,7 +17,6 @@ files:
 - code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
 - code.cloudfoundry.org/loggregator/plumbing/batching/*.go # gosub
 - code.cloudfoundry.org/loggregator/plumbing/conversion/*.go # gosub
-- code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
 - code.cloudfoundry.org/loggregator/profiler/*.go # gosub
 - code.cloudfoundry.org/loggregator/router/*.go # gosub
 - code.cloudfoundry.org/loggregator/router/app/*.go # gosub
