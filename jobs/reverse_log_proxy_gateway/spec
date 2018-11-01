@@ -10,6 +10,7 @@ templates:
   cc.crt.erb: config/certs/cc.crt
   cc.key.erb: config/certs/cc.key
   uaa_ca.crt.erb: config/certs/uaa_ca.crt
+  profile.sh.erb: bin/profile.sh
 
 packages:
 - reverse_log_proxy_gateway

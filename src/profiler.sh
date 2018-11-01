@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set +u
+
 echo "Finding PProf host:port"
 HOSTS=$(lsof -c "${PACKAGE_EXECUTABLE:0:15}" | grep LISTEN | grep localhost | sed -E 's/rlp.*(localhost:\w+).*/\1/')
 
@@ -28,7 +30,7 @@ echo "Collecting profiles. This may take a while... "
 curl "$HOST/debug/pprof/" > "$PROFILE_DIR/pprof.html" 2> /dev/null
 curl "$HOST/debug/pprof/goroutine?debug=1" > "$PROFILE_DIR/goroutine.dump" 2> /dev/null
 curl "$HOST/debug/pprof/heap?debug=1" > "$PROFILE_DIR/heap.dump" 2> /dev/null
-curls "$HOST/debug/pprof/profile" > "$PROFILE_DIR/cpu.dump" 2> /dev/null
+curl "$HOST/debug/pprof/profile" > "$PROFILE_DIR/cpu.dump" 2> /dev/null
 curl "$HOST/debug/pprof/trace?seconds=30" > "$PROFILE_DIR/trace.dump" 2> /dev/null
 cp "$PACKAGE_DIR/$PACKAGE_EXECUTABLE" "$PROFILE_DIR/$PACKAGE_EXECUTABLE"
 
