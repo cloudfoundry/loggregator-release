@@ -1,67 +1,67 @@
 <%
-    router_addrs = []
+  router_addrs = []
 
-    if_link("doppler") do |ds|
-        router_addrs = ds.instances.map{|i| "#{i.address}:#{ds.p('doppler.grpc_port')}"}
-    end.else do
-        paddrs = p("loggregator.doppler.addrs")
-        router_addrs = paddrs.map{|addr| "#{addr}:#{p('doppler.grpc_port')}"}
-    end
+  if_link("doppler") do |ds|
+      router_addrs = ds.instances.map{|i| "#{i.address}:#{ds.p('doppler.grpc_port')}"}
+  end.else do
+      paddrs = p("loggregator.doppler.addrs")
+      router_addrs = paddrs.map{|addr| "#{addr}:#{p('doppler.grpc_port')}"}
+  end
 
-    # Handle renamed properties
-    uaa_client = p("loggregator.uaa.client")
-    oldUaaClient = p("loggregator.uaa_client_id")
-    unless oldUaaClient.empty?
-        uaa_client = oldUaaClient
-    end
+  # Handle renamed properties
+  uaa_client = p("loggregator.uaa.client")
+  oldUaaClient = p("loggregator.uaa_client_id")
+  unless oldUaaClient.empty?
+      uaa_client = oldUaaClient
+  end
 
-    uaa_host = p("uaa.internal_url")
+  uaa_host = p("uaa.internal_url")
 %>
 
 processes:
-    - name: loggregator_trafficcontroller
-      executable: /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller
-      env:
-        AGENT_UDP_ADDRESS: "<%= p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.dropsonde_port').to_s %>"
-        AGENT_GRPC_ADDRESS: "<%= p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.grpc_port').to_s %>"
+  - name: loggregator_trafficcontroller
+    executable: /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller
+    env:
+      AGENT_UDP_ADDRESS: "<%= p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.dropsonde_port').to_s %>"
+      AGENT_GRPC_ADDRESS: "<%= p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.grpc_port').to_s %>"
 
-        ROUTER_ADDRS: "<%= router_addrs.join(",") %>"
-        ROUTER_CA_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/loggregator_ca.crt"
-        ROUTER_CERT_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/trafficcontroller.crt"
-        ROUTER_KEY_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/trafficcontroller.key"
+      ROUTER_ADDRS: "<%= router_addrs.join(",") %>"
+      ROUTER_CA_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/loggregator_ca.crt"
+      ROUTER_CERT_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/trafficcontroller.crt"
+      ROUTER_KEY_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/trafficcontroller.key"
 
-        CC_CERT_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/cc_trafficcontroller.crt"
-        CC_KEY_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/cc_trafficcontroller.key"
-        CC_CA_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/mutual_tls_ca.crt"
-        CC_SERVER_NAME: "<%= p('cc.internal_service_hostname') %>"
+      CC_CERT_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/cc_trafficcontroller.crt"
+      CC_KEY_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/cc_trafficcontroller.key"
+      CC_CA_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/mutual_tls_ca.crt"
+      CC_SERVER_NAME: "<%= p('cc.internal_service_hostname') %>"
 
-        TRAFFIC_CONTROLLER_IP: "<%= spec.ip %>"
-        TRAFFIC_CONTROLLER_API_HOST: "<%= "https://#{p('cc.internal_service_hostname')}:#{p('cc.tls_port')}" %>"
-        TRAFFIC_CONTROLLER_OUTGOING_DROPSONDE_PORT: "<%= p("loggregator.outgoing_dropsonde_port") %>"
-        TRAFFIC_CONTROLLER_SYSTEM_DOMAIN: "<%= p("system_domain") %>"
-        TRAFFIC_CONTROLLER_SKIP_CERT_VERIFY: "<%= p("ssl.skip_cert_verify") %>"
-        TRAFFIC_CONTROLLER_UAA_HOST: "<%= uaa_host %>"
-        TRAFFIC_CONTROLLER_UAA_CLIENT: "<%= uaa_client %>"
-        TRAFFIC_CONTROLLER_UAA_CLIENT_SECRET: '<%= p("loggregator.uaa.client_secret") %>'
-        TRAFFIC_CONTROLLER_PPROF_PORT: "<%= p("traffic_controller.pprof_port") %>"
-        TRAFFIC_CONTROLLER_METRIC_EMITTER_INTERVAL: "<%= p('metric_emitter.interval') %>"
-        TRAFFIC_CONTROLLER_HEALTH_ADDR: "<%= p('traffic_controller.health_addr') %>"
-        TRAFFIC_CONTROLLER_DISABLE_ACCESS_CONTROL: "<%= p("traffic_controller.disable_access_control") %>"
+      TRAFFIC_CONTROLLER_IP: "<%= spec.ip %>"
+      TRAFFIC_CONTROLLER_API_HOST: "<%= "https://#{p('cc.internal_service_hostname')}:#{p('cc.tls_port')}" %>"
+      TRAFFIC_CONTROLLER_OUTGOING_DROPSONDE_PORT: "<%= p("loggregator.outgoing_dropsonde_port") %>"
+      TRAFFIC_CONTROLLER_SYSTEM_DOMAIN: "<%= p("system_domain") %>"
+      TRAFFIC_CONTROLLER_SKIP_CERT_VERIFY: "<%= p("ssl.skip_cert_verify") %>"
+      TRAFFIC_CONTROLLER_UAA_HOST: "<%= uaa_host %>"
+      TRAFFIC_CONTROLLER_UAA_CLIENT: "<%= uaa_client %>"
+      TRAFFIC_CONTROLLER_UAA_CLIENT_SECRET: '<%= p("loggregator.uaa.client_secret") %>'
+      TRAFFIC_CONTROLLER_PPROF_PORT: "<%= p("traffic_controller.pprof_port") %>"
+      TRAFFIC_CONTROLLER_METRIC_EMITTER_INTERVAL: "<%= p('metric_emitter.interval') %>"
+      TRAFFIC_CONTROLLER_HEALTH_ADDR: "<%= p('traffic_controller.health_addr') %>"
+      TRAFFIC_CONTROLLER_DISABLE_ACCESS_CONTROL: "<%= p("traffic_controller.disable_access_control") %>"
 
-        <% if !uaa_host.empty? %>
-        TRAFFIC_CONTROLLER_UAA_CA_CERT: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/uaa_ca.crt"
-        <% end %>
+      <% if !uaa_host.empty? %>
+      TRAFFIC_CONTROLLER_UAA_CA_CERT: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/uaa_ca.crt"
+      <% end %>
 
-        <% if p("traffic_controller.security_event_logging.enabled") %>
-        TRAFFIC_CONTROLLER_SECURITY_EVENT_LOG: "/var/vcap/sys/log/loggregator_trafficcontroller/loggregator_trafficcontroller_security_events.log"
-        <% end %>
+      <% if p("traffic_controller.security_event_logging.enabled") %>
+      TRAFFIC_CONTROLLER_SECURITY_EVENT_LOG: "/var/vcap/sys/log/loggregator_trafficcontroller/loggregator_trafficcontroller_security_events.log"
+      <% end %>
 
-        <% if_link("log-cache") do |logcache| %>
-        LOG_CACHE_ADDR: "<%= logcache.address %>:<%= logcache.p('port') %>"
-        LOG_CACHE_CA_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/logcache_ca.crt"
-        LOG_CACHE_CERT_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/logcache_trafficcontroller.crt"
-        LOG_CACHE_KEY_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/logcache_trafficcontroller.key"
-        LOG_CACHE_SERVER_NAME: "<%= p('logcache.tls.server_name') %>"
-        <% end %>
-      limits:
-        open_files: 65536
+      <% if_link("log-cache") do |logcache| %>
+      LOG_CACHE_ADDR: "<%= logcache.address %>:<%= logcache.p('port') %>"
+      LOG_CACHE_CA_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/logcache_ca.crt"
+      LOG_CACHE_CERT_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/logcache_trafficcontroller.crt"
+      LOG_CACHE_KEY_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/logcache_trafficcontroller.key"
+      LOG_CACHE_SERVER_NAME: "<%= p('logcache.tls.server_name') %>"
+      <% end %>
+    limits:
+      open_files: 65536

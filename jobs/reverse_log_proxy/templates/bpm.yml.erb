@@ -1,31 +1,31 @@
 <%
-    ingress_addrs = []
-    if_link("doppler") { |ds|
-        ingress_addrs = ds.instances.map do |instance|
-            "#{instance.address}:#{ds.p('doppler.grpc_port')}"
-        end
-    }.else {
-        ingress_addrs = p('loggregator.doppler.addrs').map do |addr|
-            "#{addr}:#{p('loggregator.doppler.grpc_port')}"
-        end
-    }
+  ingress_addrs = []
+  if_link("doppler") { |ds|
+      ingress_addrs = ds.instances.map do |instance|
+          "#{instance.address}:#{ds.p('doppler.grpc_port')}"
+      end
+  }.else {
+      ingress_addrs = p('loggregator.doppler.addrs').map do |addr|
+          "#{addr}:#{p('loggregator.doppler.grpc_port')}"
+      end
+  }
 %>
 
 processes:
-    - name: reverse_log_proxy
-      executable: /var/vcap/packages/reverse_log_proxy/rlp
-      env:
-        RLP_PORT: "<%= p('reverse_log_proxy.egress.port') %>"
-        MAX_EGRESS_STREAMS: "<%= p('reverse_log_proxy.egress.max_streams') %>"
-        RLP_CERT_FILE: "/var/vcap/jobs/reverse_log_proxy/config/certs/reverse_log_proxy.crt"
-        RLP_KEY_FILE: "/var/vcap/jobs/reverse_log_proxy/config/certs/reverse_log_proxy.key"
-        RLP_CA_FILE: "/var/vcap/jobs/reverse_log_proxy/config/certs/mutual_tls_ca.crt"
-        RLP_CIPHER_SUITES: "<%= p('loggregator.tls.cipher_suites').gsub(":", ",") %>"
-        RLP_PPROF_PORT: "<%= p('reverse_log_proxy.pprof.port') %>"
-        RLP_HEALTH_ADDR: "<%= p('reverse_log_proxy.health_addr') %>"
-        RLP_METRIC_EMITTER_INTERVAL: "<%= p('metric_emitter.interval') %>"
+  - name: reverse_log_proxy
+    executable: /var/vcap/packages/reverse_log_proxy/rlp
+    env:
+      RLP_PORT: "<%= p('reverse_log_proxy.egress.port') %>"
+      MAX_EGRESS_STREAMS: "<%= p('reverse_log_proxy.egress.max_streams') %>"
+      RLP_CERT_FILE: "/var/vcap/jobs/reverse_log_proxy/config/certs/reverse_log_proxy.crt"
+      RLP_KEY_FILE: "/var/vcap/jobs/reverse_log_proxy/config/certs/reverse_log_proxy.key"
+      RLP_CA_FILE: "/var/vcap/jobs/reverse_log_proxy/config/certs/mutual_tls_ca.crt"
+      RLP_CIPHER_SUITES: "<%= p('loggregator.tls.cipher_suites').gsub(":", ",") %>"
+      RLP_PPROF_PORT: "<%= p('reverse_log_proxy.pprof.port') %>"
+      RLP_HEALTH_ADDR: "<%= p('reverse_log_proxy.health_addr') %>"
+      RLP_METRIC_EMITTER_INTERVAL: "<%= p('metric_emitter.interval') %>"
 
-        ROUTER_ADDRS: "<%= ingress_addrs.join(",") %>"
-        AGENT_ADDR: "<%= "#{p('metron_endpoint.host')}:#{p('metron_endpoint.grpc_port')}" %>"
-      limits:
-        open_files: 65536
+      ROUTER_ADDRS: "<%= ingress_addrs.join(",") %>"
+      AGENT_ADDR: "<%= "#{p('metron_endpoint.host')}:#{p('metron_endpoint.grpc_port')}" %>"
+    limits:
+      open_files: 65536

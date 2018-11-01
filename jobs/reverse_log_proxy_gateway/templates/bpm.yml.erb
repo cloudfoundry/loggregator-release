@@ -1,36 +1,36 @@
 <%
-    cc = link('cloud_controller')
+  cc = link('cloud_controller')
 %>
 
 processes:
-    - name: reverse_log_proxy_gateway
-      executable: /var/vcap/packages/reverse_log_proxy_gateway/rlp-gateway
-      env:
-        JOB_DIR: /var/vcap/jobs/reverse_log_proxy_gateway
-        CERT_DIR: /var/vcap/jobs/reverse_log_proxy_gateway/config/certs
-        PACKAGE_DIR: /var/vcap/packages/reverse_log_proxy_gateway
-        PACKAGE_EXECUTABLE: "rlp-gateway"
-        PROFILE_EXECUTABLE: "/var/vcap/packages/profiler/profiler.sh"
+  - name: reverse_log_proxy_gateway
+    executable: /var/vcap/packages/reverse_log_proxy_gateway/rlp-gateway
+    env:
+      JOB_DIR: /var/vcap/jobs/reverse_log_proxy_gateway
+      CERT_DIR: /var/vcap/jobs/reverse_log_proxy_gateway/config/certs
+      PACKAGE_DIR: /var/vcap/packages/reverse_log_proxy_gateway
+      PACKAGE_EXECUTABLE: "rlp-gateway"
+      PROFILE_EXECUTABLE: "/var/vcap/packages/profiler/profiler.sh"
 
-        LOGS_PROVIDER_ADDR: "127.0.0.1:<%= link('reverse_log_proxy').p('reverse_log_proxy.egress.port') %>"
-        LOGS_PROVIDER_CLIENT_CERT_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/reverse_log_proxy_gateway.crt"
-        LOGS_PROVIDER_CLIENT_KEY_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/reverse_log_proxy_gateway.key"
-        LOGS_PROVIDER_CA_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/mutual_tls_ca.crt"
-        LOGS_PROVIDER_COMMON_NAME: "<%= p('logs_provider.common_name') %>"
-        GATEWAY_ADDR: "<%= p('http.address') %>"
+      LOGS_PROVIDER_ADDR: "127.0.0.1:<%= link('reverse_log_proxy').p('reverse_log_proxy.egress.port') %>"
+      LOGS_PROVIDER_CLIENT_CERT_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/reverse_log_proxy_gateway.crt"
+      LOGS_PROVIDER_CLIENT_KEY_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/reverse_log_proxy_gateway.key"
+      LOGS_PROVIDER_CA_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/mutual_tls_ca.crt"
+      LOGS_PROVIDER_COMMON_NAME: "<%= p('logs_provider.common_name') %>"
+      GATEWAY_ADDR: "<%= p('http.address') %>"
 
-        # External ADDR is plaintext because it assumes go-router is doing SSL
-        # termination.
-        LOG_ACCESS_ADDR_EXTERNAL: "<%= "http://#{cc.address}:9022" %>"
-        LOG_ACCESS_ADDR: "<%= "https://#{cc.address}:9023" %>"
-        LOG_ACCESS_CERT_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/cc.crt"
-        LOG_ACCESS_KEY_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/cc.key"
-        LOG_ACCESS_CA_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/cc_ca.crt"
-        LOG_ACCESS_COMMON_NAME: "<%= p('cc.common_name') %>"
+      # External ADDR is plaintext because it assumes go-router is doing SSL
+      # termination.
+      LOG_ACCESS_ADDR_EXTERNAL: "<%= "http://#{cc.address}:9022" %>"
+      LOG_ACCESS_ADDR: "<%= "https://#{cc.address}:9023" %>"
+      LOG_ACCESS_CERT_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/cc.crt"
+      LOG_ACCESS_KEY_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/cc.key"
+      LOG_ACCESS_CA_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/cc_ca.crt"
+      LOG_ACCESS_COMMON_NAME: "<%= p('cc.common_name') %>"
 
-        LOG_ADMIN_CLIENT_ID: "<%= p('uaa.client_id') %>"
-        LOG_ADMIN_CLIENT_SECRET: "<%= p('uaa.client_secret') %>"
-        LOG_ADMIN_ADDR: "<%= p('uaa.internal_addr') %>"
-        LOG_ADMIN_CA_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/uaa_ca.crt"
+      LOG_ADMIN_CLIENT_ID: "<%= p('uaa.client_id') %>"
+      LOG_ADMIN_CLIENT_SECRET: "<%= p('uaa.client_secret') %>"
+      LOG_ADMIN_ADDR: "<%= p('uaa.internal_addr') %>"
+      LOG_ADMIN_CA_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/uaa_ca.crt"
 
-        SKIP_CERT_VERIFY: "<%= p('skip_cert_verify') %>"
+      SKIP_CERT_VERIFY: "<%= p('skip_cert_verify') %>"
