@@ -13,6 +13,7 @@ files:
 - code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
 - code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
 - code.cloudfoundry.org/loggregator/plumbing/conversion/*.go # gosub
+- code.cloudfoundry.org/loggregator/plumbing/dns/*.go # gosub
 - code.cloudfoundry.org/loggregator/profiler/*.go # gosub
 - code.cloudfoundry.org/loggregator/trafficcontroller/*.go # gosub
 - code.cloudfoundry.org/loggregator/trafficcontroller/app/*.go # gosub
