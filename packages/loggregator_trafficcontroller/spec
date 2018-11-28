@@ -1,7 +1,7 @@
 ---
 name: loggregator_trafficcontroller
 dependencies:
-- golang1.11.1
+- golang1.11.2
 files:
 - code.cloudfoundry.org/go-envstruct/*.go # gosub
 - code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2/*.go # gosub
