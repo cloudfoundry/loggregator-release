@@ -1,9 +1,9 @@
 ---
-golang/go1.11.2.linux-amd64.tar.gz:
-  size: 126520483
-  object_id: 04e5c749-6b65-4ede-60c3-e920644aeda4
-  sha: sha256:1dfe664fa3d8ad714bbd15a36627992effd150ddabd7523931f077b3926d736d
-golang/go1.11.2.windows-amd64.zip:
-  size: 134390795
-  object_id: '02418876-2d8e-40c5-416c-4d317b03fbc8'
-  sha: sha256:086c59df0dce54d88f30edd50160393deceb27e73b8d6b46b9ee3f88b0c02e28
+golang/go1.11.4.linux-amd64.tar.gz:
+  size: 126643341
+  object_id: d6ae3c47-21b2-466c-6ff3-8cc592bf63fe
+  sha: sha256:fb26c30e6a04ad937bbc657a1b5bba92f80096af1e8ee6da6430c045a8db3a5b
+golang/go1.11.4.windows-amd64.zip:
+  size: 134576874
+  object_id: 7ef426b1-2e04-4571-605b-3536ba560f53
+  sha: sha256:eeb20e21702f2b9469d9381df5de85e2f731b64a1f54effe196d0f7d0227fe14
