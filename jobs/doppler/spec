@@ -5,6 +5,7 @@ templates:
   bpm.yml.erb: config/bpm.yml
   doppler.crt.erb: config/certs/doppler.crt
   doppler.key.erb: config/certs/doppler.key
+  indicators.yml.erb: config/indicators.yml
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
   dns_health_check.erb: bin/dns_health_check
   profile.sh.erb: bin/profile.sh
