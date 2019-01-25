@@ -57,10 +57,6 @@ properties:
     description: "PEM encoded CA certificate for secure communication to UAA. Required if uaa.internal_url is provided."
     default: ""
 
-  doppler.outgoing_port:
-    description: "Port for outgoing doppler messages"
-    default: 8081
-
   loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"
   loggregator.tls.trafficcontroller.cert:
