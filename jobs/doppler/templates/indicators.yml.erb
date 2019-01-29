@@ -34,7 +34,7 @@ indicators:
     `log-api` instances by increasing CPU resources.
 
 - name: doppler_message_rate_ksi
-  promql: avg(rate(ingress{source_id="doppler"}[5m]))
+  promql: rate(ingress{source_id="doppler"}[5m])
   thresholds:
   - level: warning
     gte: 16000
