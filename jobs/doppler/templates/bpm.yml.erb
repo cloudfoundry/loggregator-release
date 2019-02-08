@@ -11,7 +11,6 @@ processes:
       ROUTER_CIPHER_SUITES: "<%=  p("loggregator.tls.cipher_suites").split(":").join(',') %>"
 
       ROUTER_MAX_RETAINED_LOG_MESSAGES: "<%=  p("doppler.maxRetainedLogMessages") %>"
-      ROUTER_CONTAINER_METRIC_TTL_SECONDS: "<%=  p("doppler.container_metric_ttl_seconds") %>"
       ROUTER_SINK_INACTIVITY_TIMEOUT_SECONDS: "<%=  p("doppler.sink_inactivity_timeout_seconds") %>"
       ROUTER_PPROF_PORT: "<%=  p("doppler.pprof_port") %>"
       ROUTER_HEALTH_ADDR: "<%=  p("doppler.health_addr") %>"
