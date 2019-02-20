@@ -13,11 +13,14 @@ processes:
       PROFILE_EXECUTABLE: "/var/vcap/packages/profiler/profiler.sh"
 
       LOGS_PROVIDER_ADDR: "127.0.0.1:<%= link('reverse_log_proxy').p('reverse_log_proxy.egress.port') %>"
-      LOGS_PROVIDER_CLIENT_CERT_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/reverse_log_proxy_gateway.crt"
-      LOGS_PROVIDER_CLIENT_KEY_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/reverse_log_proxy_gateway.key"
+      LOGS_PROVIDER_CLIENT_CERT_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/reverse_log_proxy.crt"
+      LOGS_PROVIDER_CLIENT_KEY_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/reverse_log_proxy.key"
       LOGS_PROVIDER_CA_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/mutual_tls_ca.crt"
       LOGS_PROVIDER_COMMON_NAME: "<%= p('logs_provider.common_name') %>"
+
       GATEWAY_ADDR: "<%= p('http.address') %>"
+      HTTP_CERT_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/reverse_log_proxy_gateway.crt"
+      HTTP_KEY_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/reverse_log_proxy_gateway.key"
 
       # External ADDR is plaintext because it assumes go-router is doing SSL
       # termination.

@@ -3,6 +3,8 @@ name: reverse_log_proxy_gateway
 
 templates:
   bpm.yml.erb: config/bpm.yml
+  reverse_log_proxy.crt.erb: config/certs/reverse_log_proxy.crt
+  reverse_log_proxy.key.erb: config/certs/reverse_log_proxy.key
   reverse_log_proxy_gateway.crt.erb: config/certs/reverse_log_proxy_gateway.crt
   reverse_log_proxy_gateway.key.erb: config/certs/reverse_log_proxy_gateway.key
   mutual_tls_ca.crt.erb: config/certs/mutual_tls_ca.crt
@@ -32,6 +34,10 @@ properties:
   http.address:
     description: "HTTP address for the gateway to listen on"
     default: ":8088"
+  http.cert:
+    description: "The TLS cert for the gateway server"
+  http.key:
+    description: "The TLS key for the gateway server"
 
   logs_provider.ca_cert:
     description: "CA root required for key/cert verification"

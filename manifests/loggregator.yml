@@ -135,6 +135,9 @@ instance_groups:
     provides:
       log_gateway: {as: log_gateway, shared: true}
     properties:
+      http:
+        cert: "((loggregator_rlp_gateway.certificate))"
+        key: "((loggregator_rlp_gateway.private_key))"
       logs_provider:
         ca_cert: "((loggregator_rlp_gateway.ca))"
         client_cert: "((loggregator_rlp_gateway.certificate))"
