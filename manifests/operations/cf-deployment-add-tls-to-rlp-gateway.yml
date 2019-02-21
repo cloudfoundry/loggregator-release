@@ -5,7 +5,7 @@
     type: certificate
     options:
       alternative_names:
-      - log-stream.coconut.cf-app.com
+      - log-stream.((system_domain))
       - log-api.service.cf.internal
       ca: service_cf_internal_ca
       common_name: log-stream.((system_domain))
