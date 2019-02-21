@@ -1,0 +1,29 @@
+- type: replace
+  path: /variables/-
+  value:
+    name: loggregator_rlp_gateway_tls
+    type: certificate
+    options:
+      alternative_names:
+      - log-stream.coconut.cf-app.com
+      - log-api.service.cf.internal
+      ca: service_cf_internal_ca
+      common_name: log-stream.((system_domain))
+
+- type: replace
+  path: /instance_groups/name=log-api/jobs/name=reverse_log_proxy_gateway/properties/http?
+  value:
+    address: "0.0.0.0:8088"
+    cert: "((loggregator_rlp_gateway_tls.certificate))"
+    key: "((loggregator_rlp_gateway_tls.private_key))"
+
+- type: replace
+  path: /instance_groups/name=log-api/jobs/name=route_registrar/properties/route_registrar/routes/name=rlp-gateway?
+  value:
+    name: rlp-gateway
+    tls_port: 8088
+    server_cert_domain_san: log-stream.((system_domain))
+    registration_interval: 20s
+    uris:
+    - log-stream.((system_domain))
+    - "*.log-stream.((system_domain))"
