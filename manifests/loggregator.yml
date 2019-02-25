@@ -158,6 +158,8 @@ instance_groups:
       traffic_controller:
         disable_access_control: true
       loggregator:
+        outgoing_cert: "((loggregator_trafficcontroller_tls.certificate))"
+        outgoing_key: "((loggregator_trafficcontroller_tls.private_key))"
         tls:
           ca_cert: "((loggregator_tc.ca))"
           trafficcontroller:
@@ -183,6 +185,16 @@ instance_groups:
     serial: true
 
 variables:
+
+- name: loggregator_trafficcontroller_tls
+  type: certificate
+  options:
+    alternative_names:
+      - doppler.((system_domain))
+      - log-api.service.cf.internal
+    ca: service_cf_internal_ca
+    common_name: doppler.((system_domain))
+
 - name: loggregator_ca
   type: certificate
   options:

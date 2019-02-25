@@ -4,6 +4,8 @@ templates:
   bpm.yml.erb: config/bpm.yml
   trafficcontroller.crt.erb: config/certs/trafficcontroller.crt
   trafficcontroller.key.erb: config/certs/trafficcontroller.key
+  trafficcontroller_outgoing.crt.erb: config/certs/trafficcontroller_outgoing.crt
+  trafficcontroller_outgoing.key.erb: config/certs/trafficcontroller_outgoing.key
   logcache_ca.crt.erb: config/certs/logcache_ca.crt
   logcache_trafficcontroller.crt.erb: config/certs/logcache_trafficcontroller.crt
   logcache_trafficcontroller.key.erb: config/certs/logcache_trafficcontroller.key
@@ -41,6 +43,10 @@ properties:
   loggregator.outgoing_dropsonde_port:
     description: "Port for outgoing dropsonde messages"
     default: 8081
+  loggregator.outgoing_cert:
+    description: "TLS cert for outgoing dropsonde connection"
+  loggregator.outgoing_key:
+    description: "TLS key for outgoing dropsonde connection"
   traffic_controller.security_event_logging.enabled:
     description: "Enable logging of all requests made to the Traffic Controller in CEF format"
     default: false

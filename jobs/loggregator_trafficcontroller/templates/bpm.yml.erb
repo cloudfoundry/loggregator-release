@@ -38,6 +38,8 @@ processes:
       TRAFFIC_CONTROLLER_IP: "<%= spec.ip %>"
       TRAFFIC_CONTROLLER_API_HOST: "<%= "https://#{p('cc.internal_service_hostname')}:#{p('cc.tls_port')}" %>"
       TRAFFIC_CONTROLLER_OUTGOING_DROPSONDE_PORT: "<%= p("loggregator.outgoing_dropsonde_port") %>"
+      TRAFFIC_CONTROLLER_OUTGOING_CERT_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/trafficcontroller_outgoing.crt"
+      TRAFFIC_CONTROLLER_OUTGOING_KEY_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/trafficcontroller_outgoing.key"
       TRAFFIC_CONTROLLER_SYSTEM_DOMAIN: "<%= p("system_domain") %>"
       TRAFFIC_CONTROLLER_SKIP_CERT_VERIFY: "<%= p("ssl.skip_cert_verify") %>"
       TRAFFIC_CONTROLLER_UAA_HOST: "<%= uaa_host %>"
