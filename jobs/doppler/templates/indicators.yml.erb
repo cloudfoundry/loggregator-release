@@ -10,12 +10,12 @@ metadata:
 
 indicators:
 - name: log_loss_rate_ksi
-  promql: rate(dropped{source_id="doppler",direction="ingress"}[5m]) / ignoring(direction) rate(ingress{source_id="doppler"}[5m])
+  promql: 100*rate(dropped{source_id="doppler",direction="ingress"}[5m]) / ignoring(direction) rate(ingress{source_id="doppler"}[5m])
   thresholds:
   - level: warning
-    gte: 0.005
+    gte: 0.5
   - level: critical
-    gte: 0.01
+    gte: 1
   documentation:
     title: Log Transport Loss Rate
     description: |
@@ -49,12 +49,12 @@ indicators:
     Increase the number of `doppler` instances.
 
 - name: rlp_loss_ksi
-  promql: rate(dropped{source_id="reverse_log_proxy"}[5m]) / ignoring(direction,protocol) rate(ingress{source_id="reverse_log_proxy"}[5m])
+  promql: 100*rate(dropped{source_id="reverse_log_proxy"}[5m]) / ignoring(direction,protocol) rate(ingress{source_id="reverse_log_proxy"}[5m])
   thresholds:
   - level: warning
-    gte: 0.01
+    gte: 1
   - level: critical
-    gte: 0.1
+    gte: 10
   documentation:
     title: Reverse Log Proxy Loss Rate
     description: |
