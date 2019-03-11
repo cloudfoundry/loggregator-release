@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-go get -u github.com/vito/gosub
+go get github.com/vito/gosub
 
 if [ ! $(which gosub) ]; then
     echo "Gosub required to update dependencies in bosh/*/spec files."
