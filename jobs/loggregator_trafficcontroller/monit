@@ -1,5 +1,7 @@
+<% if p('traffic_controller.enabled') %>
 check process loggregator_trafficcontroller
   with pidfile /var/vcap/sys/run/bpm/loggregator_trafficcontroller/loggregator_trafficcontroller.pid
   start program "/var/vcap/jobs/bpm/bin/bpm start loggregator_trafficcontroller"
   stop program "/var/vcap/jobs/bpm/bin/bpm stop loggregator_trafficcontroller" with timeout 60 seconds
   group vcap
+<% end %>

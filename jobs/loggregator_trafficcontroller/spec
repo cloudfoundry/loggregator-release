@@ -37,6 +37,9 @@ consumes:
   optional: true
 
 properties:
+  traffic_controller.enabled:
+    description: "Enable v1 Firehose"
+    default: true
   traffic_controller.disable_access_control:
     description: "Traffic controller bypasses authentication with the UAA and CC"
     default: false
