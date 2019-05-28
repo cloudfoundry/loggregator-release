@@ -121,9 +121,6 @@
 [submodule "src/code.cloudfoundry.org/log-cache"]
 	path = src/code.cloudfoundry.org/log-cache
 	url = https://github.com/cloudfoundry/log-cache
-[submodule "src/code.cloudfoundry.org/go-orchestrator"]
-	path = src/code.cloudfoundry.org/go-orchestrator
-	url = https://github.com/cloudfoundry-incubator/go-orchestrator
 [submodule "src/github.com/blang/semver"]
 	path = src/github.com/blang/semver
 	url = https://github.com/blang/semver
