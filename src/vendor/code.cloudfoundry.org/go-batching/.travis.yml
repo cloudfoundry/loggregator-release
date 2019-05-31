@@ -1,0 +1,18 @@
+language: go
+
+go:
+  - 1.8.x
+  - 1.9.x
+  - master
+
+install: |
+  mkdir -p $HOME/gopath/src/code.cloudfoundry.org/go-batching
+  rsync -az ${TRAVIS_BUILD_DIR}/ $HOME/gopath/src/code.cloudfoundry.org/go-batching/
+  export TRAVIS_BUILD_DIR=$GOPATH/src/code.cloudfoundry.org/go-batching
+  go get -t -d -v code.cloudfoundry.org/go-batching/...
+
+script: go test code.cloudfoundry.org/go-batching/...
+
+matrix:
+  allow_failures:
+  - go: master

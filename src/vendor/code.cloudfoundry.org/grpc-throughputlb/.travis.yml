@@ -1,0 +1,19 @@
+language: go
+
+go:
+- 1.10.x
+- 1.11.x
+- master
+
+install: |
+  mkdir -p $HOME/gopath/src/code.cloudfoundry.org/grpc-throughputlb
+  rsync -az ${TRAVIS_BUILD_DIR}/ $HOME/gopath/src/code.cloudfoundry.org/grpc-throughputlb/
+  export TRAVIS_BUILD_DIR=$GOPATH/src/code.cloudfoundry.org/grpc-throughputlb
+  go get -t -d -v code.cloudfoundry.org/grpc-throughputlb/...
+script: |
+  cd $GOPATH
+  cd src/code.cloudfoundry.org/grpc-throughputlb
+  go test ./...
+matrix:
+  allow_failures:
+  - go: master

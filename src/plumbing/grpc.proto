@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package plumbing;
+
+service Doppler {
+  rpc Subscribe(SubscriptionRequest) returns (stream Response) {}
+  rpc BatchSubscribe(SubscriptionRequest) returns (stream BatchResponse) {}
+  rpc ContainerMetrics(ContainerMetricsRequest) returns (ContainerMetricsResponse) {}
+  rpc RecentLogs(RecentLogsRequest) returns (RecentLogsResponse) {}
+}
+
+service DopplerIngestor {
+  rpc Pusher(stream EnvelopeData) returns (PushResponse) {}
+}
+
+message EnvelopeData {
+  bytes payload = 1;
+}
+
+message PushResponse {
+}
+
+message SubscriptionRequest {
+  string shardID = 1;
+  Filter filter = 2;
+}
+
+message Filter{
+  string appID = 1;
+
+  oneof Message {
+    LogFilter log = 2;
+    MetricFilter metric = 3;
+  }
+}
+
+message LogFilter {
+}
+
+message MetricFilter {
+}
+
+// Note: Ideally this would be EnvelopeData but for the time being we do not
+// want to pay the cost of planning an upgrade path for this to be renamed.
+message Response {
+  bytes payload = 1;
+}
+
+message BatchResponse {
+  repeated bytes payload = 1;
+}
+
+message ContainerMetricsRequest {
+  string appID = 1;
+}
+
+message ContainerMetricsResponse {
+  repeated bytes payload = 1;
+}
+
+message RecentLogsRequest {
+  string appID = 1;
+}
+
+message RecentLogsResponse {
+  repeated bytes payload = 1;
+}

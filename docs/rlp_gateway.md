@@ -1,8 +1,7 @@
 # Reverse Log Proxy (RLP) Gateway
 
 The Reverse Log Proxy Gateway provides an HTTP API to access the Reverse Log
-Proxy. The HTTP endpoint is only available on the local machine and is
-unauthenticated.
+Proxy. The HTTP endpoint is by default available to traffic outside the deployment (configurable through `GATEWAY_ADDR` environment variable). The RLP Gateway endpoint is authenticated and verifies provided access tokens against a UAA (configurable through the `LOG_ACCESS*` and `LOG_ADMIN*` environment variables.
 
 ## HTTP API
 
@@ -14,7 +13,7 @@ JSON format.
 #### Parameters
 
 - `shard_id`  - Set the shard ID. Envelopes will be split between clients
-  using the same source ID.
+  using the same shard ID.
 - `source_id` - One or more source IDs.
 - `log`       - Request log envelopes.
 - `counter`   - Request counter envelopes.
@@ -32,22 +31,22 @@ string.
 
 Request log envelopes
 ```
-curl http://localhost:8088/v2/read?log
+curl -H "Authorization: $(cf oauth-token)" https://localhost:8088/v2/read?log
 ```
 
 Request log envelopes with sharding:
 ```
-curl http://localhost:8088/v2/read?log&shard_id=shard-id-for-all-clients
+curl -H "Authorization: $(cf oauth-token)" https://localhost:8088/v2/read?log&shard_id=shard-id-for-all-clients
 ```
 
 Request all envelopes for a given source:
 ```
-curl http://localhost:8088/v2/read?log&counter&gauge&timer&event&source_id=SOURCE-ID
+curl -H "Authorization: $(cf oauth-token)" https://localhost:8088/v2/read?log&counter&gauge&timer&event&source_id=SOURCE-ID
 ```
 
 Request counter metrics with a given name:
 ```
-curl http://localhost:8088/v2/read?counter.name=request_count
+curl -H "Authorization: $(cf oauth-token)" https://localhost:8088/v2/read?counter.name=request_count
 ```
 
 #### Example SSE Response

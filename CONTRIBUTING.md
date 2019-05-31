@@ -9,7 +9,8 @@ quickly as possible:
   - We may have advice to give you or requests for your final solution.
 2. Include at least one test in your PR.
   - For bugs, it's also useful to provide a failing test in your issue.
-3. Run [LATs](https://github.com/cloudfoundry/logging-acceptance-tests-release) in a
+3. Run the unit tests: `go test -race ./...`
+4. Run [LATs](https://github.com/cloudfoundry/logging-acceptance-tests-release) in a
    [standalone loggregator](https://github.com/cloudfoundry/loggregator-release#standalone-loggregator)
    deployment on `bosh-lite`.
 
@@ -18,8 +19,9 @@ quickly as possible:
 Follow these steps to make a contribution to any of our open source repositories:
 
 1. Ensure that you have completed our CLA Agreement for
-[individuals](https://www.cloudfoundry.org/wp-content/uploads/2015/07/CFF_Individual_CLA.pdf)
- or [corporations](https://www.cloudfoundry.org/wp-content/uploads/2015/07/CFF_Corporate_CLA.pdf).
+    [individuals][individual-cla], or [corporations][corp-cla].
+1. Set your name and email (these should match the information on your
+   submitted CLA):
 
 1. Set your name and email (these should match the information on your submitted CLA)
   ```
@@ -49,3 +51,6 @@ comment on pull requests.
 When the project receives a new CLA, it is recorded in the project records,
 the CLA is added to the database for the automated system uses, then we
 manually make the Pull Request as having a CLA on-file.
+
+[individual-cla]: https://www.cloudfoundry.org/wp-content/uploads/2015/07/CFF_Individual_CLA.pdf
+[corp-cla]: https://www.cloudfoundry.org/wp-content/uploads/2015/07/CFF_Corporate_CLA.pdf

@@ -1,0 +1,18 @@
+{
+    "JobName": "trafficcontroller",
+    "Index": "3",
+    "OutgoingDropsondePort": 49629,
+    "RouterPort": 49627,
+    "IncomingPort": 49631,
+    "SkipCertVerify": true,
+    "Zone": "z1",
+    "Host": "0.0.0.0",
+    "ApiHost": "http://127.0.0.1:49632",
+    "SystemDomain": "vcap.me",
+
+    "AgentPort": 49625,
+    "UaaHost": "http://127.0.0.1:49628",
+    "UaaClient": "bob",
+    "UaaClientSecret": "yourUncle",
+    "PPROFPort": 6060
+}
