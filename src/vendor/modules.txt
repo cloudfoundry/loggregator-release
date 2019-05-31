@@ -115,11 +115,11 @@ github.com/prometheus/client_golang/prometheus/promhttp
 github.com/prometheus/client_golang/prometheus/internal
 # github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
 github.com/prometheus/client_model/go
-# github.com/prometheus/common v0.4.0
+# github.com/prometheus/common v0.4.1
 github.com/prometheus/common/expfmt
 github.com/prometheus/common/model
 github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
-# github.com/prometheus/procfs v0.0.0-20190507164030-5867b95ac084
+# github.com/prometheus/procfs v0.0.1
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 # golang.org/x/net v0.0.0-20190522155817-f3200d17e092
@@ -134,9 +134,9 @@ golang.org/x/net/html
 golang.org/x/net/http/httpguts
 golang.org/x/net/idna
 golang.org/x/net/html/atom
-# golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a
+# golang.org/x/sys v0.0.0-20190531175056-4c3a928424d2
 golang.org/x/sys/unix
-# golang.org/x/text v0.3.0
+# golang.org/x/text v0.3.2
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
 golang.org/x/text/encoding/htmlindex
@@ -154,8 +154,10 @@ golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 golang.org/x/text/internal/utf8internal
 golang.org/x/text/runes
+golang.org/x/text/internal/language
+golang.org/x/text/internal/language/compact
 golang.org/x/text/internal/tag
-# google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8
+# google.golang.org/genproto v0.0.0-20190530194941-fb225487d101
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/api/httpbody
@@ -197,5 +199,5 @@ google.golang.org/grpc/internal/syscall
 gopkg.in/fsnotify.v1
 # gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 gopkg.in/tomb.v1
-# gopkg.in/yaml.v2 v2.2.1
+# gopkg.in/yaml.v2 v2.2.2
 gopkg.in/yaml.v2
