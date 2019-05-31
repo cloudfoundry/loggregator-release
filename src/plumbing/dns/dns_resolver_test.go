@@ -51,6 +51,10 @@ type testClientConn struct {
 	s      int
 }
 
+func (t *testClientConn) UpdateState(resolver.State) {
+	panic("implement me")
+}
+
 func (t *testClientConn) NewAddress(addresses []resolver.Address) {
 	t.m1.Lock()
 	defer t.m1.Unlock()
