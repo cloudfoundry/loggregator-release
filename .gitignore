@@ -1,6 +1,6 @@
 
 # golang
-pkg/
+/pkg/
 /bin/
 *.prof
 *.mprof
@@ -23,21 +23,6 @@ config/private.yml
 releases/*.tgz
 releases/**/*.tgz
 
-# tools
-/src/golang.org/x/tools/
-/src/github.com/square/certstrap
-/src/github.com/client9/misspell
-/src/github.com/mdempsky/unconvert
-/src/github.com/tsenart/deadcode
-/src/github.com/golang/lint
-/src/github.com/opennota/check
-/src/github.com/kisielk/errcheck
-src/github.com/kisielk/gotool
-/src/github.com/gordonklaus/ineffassign
-/src/github.com/mvdan/interfacer
-/src/github.com/mvdan/lint
-/src/honnef.co/go
-
 # cert script output
 loggregator-certs
 
@@ -49,8 +34,5 @@ release/
 *.iml
 *.pem
 *.etcd
-src/code.google.com/p/go.tools/
-src/github.com/cloudfoundry/gorouter/
-src/github.com/rcrowley/
 src/lats/fixtures/metron.json
 scripts/etcd
