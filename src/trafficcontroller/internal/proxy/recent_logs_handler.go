@@ -12,7 +12,7 @@ import (
 	logcache "code.cloudfoundry.org/log-cache/pkg/client"
 	"code.cloudfoundry.org/log-cache/pkg/rpc/logcache_v1"
 	"code.cloudfoundry.org/loggregator/metricemitter"
-	"code.cloudfoundry.org/loggregator/plumbing/conversion"
+	"code.cloudfoundry.org/go-loggregator/conversion"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/mux"

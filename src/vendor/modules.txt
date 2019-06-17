@@ -6,6 +6,7 @@ code.cloudfoundry.org/go-diodes
 code.cloudfoundry.org/go-envstruct
 # code.cloudfoundry.org/go-loggregator v7.3.0+incompatible
 code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2
+code.cloudfoundry.org/go-loggregator/conversion
 # code.cloudfoundry.org/go-pubsub v0.0.0-20180503211407-becd51dc37cb
 code.cloudfoundry.org/go-pubsub
 code.cloudfoundry.org/go-pubsub/pubsub-gen/setters
@@ -55,7 +56,7 @@ github.com/gorilla/handlers
 github.com/gorilla/mux
 # github.com/gorilla/websocket v1.4.0
 github.com/gorilla/websocket
-# github.com/grpc-ecosystem/grpc-gateway v1.9.2
+# github.com/grpc-ecosystem/grpc-gateway v1.9.1
 github.com/grpc-ecosystem/grpc-gateway/runtime
 github.com/grpc-ecosystem/grpc-gateway/utilities
 github.com/grpc-ecosystem/grpc-gateway/internal
@@ -102,10 +103,8 @@ github.com/onsi/gomega/internal/asyncassertion
 github.com/onsi/gomega/internal/testingtsupport
 github.com/onsi/gomega/matchers
 github.com/onsi/gomega/types
-github.com/onsi/gomega/gstruct
 github.com/onsi/gomega/internal/oraclematcher
 github.com/onsi/gomega/matchers/support/goraph/bipartitegraph
-github.com/onsi/gomega/gstruct/errors
 github.com/onsi/gomega/matchers/support/goraph/edge
 github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util

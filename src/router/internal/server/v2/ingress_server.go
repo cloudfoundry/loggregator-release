@@ -4,7 +4,7 @@ import (
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/metricemitter"
-	"code.cloudfoundry.org/loggregator/plumbing/conversion"
+	"code.cloudfoundry.org/go-loggregator/conversion"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
