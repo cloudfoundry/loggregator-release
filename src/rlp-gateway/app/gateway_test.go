@@ -94,7 +94,11 @@ var _ = Describe("Gateway", func() {
 			defer gateway.Stop()
 
 			client := newTestClient()
-			go client.open("https://" + gateway.Addr() + "/v2/read?log&source_id=deadbeef-dead-dead-dead-deaddeafbeef")
+			go func() {
+				resp, err := client.open("https://" + gateway.Addr() + "/v2/read?log&source_id=deadbeef-dead-dead-dead-deaddeafbeef")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			}()
 
 			Eventually(client.envelopes).Should(HaveLen(10))
 		})
@@ -153,7 +157,11 @@ var _ = Describe("Gateway", func() {
 			defer gateway.Stop()
 
 			client := newTestClient()
-			go client.open("https://" + gateway.Addr() + "/v2/read?log")
+			go func() {
+				resp, err := client.open("https://" + gateway.Addr() + "/v2/read?log&source_id=deadbeef-dead-dead-dead-deaddeafbeef")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			}()
 
 			Eventually(client.envelopes).Should(HaveLen(10))
 		})
@@ -273,11 +281,11 @@ func (s *stubLogsProvider) BatchedReceiver(req *loggregator_v2.EgressBatchReques
 			break
 		}
 
-		srv.Send(&loggregator_v2.EnvelopeBatch{
+		Expect(srv.Send(&loggregator_v2.EnvelopeBatch{
 			Batch: []*loggregator_v2.Envelope{
 				{Timestamp: time.Now().UnixNano()},
 			},
-		})
+		})).To(Succeed())
 	}
 
 	return nil
