@@ -67,12 +67,16 @@ var _ = Describe("GRPCConnector", func() {
 
 	Describe("Subscribe()", func() {
 		var (
-			ctx       context.Context
-			cancelCtx func()
+			ctx        context.Context
+			cancelFunc func()
 		)
 
 		BeforeEach(func() {
-			ctx, cancelCtx = context.WithCancel(context.Background())
+			ctx, cancelFunc = context.WithCancel(context.Background())
+		})
+
+		AfterEach(func() {
+			cancelFunc()
 		})
 
 		Context("when no dopplers are available", func() {
@@ -119,7 +123,7 @@ var _ = Describe("GRPCConnector", func() {
 
 				It("does not close the doppler connection when a client exits", func() {
 					Eventually(mockDopplerServerA.BatchSubscribeInput.Stream).Should(Receive())
-					cancelCtx()
+					cancelFunc()
 
 					newData, _, ready := readFromSubscription(context.Background(), req, connector)
 					Eventually(ready).Should(BeClosed())
@@ -192,7 +196,7 @@ var _ = Describe("GRPCConnector", func() {
 
 				Context("when the consumer disconnects", func() {
 					BeforeEach(func() {
-						cancelCtx()
+						cancelFunc()
 					})
 
 					It("returns an error", func() {
@@ -253,18 +257,18 @@ var _ = Describe("GRPCConnector", func() {
 
 						Context("when the first connection is closed", func() {
 							var (
-								newCtx       context.Context
-								newCancelCtx func()
+								newCtx        context.Context
+								newCancelFunc func()
 							)
 
 							BeforeEach(func() {
-								cancelCtx()
+								cancelFunc()
 
-								newCtx, newCancelCtx = context.WithCancel(context.Background())
+								newCtx, newCancelFunc = context.WithCancel(context.Background())
 							})
 
 							AfterEach(func() {
-								newCancelCtx()
+								newCancelFunc()
 							})
 
 							It("allows new connections", func() {
@@ -363,10 +367,16 @@ var _ = Describe("GRPCConnector", func() {
 
 					Expect(listeners[0].Close()).To(Succeed())
 					grpcServers[0].Stop()
-					listeners[0], grpcServers[0] = startGRPCServer(mockDopplerServerA, listeners[0].Addr().String())
+
+					listeners[0], grpcServers[0] = startGRPCServer(mockDopplerServerA, "127.0.0.1:0")
+					event = plumbing.Event{
+						GRPCDopplers: createGrpcURIs(listeners),
+					}
+
+					mockFinder.NextOutput.Ret0 <- event
 				})
 
-				It("attempts to reconnect", func() {
+				It("continues sending", func() {
 					senderA = captureSubscribeSender(mockDopplerServerA)
 					Eventually(func() error {
 						return senderA.Send(&plumbing.BatchResponse{

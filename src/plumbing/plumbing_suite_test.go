@@ -30,7 +30,7 @@ func startListener(addr string) net.Listener {
 		lis, err = net.Listen("tcp", addr)
 		return err
 	}
-	Eventually(f).ShouldNot(HaveOccurred())
+	Eventually(f).Should(Succeed())
 
 	return lis
 }
@@ -38,6 +38,7 @@ func startListener(addr string) net.Listener {
 func startGRPCServer(ds plumbing.DopplerServer, addr string) (net.Listener, *grpc.Server) {
 	lis := startListener(addr)
 	s := grpc.NewServer()
+
 	plumbing.RegisterDopplerServer(s, ds)
 	go s.Serve(lis)
 
