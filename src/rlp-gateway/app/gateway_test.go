@@ -95,9 +95,12 @@ var _ = Describe("Gateway", func() {
 
 			client := newTestClient()
 			go func() {
+				defer GinkgoRecover()
 				resp, err := client.open("https://" + gateway.Addr() + "/v2/read?log&source_id=deadbeef-dead-dead-dead-deaddeafbeef")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(err).To(MatchError("EOF"))
+				if resp != nil {
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				}
 			}()
 
 			Eventually(client.envelopes).Should(HaveLen(10))
@@ -158,9 +161,12 @@ var _ = Describe("Gateway", func() {
 
 			client := newTestClient()
 			go func() {
+				defer GinkgoRecover()
 				resp, err := client.open("https://" + gateway.Addr() + "/v2/read?log&source_id=deadbeef-dead-dead-dead-deaddeafbeef")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(err).To(MatchError("EOF"))
+				if resp != nil {
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				}
 			}()
 
 			Eventually(client.envelopes).Should(HaveLen(10))
