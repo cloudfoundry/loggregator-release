@@ -368,10 +368,11 @@ var _ = Describe("GRPCConnector", func() {
 
 				It("attempts to reconnect", func() {
 					senderA = captureSubscribeSender(mockDopplerServerA)
-					err := senderA.Send(&plumbing.BatchResponse{
-						Payload: [][]byte{[]byte("test-payload-2")},
-					})
-					Expect(err).ToNot(HaveOccurred())
+					Eventually(func() error {
+						return senderA.Send(&plumbing.BatchResponse{
+							Payload: [][]byte{[]byte("test-payload-2")},
+						})
+					}, 5).ShouldNot(HaveOccurred())
 
 					Eventually(data, 5).Should(Receive(Equal([]byte("test-payload-2"))))
 				})
