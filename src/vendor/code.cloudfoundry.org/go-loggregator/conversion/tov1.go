@@ -317,7 +317,7 @@ func parseUUID(id string) []byte {
 
 func convertUUID(id []byte) *events.UUID {
 	if len(id) != 16 {
-		return &events.UUID{}
+		return nil
 	}
 
 	return &events.UUID{
