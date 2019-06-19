@@ -22,11 +22,11 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestRounter(t *testing.T) {
+func TestRouter(t *testing.T) {
 	grpclog.SetLogger(log.New(GinkgoWriter, "", 0))
 	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Rounter Integration Suite")
+	RunSpecs(t, "Router Integration Suite")
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {

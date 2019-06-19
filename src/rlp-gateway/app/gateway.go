@@ -1,6 +1,8 @@
 package app
 
 import (
+	"code.cloudfoundry.org/tlsconfig"
+	"crypto/tls"
 	"crypto/x509"
 	"io"
 	"io/ioutil"
@@ -96,16 +98,28 @@ func (g *Gateway) Start(blocking bool) {
 
 	g.listener = l
 	g.server = &http.Server{
-		Addr:    g.cfg.HTTP.GatewayAddr,
-		Handler: stack,
+		Addr:      g.cfg.HTTP.GatewayAddr,
+		Handler:   stack,
+		TLSConfig: g.buildTlsConfig(),
 	}
 
 	if blocking {
-		g.server.ServeTLS(g.listener, g.cfg.HTTP.CertPath, g.cfg.HTTP.KeyPath)
+		g.server.ServeTLS(g.listener, "", "")
 		return
 	}
 
-	go g.server.ServeTLS(g.listener, g.cfg.HTTP.CertPath, g.cfg.HTTP.KeyPath)
+	go g.server.ServeTLS(g.listener, "", "")
+}
+
+func (g *Gateway) buildTlsConfig() *tls.Config {
+	tlsConfig, err := tlsconfig.Build(
+		tlsconfig.WithInternalServiceDefaults(),
+		tlsconfig.WithIdentityFromFile(g.cfg.HTTP.CertPath, g.cfg.HTTP.KeyPath),
+	).Server()
+	if err != nil {
+		g.log.Fatalf("failed to build tls config: %s", err)
+	}
+	return tlsConfig
 }
 
 // Stop closes the server connection

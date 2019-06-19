@@ -1,6 +1,4 @@
-
 # golang
-/pkg/
 /bin/
 *.prof
 *.mprof

@@ -1,6 +1,8 @@
 package app
 
 import (
+	"code.cloudfoundry.org/tlsconfig"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
@@ -192,22 +194,40 @@ func (t *TrafficController) Start() {
 	if accessMiddleware != nil {
 		dopplerHandler = accessMiddleware(dopplerHandler)
 	}
-	go func() {
-		lis, err := net.Listen("tcp", fmt.Sprintf(":%d", t.conf.OutgoingDropsondePort))
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Printf("ws bound to: %s", lis.Addr())
-		log.Fatal(http.ServeTLS(lis,
-			dopplerHandler,
-			t.conf.OutgoingCertFile,
-			t.conf.OutgoingKeyFile))
-	}()
 
+	go t.startServer(dopplerHandler)
 	go profiler.New(t.conf.PProfPort).Start()
 
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Interrupt)
 	<-killChan
 	log.Print("Shutting down")
+}
+
+func (t *TrafficController) startServer(dopplerHandler http.Handler) {
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", t.conf.OutgoingDropsondePort))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("ws bound to: %s", lis.Addr())
+
+	server := http.Server{
+		Handler:   dopplerHandler,
+		TLSConfig: t.buildTLSConfig(),
+	}
+
+	log.Fatal(server.ServeTLS(lis, "", ""))
+}
+
+func (t *TrafficController) buildTLSConfig() *tls.Config {
+	tlsConfig, err := tlsconfig.Build(
+		tlsconfig.WithInternalServiceDefaults(),
+		tlsconfig.WithIdentityFromFile(t.conf.OutgoingCertFile, t.conf.OutgoingKeyFile),
+	).Server()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	return tlsConfig
 }

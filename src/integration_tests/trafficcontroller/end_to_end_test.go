@@ -1,6 +1,7 @@
 package trafficcontroller_test
 
 import (
+	"code.cloudfoundry.org/tlsconfig/certtest"
 	"crypto/tls"
 	"fmt"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"code.cloudfoundry.org/loggregator/testservers"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry/noaa/consumer"
@@ -237,5 +239,87 @@ var _ = Describe("TrafficController for v1 messages", func() {
 				Expect(cookie.Secure).To(BeTrue())
 			})
 		})
+
+		Describe("TLS security", func() {
+			DescribeTable("allows only supported TLS versions", func(clientTLSVersion int, serverShouldAllow bool) {
+				tlsConfig := buildTLSConfig(uint16(clientTLSVersion), tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256)
+				client := consumer.New(tcWSEndpoint, tlsConfig, nil)
+				_, errors := client.StreamWithoutReconnect(APP_ID, AUTH_TOKEN)
+
+				defer client.Close()
+
+				if serverShouldAllow {
+					Consistently(errors).ShouldNot(Receive())
+				} else {
+					Eventually(errors).Should(Receive())
+				}
+			},
+				Entry("unsupported SSL 3.0", tls.VersionSSL30, false),
+				Entry("unsupported TLS 1.0", tls.VersionTLS10, false),
+				Entry("unsupported TLS 1.1", tls.VersionTLS11, false),
+				Entry("supported TLS 1.2", tls.VersionTLS12, true),
+			)
+
+			DescribeTable("allows only supported TLS versions", func(cipherSuite uint16, serverShouldAllow bool) {
+				tlsConfig := buildTLSConfig(tls.VersionTLS12, cipherSuite)
+				client := consumer.New(tcWSEndpoint, tlsConfig, nil)
+				_, errors := client.StreamWithoutReconnect(APP_ID, AUTH_TOKEN)
+
+				defer client.Close()
+
+				if serverShouldAllow {
+					Consistently(errors).ShouldNot(Receive())
+				} else {
+					Eventually(errors).Should(Receive())
+				}
+			},
+				Entry("unsupported cipher RSA_WITH_3DES_EDE_CBC_SHA", tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA, false),
+				Entry("unsupported cipher ECDHE_RSA_WITH_3DES_EDE_CBC_SHA", tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, false),
+				Entry("unsupported cipher RSA_WITH_RC4_128_SHA", tls.TLS_RSA_WITH_RC4_128_SHA, false),
+				Entry("unsupported cipher RSA_WITH_AES_128_CBC_SHA256", tls.TLS_RSA_WITH_AES_128_CBC_SHA256, false),
+				Entry("unsupported cipher ECDHE_ECDSA_WITH_CHACHA20_POLY1305", tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305, false),
+				Entry("unsupported cipher ECDHE_ECDSA_WITH_RC4_128_SHA", tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA, false),
+				Entry("unsupported cipher ECDHE_ECDSA_WITH_AES_128_CBC_SHA", tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, false),
+				Entry("unsupported cipher ECDHE_ECDSA_WITH_AES_256_CBC_SHA", tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA, false),
+				Entry("unsupported cipher ECDHE_ECDSA_WITH_AES_128_CBC_SHA256", tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, false),
+				Entry("unsupported cipher ECDHE_ECDSA_WITH_AES_128_GCM_SHA256", tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, false),
+				Entry("unsupported cipher ECDHE_ECDSA_WITH_AES_256_GCM_SHA384", tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, false),
+				Entry("unsupported cipher ECDHE_RSA_WITH_RC4_128_SHA", tls.TLS_ECDHE_RSA_WITH_RC4_128_SHA, false),
+				Entry("unsupported cipher ECDHE_RSA_WITH_AES_128_CBC_SHA256", tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256, false),
+				Entry("unsupported cipher ECDHE_RSA_WITH_AES_128_CBC_SHA", tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, false),
+				Entry("unsupported cipher ECDHE_RSA_WITH_AES_256_CBC_SHA", tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA, false),
+				Entry("unsupported cipher ECDHE_RSA_WITH_CHACHA20_POLY1305", tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, false),
+				Entry("unsupported cipher RSA_WITH_AES_128_CBC_SHA", tls.TLS_RSA_WITH_AES_128_CBC_SHA, false),
+				Entry("unsupported cipher RSA_WITH_AES_128_GCM_SHA256", tls.TLS_RSA_WITH_AES_128_GCM_SHA256, false),
+				Entry("unsupported cipher RSA_WITH_AES_256_CBC_SHA", tls.TLS_RSA_WITH_AES_256_CBC_SHA, false),
+				Entry("unsupported cipher RSA_WITH_AES_256_GCM_SHA384", tls.TLS_RSA_WITH_AES_256_GCM_SHA384, false),
+
+				Entry("supported cipher ECDHE_RSA_WITH_AES_128_GCM_SHA256", tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, true),
+				Entry("supported cipher ECDHE_RSA_WITH_AES_256_GCM_SHA384", tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, true),
+			)
+		})
 	})
 })
+
+func buildTLSConfig(maxVersion, cipherSuite uint16) *tls.Config {
+	ca, err := certtest.BuildCA("tlsconfig")
+	Expect(err).ToNot(HaveOccurred())
+
+	pool, err := ca.CertPool()
+	Expect(err).ToNot(HaveOccurred())
+
+	clientCrt, err := ca.BuildSignedCertificate("client")
+	Expect(err).ToNot(HaveOccurred())
+
+	clientTLSCrt, err := clientCrt.TLSCertificate()
+	Expect(err).ToNot(HaveOccurred())
+
+	return &tls.Config{
+		Certificates:       []tls.Certificate{clientTLSCrt},
+		RootCAs:            pool,
+		ServerName:         "",
+		MaxVersion:         uint16(maxVersion),
+		CipherSuites:       []uint16{cipherSuite},
+		InsecureSkipVerify: true,
+	}
+}

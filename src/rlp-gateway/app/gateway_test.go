@@ -21,8 +21,10 @@ import (
 	"code.cloudfoundry.org/loggregator/testservers"
 	"google.golang.org/grpc"
 
+	"code.cloudfoundry.org/tlsconfig/certtest"
 	"github.com/gogo/protobuf/jsonpb"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
@@ -119,7 +121,7 @@ var _ = Describe("Gateway", func() {
 			}).ToNot(Panic())
 		})
 
-		It("does not accept unencrypted connections", func () {
+		It("does not accept unencrypted connections", func() {
 			gateway := app.NewGateway(cfg, metrics, logger, GinkgoWriter)
 			gateway.Start(false)
 			defer gateway.Stop()
@@ -230,7 +232,117 @@ var _ = Describe("Gateway", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 	})
+
+	Describe("TLS security", func() {
+		tlsConfigTest := func(tlsConfig *tls.Config) {
+			client := newTestClient()
+			client.tlsConfig = tlsConfig
+
+			internalLogAccess := newAuthorizationServer(
+				http.StatusOK,
+				"{}",
+				testservers.Cert("capi.crt"),
+				testservers.Cert("capi.key"),
+			)
+			logAdmin := newAuthorizationServer(
+				http.StatusBadRequest,
+				invalidTokenResponse,
+				testservers.Cert("uaa.crt"),
+				testservers.Cert("uaa.key"),
+			)
+
+			logsProvider = newStubLogsProvider()
+			logsProvider.toSend = 1
+
+			cfg.LogsProviderAddr = logsProvider.addr()
+			cfg.LogAccessAuthorization.Addr = internalLogAccess.URL
+			cfg.LogAdminAuthorization.Addr = logAdmin.URL
+
+			cfg.LogsProviderAddr = logsProvider.addr()
+			gateway := app.NewGateway(cfg, metrics, logger, GinkgoWriter)
+			gateway.Start(false)
+			defer gateway.Stop()
+
+			client.open("https://" + gateway.Addr() + "/v2/read?log&source_id=deadbeef-dead-dead-dead-deaddeafbeef")
+		}
+
+		DescribeTable("allows only supported TLS versions", func(clientTLSVersion int, serverShouldAllow bool) {
+			runTest := func() {
+				tlsConfigTest(buildTLSConfig(uint16(clientTLSVersion), tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256))
+			}
+
+			if serverShouldAllow {
+				Expect(runTest).ToNot(Panic())
+			} else {
+				Expect(runTest).To(Panic())
+			}
+		},
+			Entry("unsupported SSL 3.0", tls.VersionSSL30, false),
+			Entry("unsupported TLS 1.0", tls.VersionTLS10, false),
+			Entry("unsupported TLS 1.1", tls.VersionTLS11, false),
+			Entry("supported TLS 1.2", tls.VersionTLS12, true),
+		)
+
+		DescribeTable("allows only supported cipher suites", func(clientCipherSuite uint16, serverShouldAllow bool) {
+			runTest := func() {
+				tlsConfigTest(buildTLSConfig(tls.VersionTLS12, clientCipherSuite))
+			}
+
+			if serverShouldAllow {
+				Expect(runTest).ToNot(Panic())
+			} else {
+				Expect(runTest).To(Panic())
+			}
+		},
+			Entry("unsupported cipher RSA_WITH_3DES_EDE_CBC_SHA", tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA, false),
+			Entry("unsupported cipher ECDHE_RSA_WITH_3DES_EDE_CBC_SHA", tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, false),
+			Entry("unsupported cipher RSA_WITH_RC4_128_SHA", tls.TLS_RSA_WITH_RC4_128_SHA, false),
+			Entry("unsupported cipher RSA_WITH_AES_128_CBC_SHA256", tls.TLS_RSA_WITH_AES_128_CBC_SHA256, false),
+			Entry("unsupported cipher ECDHE_ECDSA_WITH_CHACHA20_POLY1305", tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305, false),
+			Entry("unsupported cipher ECDHE_ECDSA_WITH_RC4_128_SHA", tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA, false),
+			Entry("unsupported cipher ECDHE_ECDSA_WITH_AES_128_CBC_SHA", tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, false),
+			Entry("unsupported cipher ECDHE_ECDSA_WITH_AES_256_CBC_SHA", tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA, false),
+			Entry("unsupported cipher ECDHE_ECDSA_WITH_AES_128_CBC_SHA256", tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, false),
+			Entry("unsupported cipher ECDHE_ECDSA_WITH_AES_128_GCM_SHA256", tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, false),
+			Entry("unsupported cipher ECDHE_ECDSA_WITH_AES_256_GCM_SHA384", tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, false),
+			Entry("unsupported cipher ECDHE_RSA_WITH_RC4_128_SHA", tls.TLS_ECDHE_RSA_WITH_RC4_128_SHA, false),
+			Entry("unsupported cipher ECDHE_RSA_WITH_AES_128_CBC_SHA256", tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256, false),
+			Entry("unsupported cipher ECDHE_RSA_WITH_AES_128_CBC_SHA", tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, false),
+			Entry("unsupported cipher ECDHE_RSA_WITH_AES_256_CBC_SHA", tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA, false),
+			Entry("unsupported cipher ECDHE_RSA_WITH_CHACHA20_POLY1305", tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, false),
+			Entry("unsupported cipher RSA_WITH_AES_128_CBC_SHA", tls.TLS_RSA_WITH_AES_128_CBC_SHA, false),
+			Entry("unsupported cipher RSA_WITH_AES_128_GCM_SHA256", tls.TLS_RSA_WITH_AES_128_GCM_SHA256, false),
+			Entry("unsupported cipher RSA_WITH_AES_256_CBC_SHA", tls.TLS_RSA_WITH_AES_256_CBC_SHA, false),
+			Entry("unsupported cipher RSA_WITH_AES_256_GCM_SHA384", tls.TLS_RSA_WITH_AES_256_GCM_SHA384, false),
+
+			Entry("supported cipher ECDHE_RSA_WITH_AES_128_GCM_SHA256", tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, true),
+			Entry("supported cipher ECDHE_RSA_WITH_AES_256_GCM_SHA384", tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, true),
+		)
+	})
 })
+
+func buildTLSConfig(maxVersion, cipherSuite uint16) *tls.Config {
+	ca, err := certtest.BuildCA("tlsconfig")
+	Expect(err).ToNot(HaveOccurred())
+
+	pool, err := ca.CertPool()
+	Expect(err).ToNot(HaveOccurred())
+
+	clientCrt, err := ca.BuildSignedCertificate("client")
+	Expect(err).ToNot(HaveOccurred())
+
+	clientTLSCrt, err := clientCrt.TLSCertificate()
+	Expect(err).ToNot(HaveOccurred())
+
+	return &tls.Config{
+		Certificates:       []tls.Certificate{clientTLSCrt},
+		RootCAs:            pool,
+		ServerName:         "",
+		MaxVersion:         uint16(maxVersion),
+		CipherSuites:       []uint16{cipherSuite},
+		InsecureSkipVerify: true,
+	}
+}
 
 var (
 	invalidTokenResponse = `{
@@ -304,10 +416,13 @@ func (s *stubLogsProvider) addr() string {
 type testClient struct {
 	mu         sync.Mutex
 	_envelopes []*loggregator_v2.Envelope
+	tlsConfig  *tls.Config
 }
 
 func newTestClient() *testClient {
-	return &testClient{}
+	return &testClient{
+		tlsConfig: &tls.Config{InsecureSkipVerify: true},
+	}
 }
 
 func (tc *testClient) open(url string) (*http.Response, error) {
@@ -318,7 +433,7 @@ func (tc *testClient) open(url string) (*http.Response, error) {
 	req.Header.Set("Authorization", "my-token")
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig: tc.tlsConfig,
 	}
 	client := &http.Client{Transport: tr}
 
