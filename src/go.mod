@@ -51,10 +51,10 @@ require (
 	golang.org/x/image v0.0.0-20190618124811-92942e4437e2 // indirect
 	golang.org/x/mobile v0.0.0-20190607214518-6fa95d984e88 // indirect
 	golang.org/x/mod v0.1.0 // indirect
-	golang.org/x/net v0.0.0-20190619014844-b5b0513f8c1b
-	golang.org/x/sys v0.0.0-20190620070143-6f217b454f45 // indirect
+	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
+	golang.org/x/sys v0.0.0-20190621134130-06bbe82148b1 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
-	golang.org/x/tools v0.0.0-20190619215442-4adf7a708c2d // indirect
+	golang.org/x/tools v0.0.0-20190620191750-1fa568393b23 // indirect
 	google.golang.org/appengine v1.6.1 // indirect
 	google.golang.org/genproto v0.0.0-20190620144150-6af8c5fc6601 // indirect
 	google.golang.org/grpc v1.21.1
