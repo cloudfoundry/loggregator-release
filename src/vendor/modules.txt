@@ -138,7 +138,7 @@ golang.org/x/net/html
 golang.org/x/net/http/httpguts
 golang.org/x/net/idna
 golang.org/x/net/html/atom
-# golang.org/x/sys v0.0.0-20190621134130-06bbe82148b1
+# golang.org/x/sys v0.0.0-20190621203818-d432491b9138
 golang.org/x/sys/windows
 golang.org/x/sys/unix
 # golang.org/x/text v0.3.2
