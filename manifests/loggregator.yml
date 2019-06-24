@@ -88,7 +88,6 @@ instance_groups:
          disable_announce: true
          syslog_skip_cert_verify: true
        loggregator:
-         disable_syslog_drains: true
          tls:
            ca_cert: "((loggregator_router.ca))"
            doppler:
