@@ -33,7 +33,7 @@ require (
 	github.com/kisielk/errcheck v1.2.0 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pty v1.1.5 // indirect
-	github.com/mailru/easyjson v0.0.0-20190620125010-da37f6c1e481 // indirect
+	github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e // indirect
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
 	github.com/pkg/errors v0.8.1 // indirect
@@ -41,6 +41,7 @@ require (
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
 	github.com/prometheus/client_golang v1.0.0
 	github.com/prometheus/common v0.6.0 // indirect
+	github.com/prometheus/procfs v0.0.3 // indirect
 	github.com/rogpeppe/fastuuid v1.1.0 // indirect
 	github.com/rogpeppe/go-charset v0.0.0-20190617161244-0dc95cdf6f31 // indirect
 	github.com/sirupsen/logrus v1.4.2 // indirect
@@ -52,9 +53,9 @@ require (
 	golang.org/x/mobile v0.0.0-20190607214518-6fa95d984e88 // indirect
 	golang.org/x/mod v0.1.0 // indirect
 	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
-	golang.org/x/sys v0.0.0-20190624142023-c5567b49c5d0 // indirect
+	golang.org/x/sys v0.0.0-20190626150813-e07cf5db2756 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
-	golang.org/x/tools v0.0.0-20190624222133-a101b041ded4 // indirect
+	golang.org/x/tools v0.0.0-20190625160430-252024b82959 // indirect
 	google.golang.org/api v0.7.0 // indirect
 	google.golang.org/appengine v1.6.1 // indirect
 	google.golang.org/genproto v0.0.0-20190620144150-6af8c5fc6601 // indirect
