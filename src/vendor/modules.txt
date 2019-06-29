@@ -59,7 +59,7 @@ github.com/gorilla/handlers
 github.com/gorilla/mux
 # github.com/gorilla/websocket v1.4.0
 github.com/gorilla/websocket
-# github.com/grpc-ecosystem/grpc-gateway v1.9.2
+# github.com/grpc-ecosystem/grpc-gateway v1.9.3
 github.com/grpc-ecosystem/grpc-gateway/runtime
 github.com/grpc-ecosystem/grpc-gateway/utilities
 github.com/grpc-ecosystem/grpc-gateway/internal
@@ -126,7 +126,7 @@ github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 # github.com/square/certstrap v1.1.2-0.20181030173000-b612375892a7
 github.com/square/certstrap/pkix
-# golang.org/x/net v0.0.0-20190620200207-3b0461eec859
+# golang.org/x/net v0.0.0-20190628185345-da137c7871d7
 golang.org/x/net/context
 golang.org/x/net/netutil
 golang.org/x/net/trace
