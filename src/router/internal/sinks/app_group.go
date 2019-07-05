@@ -156,9 +156,3 @@ func (g *AppGroup) BroadcastError(msg *events.Envelope) {
 		}
 	}
 }
-
-func (g *AppGroup) length() int {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-	return len(g.wrappers)
-}

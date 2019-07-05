@@ -14,8 +14,6 @@ import (
 )
 
 type Pool struct {
-	size int
-
 	mu       sync.RWMutex
 	dopplers map[string]clientInfo
 	dialOpts []grpc.DialOption
@@ -69,9 +67,7 @@ func (p *Pool) connectToDoppler(addr string) {
 		),
 	}
 
-	for _, o := range p.dialOpts {
-		opts = append(opts, o)
-	}
+	opts = append(opts, p.dialOpts...)
 
 	for {
 		log.Printf("adding doppler %s", addr)

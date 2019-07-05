@@ -16,7 +16,6 @@ type HealthRegistrar interface {
 type DumpSink struct {
 	appId              string
 	messageRing        *ring.Ring
-	inputChan          chan *events.Envelope
 	inactivityDuration time.Duration
 	lock               sync.RWMutex
 	health             HealthRegistrar

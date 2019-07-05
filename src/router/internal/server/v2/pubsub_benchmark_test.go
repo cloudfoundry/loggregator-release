@@ -54,8 +54,6 @@ func BenchmarkDopplerRouter(b *testing.B) {
 
 type NopSetter struct{}
 
-var data []byte
-
 func (s NopSetter) Set(e *loggregator_v2.Envelope) {}
 
 func randEnvGen() func() *loggregator_v2.Envelope {

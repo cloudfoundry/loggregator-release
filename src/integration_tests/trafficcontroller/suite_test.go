@@ -23,9 +23,7 @@ const (
 
 var (
 	localIPAddress                    string
-	fakeDoppler                       *FakeDoppler
 	tcCleanupFunc                     func()
-	TRAFFIC_CONTROLLER_DROPSONDE_PORT int
 )
 
 func TestIntegrationTest(t *testing.T) {
@@ -92,10 +90,4 @@ func makeDropsondeMessage(messageString string, appId string, currentTime int64)
 	msg, _ := proto.Marshal(envelope)
 
 	return msg
-}
-
-type RouterStart struct {
-	Id                               string   `json:"id"`
-	Hosts                            []string `json:"hosts"`
-	MinimumRegisterIntervalInSeconds int      `json:"minimumRegisterIntervalInSeconds"`
 }

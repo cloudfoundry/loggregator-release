@@ -4,7 +4,6 @@ import (
 	"net"
 
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"code.cloudfoundry.org/loggregator/rlp/internal/ingress"
 
 	"golang.org/x/net/context"
@@ -190,13 +189,4 @@ func startListener(addr string) net.Listener {
 	Eventually(f).ShouldNot(HaveOccurred())
 
 	return lis
-}
-
-func startGRPCServer(ds plumbing.DopplerServer, addr string) (net.Listener, *grpc.Server) {
-	lis := startListener(addr)
-	s := grpc.NewServer()
-	plumbing.RegisterDopplerServer(s, ds)
-	go s.Serve(lis)
-
-	return lis, s
 }

@@ -1,7 +1,6 @@
 package sinks_test
 
 import (
-	"net"
 	"time"
 
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
@@ -179,44 +178,6 @@ var _ = Describe("GroupedSink", func() {
 	})
 })
 
-func dummyErrorHandler(_, _ string) {}
-
-type DummySyslogWriter struct{}
-
-func (d DummySyslogWriter) Connect() error { return nil }
-func (d DummySyslogWriter) Write(p int, b []byte, source, sourceId string, timestamp int64) (int, error) {
-	return 0, nil
-}
-func (d DummySyslogWriter) Close() error { return nil }
-
-type fakeMessageWriter struct {
-	RemoteAddress string
-}
-
-func (fake *fakeMessageWriter) RemoteAddr() net.Addr {
-	return fakeAddr{remoteAddress: fake.RemoteAddress}
-}
-
-func (fake *fakeMessageWriter) WriteMessage(messageType int, data []byte) error {
-	return nil
-}
-
-func (fake *fakeMessageWriter) SetWriteDeadline(t time.Time) error {
-	return nil
-}
-
-type fakeAddr struct {
-	remoteAddress string
-}
-
-func (fake fakeAddr) Network() string {
-	return "RemoteAddressNetwork"
-}
-
-func (fake fakeAddr) String() string {
-	return fake.remoteAddress
-}
-
 type fakeSink struct {
 	sinkId string
 	appId  string
@@ -232,10 +193,6 @@ func (f *fakeSink) Run(<-chan *events.Envelope) {
 func (f *fakeSink) Identifier() string {
 	return f.sinkId
 }
-
-type spyMetricBatcher struct{}
-
-func (s *spyMetricBatcher) BatchIncrementCounter(name string) {}
 
 type spyHealthRegistrar struct {
 }

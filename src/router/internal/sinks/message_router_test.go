@@ -129,9 +129,3 @@ func (f *fakeSinkManager) received() []*events.Envelope {
 	defer f.RUnlock()
 	return f.receivedMessages
 }
-
-func (f *fakeSinkManager) drains() [][]string {
-	f.RLock()
-	defer f.RUnlock()
-	return f.receivedDrains
-}

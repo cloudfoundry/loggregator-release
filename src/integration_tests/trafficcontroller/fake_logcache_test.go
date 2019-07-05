@@ -16,7 +16,6 @@ import (
 type stubGrpcLogCache struct {
 	mu         sync.Mutex
 	reqs       []*logcache_v1.ReadRequest
-	promReqs   []*logcache_v1.PromQL_InstantQueryRequest
 	lis        net.Listener
 	block      bool
 	grpcServer *grpc.Server

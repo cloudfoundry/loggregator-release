@@ -1,7 +1,6 @@
 package sinks
 
 import (
-	"log"
 	"sync"
 	"time"
 
@@ -94,21 +93,6 @@ func (sm *SinkManager) RecentLogsFor(appID string) []*events.Envelope {
 	}
 
 	return nil
-}
-
-func (sm *SinkManager) listenForErrorMessages() {
-	for {
-		select {
-		case <-sm.doneChannel:
-			return
-		case errorMessage, ok := <-sm.errorChannel:
-			if !ok {
-				return
-			}
-			appID := getAppId(errorMessage)
-			log.Printf("Sink error for %s: %s", appID, errorMessage)
-		}
-	}
 }
 
 func (sm *SinkManager) ensureRecentLogsSinkFor(appID string) {

@@ -1,11 +1,8 @@
 package router_test
 
 import (
-	"bytes"
 	"errors"
 	"log"
-	"net"
-	"sync"
 	"testing"
 	"time"
 
@@ -107,68 +104,6 @@ func unmarshalMessage(messageBytes []byte) events.Envelope {
 	err := proto.Unmarshal(messageBytes, &envelope)
 	Expect(err).NotTo(HaveOccurred())
 	return envelope
-}
-
-type tcpServer struct {
-	mu    sync.Mutex
-	_data bytes.Buffer
-
-	listener net.Listener
-	port     int
-}
-
-func (s *tcpServer) start() {
-	go func() {
-		defer GinkgoRecover()
-
-		for {
-			conn, err := s.listener.Accept()
-			if err != nil {
-				return
-			}
-
-			go func(conn net.Conn) {
-				defer GinkgoRecover()
-
-				for {
-					data := make([]byte, 1024)
-					_, err := conn.Read(data)
-					if err != nil {
-						return
-					}
-
-					s.mu.Lock()
-					s._data.Write(data)
-					s.mu.Unlock()
-				}
-			}(conn)
-		}
-	}()
-}
-
-func (s *tcpServer) readLine() (string, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s._data.ReadString('\n')
-}
-
-func (s *tcpServer) close() {
-	s.listener.Close()
-}
-
-func startUnencryptedTCPServer(syslogDrainAddress string) (*tcpServer, error) {
-	lis, err := net.Listen("tcp", syslogDrainAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	server := &tcpServer{
-		listener: lis,
-		port:     lis.Addr().(*net.TCPAddr).Port,
-	}
-	server.start()
-
-	return server, nil
 }
 
 func buildV1PrimerLogMessage() []byte {

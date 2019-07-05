@@ -6,7 +6,6 @@ import (
 	"regexp"
 
 	"code.cloudfoundry.org/loggregator/rlp-gateway/internal/auth"
-	"github.com/golang/protobuf/jsonpb"
 	"github.com/gorilla/mux"
 )
 
@@ -14,7 +13,6 @@ import (
 type CFAuthMiddlewareProvider struct {
 	oauth2Reader  Oauth2ClientReader
 	logAuthorizer LogAuthorizer
-	marshaller    jsonpb.Marshaler
 }
 
 // Oauth2ClientReader defines the interface for retrieving an OAuth2 client

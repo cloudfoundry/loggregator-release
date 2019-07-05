@@ -25,9 +25,6 @@ type Health interface {
 type DopplerProxy struct {
 	*mux.Router
 
-	numFirehoses  int64
-	numAppStreams int64
-
 	health Health
 
 	firehoseConnMetric  *metricemitter.Gauge
