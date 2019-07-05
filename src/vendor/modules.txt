@@ -162,12 +162,12 @@ golang.org/x/text/runes
 golang.org/x/text/internal/language
 golang.org/x/text/internal/language/compact
 golang.org/x/text/internal/tag
-# google.golang.org/genproto v0.0.0-20190627203621-eb59cef1c072
+# google.golang.org/genproto v0.0.0-20190701230453-710ae3a149df
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/api/httpbody
 google.golang.org/genproto/protobuf/field_mask
-# google.golang.org/grpc v1.21.1
+# google.golang.org/grpc v1.22.0
 google.golang.org/grpc
 google.golang.org/grpc/codes
 google.golang.org/grpc/credentials
@@ -194,6 +194,7 @@ google.golang.org/grpc/naming
 google.golang.org/grpc/peer
 google.golang.org/grpc/resolver/dns
 google.golang.org/grpc/resolver/passthrough
+google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/tap
 google.golang.org/grpc/credentials/internal
