@@ -12,12 +12,6 @@ import (
 )
 
 const (
-	availabilityZone = "test-availability-zone"
-	jobName          = "test-job-name"
-	jobIndex         = "42"
-)
-
-const (
 	red = 31 + iota
 	green
 	_ // yellow

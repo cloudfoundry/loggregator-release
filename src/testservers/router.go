@@ -16,9 +16,9 @@ import (
 func BuildRouterConfig(agentUDPPort, agentGRPCPort int) app.Config {
 	return app.Config{
 		GRPC: app.GRPC{
-			CertFile: Cert("doppler.crt"),
-			KeyFile:  Cert("doppler.key"),
-			CAFile:   Cert("loggregator-ca.crt"),
+			CertFile: LoggregatorTestCerts.Cert("doppler"),
+			KeyFile:  LoggregatorTestCerts.Key("doppler"),
+			CAFile:   LoggregatorTestCerts.CA(),
 		},
 		HealthAddr: "127.0.0.1:0",
 

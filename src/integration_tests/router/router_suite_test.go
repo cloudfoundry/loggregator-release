@@ -2,7 +2,6 @@ package router_test
 
 import (
 	"bytes"
-	"crypto/tls"
 	"errors"
 	"log"
 	"net"
@@ -13,7 +12,6 @@ import (
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator/integration_tests/binaries"
 	"code.cloudfoundry.org/loggregator/plumbing"
-	"code.cloudfoundry.org/loggregator/testservers"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc/grpclog"
@@ -163,28 +161,6 @@ func startUnencryptedTCPServer(syslogDrainAddress string) (*tcpServer, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	server := &tcpServer{
-		listener: lis,
-		port:     lis.Addr().(*net.TCPAddr).Port,
-	}
-	server.start()
-
-	return server, nil
-}
-
-func startEncryptedTCPServer(syslogDrainAddress string) (*tcpServer, error) {
-	lis, err := net.Listen("tcp", syslogDrainAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	tlsConfig, err := plumbing.NewServerTLSConfig(
-		testservers.Cert("localhost.crt"),
-		testservers.Cert("localhost.key"),
-	)
-	Expect(err).NotTo(HaveOccurred())
-	lis = tls.NewListener(lis, tlsConfig)
 
 	server := &tcpServer{
 		listener: lis,

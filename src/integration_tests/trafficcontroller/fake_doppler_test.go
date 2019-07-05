@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
+
 type FakeDoppler struct {
 	GrpcEndpoint         string
 	grpcListener         net.Listener
@@ -44,10 +45,11 @@ func (fakeDoppler *FakeDoppler) Start() error {
 	if err != nil {
 		return err
 	}
+
 	tlsConfig, err := plumbing.NewServerMutualTLSConfig(
-		testservers.Cert("doppler.crt"),
-		testservers.Cert("doppler.key"),
-		testservers.Cert("loggregator-ca.crt"),
+		testservers.LoggregatorTestCerts.Cert("doppler"),
+		testservers.LoggregatorTestCerts.Key("doppler"),
+		testservers.LoggregatorTestCerts.CA(),
 	)
 	if err != nil {
 		return err

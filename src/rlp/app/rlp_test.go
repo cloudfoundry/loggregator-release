@@ -27,14 +27,14 @@ import (
 var _ = Describe("Start", func() {
 	It("receive messages via egress client", func(done Done) {
 		defer close(done)
-		_, _, dopplerLis := setupDoppler()
+		_, _, dopplerLis := setupDoppler(testservers.LoggregatorTestCerts)
 		defer func() {
 			Expect(dopplerLis.Close()).To(Succeed())
 		}()
 
-		egressAddr, _ := setupRLP(dopplerLis, "127.0.0.1:0")
+		egressAddr, _ := setupRLP(dopplerLis, "127.0.0.1:0", testservers.LoggregatorTestCerts)
 
-		egressStream, cleanup := setupRLPStream(egressAddr)
+		egressStream, cleanup := setupRLPStream(egressAddr, testservers.LoggregatorTestCerts)
 		defer cleanup()
 
 		envelope, err := egressStream.Recv()
@@ -44,14 +44,14 @@ var _ = Describe("Start", func() {
 
 	It("receive messages via egress batching client", func(done Done) {
 		defer close(done)
-		_, _, dopplerLis := setupDoppler()
+		_, _, dopplerLis := setupDoppler(testservers.LoggregatorTestCerts)
 		defer func() {
 			Expect(dopplerLis.Close()).To(Succeed())
 		}()
 
-		egressAddr, _ := setupRLP(dopplerLis, "127.0.0.1:0")
+		egressAddr, _ := setupRLP(dopplerLis, "127.0.0.1:0", testservers.LoggregatorTestCerts)
 
-		egressStream, cleanup := setupRLPBatchedStream(egressAddr)
+		egressStream, cleanup := setupRLPBatchedStream(egressAddr, testservers.LoggregatorTestCerts)
 		defer cleanup()
 
 		f := func() int {
@@ -64,7 +64,7 @@ var _ = Describe("Start", func() {
 	}, 10)
 
 	It("limits the number of allowed connections", func() {
-		doppler, _, dopplerLis := setupDoppler()
+		doppler, _, dopplerLis := setupDoppler(testservers.LoggregatorTestCerts)
 
 		go func() {
 			for {
@@ -75,9 +75,9 @@ var _ = Describe("Start", func() {
 			}
 		}()
 
-		egressAddr, _ := setupRLP(dopplerLis, "127.0.0.1:0")
+		egressAddr, _ := setupRLP(dopplerLis, "127.0.0.1:0", testservers.LoggregatorTestCerts)
 		createStream := func() error {
-			egressClient, _ := setupRLPClient(egressAddr)
+			egressClient, _ := setupRLPClient(egressAddr, testservers.LoggregatorTestCerts)
 			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 			defer cancel()
 
@@ -101,12 +101,12 @@ var _ = Describe("Start", func() {
 	})
 
 	It("upgrades a LegacySelector into a Selector", func() {
-		_, doppler, dopplerLis := setupDoppler()
+		_, doppler, dopplerLis := setupDoppler(testservers.LoggregatorTestCerts)
 		defer dopplerLis.Close()
 
-		egressAddr, _ := setupRLP(dopplerLis, "127.0.0.1:0")
+		egressAddr, _ := setupRLP(dopplerLis, "127.0.0.1:0", testservers.LoggregatorTestCerts)
 
-		egressClient, cleanup := setupRLPClient(egressAddr)
+		egressClient, cleanup := setupRLPClient(egressAddr, testservers.LoggregatorTestCerts)
 		defer cleanup()
 
 		Eventually(func() error {
@@ -134,14 +134,14 @@ var _ = Describe("Start", func() {
 
 	Describe("draining", func() {
 		It("Stops accepting new connections", func() {
-			_, _, dopplerLis := setupDoppler()
+			_, _, dopplerLis := setupDoppler(testservers.LoggregatorTestCerts)
 			defer func() {
 				Expect(dopplerLis.Close()).To(Succeed())
 			}()
 
-			egressAddr, rlp := setupRLP(dopplerLis, "127.0.0.1:0")
+			egressAddr, rlp := setupRLP(dopplerLis, "127.0.0.1:0", testservers.LoggregatorTestCerts)
 
-			egressClient, cleanup := setupRLPClient(egressAddr)
+			egressClient, cleanup := setupRLPClient(egressAddr, testservers.LoggregatorTestCerts)
 			defer cleanup()
 
 			Eventually(func() error {
@@ -157,13 +157,13 @@ var _ = Describe("Start", func() {
 		})
 
 		It("Drains the envelopes", func() {
-			_, doppler, dopplerLis := setupDoppler()
+			_, doppler, dopplerLis := setupDoppler(testservers.LoggregatorTestCerts)
 			defer func() {
 				Expect(dopplerLis.Close()).To(Succeed())
 			}()
-			egressAddr, rlp := setupRLP(dopplerLis, "127.0.0.1:0")
+			egressAddr, rlp := setupRLP(dopplerLis, "127.0.0.1:0", testservers.LoggregatorTestCerts)
 
-			stream, cleanup := setupRLPStream(egressAddr)
+			stream, cleanup := setupRLPStream(egressAddr, testservers.LoggregatorTestCerts)
 			defer cleanup()
 
 			Eventually(doppler.requests, 5).ShouldNot(BeEmpty())
@@ -195,21 +195,6 @@ var _ = Describe("Start", func() {
 	})
 })
 
-func buildLogMessage() [][]byte {
-	e := &events.Envelope{
-		Origin:    proto.String("some-origin"),
-		EventType: events.Envelope_LogMessage.Enum(),
-		LogMessage: &events.LogMessage{
-			Message:     []byte("foo"),
-			MessageType: events.LogMessage_OUT.Enum(),
-			Timestamp:   proto.Int64(time.Now().UnixNano()),
-			AppId:       proto.String("test-app"),
-		},
-	}
-	b, _ := proto.Marshal(e)
-	return [][]byte{b}
-}
-
 func buildContainerMetric() []byte {
 	e := &events.Envelope{
 		Origin:    proto.String("some-origin"),
@@ -226,7 +211,7 @@ func buildContainerMetric() []byte {
 	return b
 }
 
-func setupDoppler() (*mockDopplerServer, *spyDopplerV2, net.Listener) {
+func setupDoppler(testCerts *testservers.TestCerts) (*mockDopplerServer, *spyDopplerV2, net.Listener) {
 	dopplerV1 := newMockDopplerServer()
 	dopplerV2 := newSpyDopplerV2()
 
@@ -234,9 +219,9 @@ func setupDoppler() (*mockDopplerServer, *spyDopplerV2, net.Listener) {
 	Expect(err).ToNot(HaveOccurred())
 
 	tlsCredentials, err := plumbing.NewServerCredentials(
-		testservers.Cert("doppler.crt"),
-		testservers.Cert("doppler.key"),
-		testservers.Cert("loggregator-ca.crt"),
+		testCerts.Cert("doppler"),
+		testCerts.Key("doppler"),
+		testCerts.CA(),
 	)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -249,19 +234,19 @@ func setupDoppler() (*mockDopplerServer, *spyDopplerV2, net.Listener) {
 	return dopplerV1, dopplerV2, lis
 }
 
-func setupRLP(dopplerLis net.Listener, healthAddr string) (addr string, rlp *app.RLP) {
+func setupRLP(dopplerLis net.Listener, healthAddr string, testCerts *testservers.TestCerts) (addr string, rlp *app.RLP) {
 	ingressTLSCredentials, err := plumbing.NewClientCredentials(
-		testservers.Cert("reverselogproxy.crt"),
-		testservers.Cert("reverselogproxy.key"),
-		testservers.Cert("loggregator-ca.crt"),
+		testCerts.Cert("reverselogproxy"),
+		testCerts.Key("reverselogproxy"),
+		testCerts.CA(),
 		"doppler",
 	)
 	Expect(err).ToNot(HaveOccurred())
 
 	egressTLSCredentials, err := plumbing.NewServerCredentials(
-		testservers.Cert("reverselogproxy.crt"),
-		testservers.Cert("reverselogproxy.key"),
-		testservers.Cert("loggregator-ca.crt"),
+		testCerts.Cert("reverselogproxy"),
+		testCerts.Key("reverselogproxy"),
+		testCerts.CA(),
 	)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -279,11 +264,11 @@ func setupRLP(dopplerLis net.Listener, healthAddr string) (addr string, rlp *app
 	return rlp.EgressAddr().String(), rlp
 }
 
-func setupRLPClient(egressAddr string) (loggregator_v2.EgressClient, func()) {
+func setupRLPClient(egressAddr string, testCerts *testservers.TestCerts) (loggregator_v2.EgressClient, func()) {
 	ingressTLSCredentials, err := plumbing.NewClientCredentials(
-		testservers.Cert("reverselogproxy.crt"),
-		testservers.Cert("reverselogproxy.key"),
-		testservers.Cert("loggregator-ca.crt"),
+		testCerts.Cert("reverselogproxy"),
+		testCerts.Key("reverselogproxy"),
+		testCerts.CA(),
 		"reverselogproxy",
 	)
 	Expect(err).ToNot(HaveOccurred())
@@ -301,8 +286,8 @@ func setupRLPClient(egressAddr string) (loggregator_v2.EgressClient, func()) {
 	}
 }
 
-func setupRLPStream(egressAddr string) (loggregator_v2.Egress_ReceiverClient, func()) {
-	egressClient, cleanup := setupRLPClient(egressAddr)
+func setupRLPStream(egressAddr string, testCerts *testservers.TestCerts) (loggregator_v2.Egress_ReceiverClient, func()) {
+	egressClient, cleanup := setupRLPClient(egressAddr, testCerts)
 
 	var egressStream loggregator_v2.Egress_ReceiverClient
 	Eventually(func() error {
@@ -322,8 +307,8 @@ func setupRLPStream(egressAddr string) (loggregator_v2.Egress_ReceiverClient, fu
 	return egressStream, cleanup
 }
 
-func setupRLPBatchedStream(egressAddr string) (loggregator_v2.Egress_BatchedReceiverClient, func()) {
-	egressClient, cleanup := setupRLPClient(egressAddr)
+func setupRLPBatchedStream(egressAddr string, testCerts *testservers.TestCerts) (loggregator_v2.Egress_BatchedReceiverClient, func()) {
+	egressClient, cleanup := setupRLPClient(egressAddr, testCerts)
 
 	var egressStream loggregator_v2.Egress_BatchedReceiverClient
 	Eventually(func() error {

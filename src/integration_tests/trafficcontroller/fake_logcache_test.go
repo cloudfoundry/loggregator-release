@@ -1,6 +1,7 @@
 package trafficcontroller_test
 
 import (
+	"code.cloudfoundry.org/loggregator/testservers"
 	"net"
 	"sync"
 	"time"
@@ -8,7 +9,6 @@ import (
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	"code.cloudfoundry.org/log-cache/pkg/rpc/logcache_v1"
 	"code.cloudfoundry.org/loggregator/plumbing"
-	"code.cloudfoundry.org/loggregator/testservers"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -24,10 +24,11 @@ type stubGrpcLogCache struct {
 
 func newStubGrpcLogCache() *stubGrpcLogCache {
 	s := &stubGrpcLogCache{}
+
 	lcCredentials, err := plumbing.NewServerCredentials(
-		testservers.Cert("log_cache.crt"),
-		testservers.Cert("log_cache.key"),
-		testservers.Cert("log-cache.crt"),
+		testservers.LogCacheTestCerts.Cert("log_cache"),
+		testservers.LogCacheTestCerts.Key("log_cache"),
+		testservers.LogCacheTestCerts.CA(),
 	)
 	if err != nil {
 		panic(err)

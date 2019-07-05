@@ -24,9 +24,9 @@ var _ = Describe("Router", func() {
 
 	BeforeEach(func() {
 		grpcConfig = app.GRPC{
-			CAFile:   testservers.Cert("loggregator-ca.crt"),
-			CertFile: testservers.Cert("doppler.crt"),
-			KeyFile:  testservers.Cert("doppler.key"),
+			CAFile:   testservers.LoggregatorTestCerts.CA(),
+			CertFile: testservers.LoggregatorTestCerts.Cert("doppler"),
+			KeyFile:  testservers.LoggregatorTestCerts.Key("doppler"),
 		}
 		spyAgent = newSpyAgent("localhost:0")
 		router = app.NewRouter(
@@ -274,9 +274,9 @@ type spyAgent struct {
 
 func newSpyAgent(addr string) *spyAgent {
 	creds, err := plumbing.NewServerCredentials(
-		testservers.Cert("metron.crt"),
-		testservers.Cert("metron.key"),
-		testservers.Cert("loggregator-ca.crt"),
+		testservers.LoggregatorTestCerts.Cert("metron"),
+		testservers.LoggregatorTestCerts.Key("metron"),
+		testservers.LoggregatorTestCerts.CA(),
 	)
 	Expect(err).ToNot(HaveOccurred())
 	a := &spyAgent{

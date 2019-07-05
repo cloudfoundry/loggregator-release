@@ -18,9 +18,9 @@ var _ = Describe("TLS", func() {
 	Context("NewClientMutualTLSConfig", func() {
 		It("builds a mutual auth tls config", func() {
 			conf, err := plumbing.NewClientMutualTLSConfig(
-				testservers.Cert("doppler.crt"),
-				testservers.Cert("doppler.key"),
-				testservers.Cert("loggregator-ca.crt"),
+				testservers.LoggregatorTestCerts.Cert("doppler"),
+				testservers.LoggregatorTestCerts.Key("doppler"),
+				testservers.LoggregatorTestCerts.CA(),
 				"test-server-name",
 			)
 			Expect(err).ToNot(HaveOccurred())
@@ -37,8 +37,8 @@ var _ = Describe("TLS", func() {
 
 		It("allows you to not specify a CA cert", func() {
 			conf, err := plumbing.NewClientMutualTLSConfig(
-				testservers.Cert("doppler.crt"),
-				testservers.Cert("doppler.key"),
+				testservers.LoggregatorTestCerts.Cert("doppler"),
+				testservers.LoggregatorTestCerts.Key("doppler"),
 				"",
 				"",
 			)
@@ -52,7 +52,7 @@ var _ = Describe("TLS", func() {
 			_, err := plumbing.NewClientMutualTLSConfig(
 				"",
 				"",
-				testservers.Cert("loggregator-ca.crt"),
+				testservers.LoggregatorTestCerts.CA(),
 				"",
 			)
 			Expect(err).To(HaveOccurred())
@@ -61,8 +61,8 @@ var _ = Describe("TLS", func() {
 
 		It("returns an error when given invalid ca cert path", func() {
 			_, err := plumbing.NewClientMutualTLSConfig(
-				testservers.Cert("doppler.crt"),
-				testservers.Cert("doppler.key"),
+				testservers.LoggregatorTestCerts.Cert("doppler"),
+				testservers.LoggregatorTestCerts.Key("doppler"),
 				"/file/that/does/not/exist",
 				"",
 			)
@@ -77,8 +77,8 @@ var _ = Describe("TLS", func() {
 				Expect(err).ToNot(HaveOccurred())
 			}()
 			_, err := plumbing.NewClientMutualTLSConfig(
-				testservers.Cert("doppler.crt"),
-				testservers.Cert("doppler.key"),
+				testservers.LoggregatorTestCerts.Cert("doppler"),
+				testservers.LoggregatorTestCerts.Key("doppler"),
 				empty,
 				"",
 			)
@@ -88,8 +88,8 @@ var _ = Describe("TLS", func() {
 
 		It("returns an error when the certificate is not signed by the CA", func() {
 			_, err := plumbing.NewClientMutualTLSConfig(
-				testservers.Cert("doppler.crt"),
-				testservers.Cert("doppler.key"),
+				testservers.LoggregatorTestCerts.Cert("doppler"),
+				testservers.LoggregatorTestCerts.Key("doppler"),
 				wrongCA(),
 				"",
 			)
@@ -100,9 +100,9 @@ var _ = Describe("TLS", func() {
 	Context("NewServerMutalTLSConfig", func() {
 		It("builds a mutual auth tls config", func() {
 			conf, err := plumbing.NewServerMutualTLSConfig(
-				testservers.Cert("doppler.crt"),
-				testservers.Cert("doppler.key"),
-				testservers.Cert("loggregator-ca.crt"),
+				testservers.LoggregatorTestCerts.Cert("doppler"),
+				testservers.LoggregatorTestCerts.Key("doppler"),
+				testservers.LoggregatorTestCerts.CA(),
 			)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -115,9 +115,9 @@ var _ = Describe("TLS", func() {
 
 		It("builds a config struct with default CIPHERs", func() {
 			conf, err := plumbing.NewServerMutualTLSConfig(
-				testservers.Cert("doppler.crt"),
-				testservers.Cert("doppler.key"),
-				testservers.Cert("loggregator-ca.crt"),
+				testservers.LoggregatorTestCerts.Cert("doppler"),
+				testservers.LoggregatorTestCerts.Key("doppler"),
+				testservers.LoggregatorTestCerts.CA(),
 			)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -130,9 +130,9 @@ var _ = Describe("TLS", func() {
 
 		It("accepts configuration for CIPHER suites", func() {
 			conf, err := plumbing.NewServerMutualTLSConfig(
-				testservers.Cert("doppler.crt"),
-				testservers.Cert("doppler.key"),
-				testservers.Cert("loggregator-ca.crt"),
+				testservers.LoggregatorTestCerts.Cert("doppler"),
+				testservers.LoggregatorTestCerts.Key("doppler"),
+				testservers.LoggregatorTestCerts.CA(),
 				plumbing.WithCipherSuites([]string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"}),
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -144,9 +144,9 @@ var _ = Describe("TLS", func() {
 
 		It("ignores garbage CIPHERs in favor of valid ones", func() {
 			conf, err := plumbing.NewServerMutualTLSConfig(
-				testservers.Cert("doppler.crt"),
-				testservers.Cert("doppler.key"),
-				testservers.Cert("loggregator-ca.crt"),
+				testservers.LoggregatorTestCerts.Cert("doppler"),
+				testservers.LoggregatorTestCerts.Key("doppler"),
+				testservers.LoggregatorTestCerts.CA(),
 				plumbing.WithCipherSuites([]string{
 					"GARBAGE",
 					"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
@@ -162,9 +162,9 @@ var _ = Describe("TLS", func() {
 		It("panics if no ciphers are provided", func() {
 			Expect(func() {
 				plumbing.NewServerMutualTLSConfig(
-					testservers.Cert("doppler.crt"),
-					testservers.Cert("doppler.key"),
-					testservers.Cert("loggregator-ca.crt"),
+					testservers.LoggregatorTestCerts.Cert("doppler"),
+					testservers.LoggregatorTestCerts.Key("doppler"),
+					testservers.LoggregatorTestCerts.CA(),
 					plumbing.WithCipherSuites([]string{}),
 				)
 			}).Should(Panic())
@@ -172,9 +172,9 @@ var _ = Describe("TLS", func() {
 
 		It("maintains the order of the ciphers provided", func() {
 			conf, err := plumbing.NewServerMutualTLSConfig(
-				testservers.Cert("doppler.crt"),
-				testservers.Cert("doppler.key"),
-				testservers.Cert("loggregator-ca.crt"),
+				testservers.LoggregatorTestCerts.Cert("doppler"),
+				testservers.LoggregatorTestCerts.Key("doppler"),
+				testservers.LoggregatorTestCerts.CA(),
 				plumbing.WithCipherSuites([]string{
 					"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
 					"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
@@ -202,8 +202,8 @@ var _ = Describe("TLS", func() {
 	Context("NewServerTLSConfig", func() {
 		It("builds a tls config with certificates set", func() {
 			conf, err := plumbing.NewServerTLSConfig(
-				testservers.Cert("localhost.crt"),
-				testservers.Cert("localhost.key"),
+				testservers.LoggregatorTestCerts.Cert("localhost"),
+				testservers.LoggregatorTestCerts.Key("localhost"),
 			)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -214,8 +214,8 @@ var _ = Describe("TLS", func() {
 
 		It("checks if cert and key match", func() {
 			_, err := plumbing.NewServerTLSConfig(
-				testservers.Cert("localhost.crt"),
-				testservers.Cert("doppler.key"),
+				testservers.LoggregatorTestCerts.Cert("localhost"),
+				testservers.LoggregatorTestCerts.Key("doppler"),
 			)
 			Expect(err).To(HaveOccurred())
 		})
@@ -224,9 +224,9 @@ var _ = Describe("TLS", func() {
 	Context("NewClientCredentials", func() {
 		It("returns transport credentials", func() {
 			creds, err := plumbing.NewClientCredentials(
-				testservers.Cert("doppler.crt"),
-				testservers.Cert("doppler.key"),
-				testservers.Cert("loggregator-ca.crt"),
+				testservers.LoggregatorTestCerts.Cert("doppler"),
+				testservers.LoggregatorTestCerts.Key("doppler"),
+				testservers.LoggregatorTestCerts.CA(),
 				"doppler",
 			)
 			Expect(err).ToNot(HaveOccurred())
@@ -235,9 +235,9 @@ var _ = Describe("TLS", func() {
 
 		It("returns an error with invalid certs", func() {
 			creds, err := plumbing.NewClientCredentials(
-				testservers.Cert("doppler.crt"),
-				testservers.Cert("doppler.key"),
-				testservers.Cert("doppler.key"),
+				testservers.LoggregatorTestCerts.Cert("doppler"),
+				testservers.LoggregatorTestCerts.Key("doppler"),
+				testservers.LoggregatorTestCerts.Key("doppler"),
 				"doppler",
 			)
 			Expect(err).To(HaveOccurred())
@@ -248,9 +248,9 @@ var _ = Describe("TLS", func() {
 	Context("NewServerCredentials", func() {
 		It("returns transport credentials", func() {
 			_, err := plumbing.NewServerCredentials(
-				testservers.Cert("doppler.crt"),
-				testservers.Cert("doppler.key"),
-				testservers.Cert("loggregator-ca.crt"),
+				testservers.LoggregatorTestCerts.Cert("doppler"),
+				testservers.LoggregatorTestCerts.Key("doppler"),
+				testservers.LoggregatorTestCerts.CA(),
 				plumbing.WithCipherSuites([]string{
 					"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
 				}),
@@ -260,9 +260,9 @@ var _ = Describe("TLS", func() {
 
 		It("returns an error with invalid certs", func() {
 			creds, err := plumbing.NewServerCredentials(
-				testservers.Cert("doppler.crt"),
-				testservers.Cert("doppler.key"),
-				testservers.Cert("doppler.key"),
+				testservers.LoggregatorTestCerts.Cert("doppler"),
+				testservers.LoggregatorTestCerts.Key("doppler"),
+				testservers.LoggregatorTestCerts.Key("doppler"),
 			)
 			Expect(err).To(HaveOccurred())
 			Expect(creds).To(BeNil())

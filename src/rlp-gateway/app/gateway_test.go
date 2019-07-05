@@ -35,34 +35,36 @@ var _ = Describe("Gateway", func() {
 
 		logger  = log.New(GinkgoWriter, "", log.LstdFlags)
 		metrics = metrics.New(expvar.NewMap("RLPGateway"))
+
+		localhostCerts = testservers.GenerateCerts("localhost")
 	)
 
 	BeforeEach(func() {
 		cfg = app.Config{
-			LogsProviderCAPath:         testservers.Cert("loggregator-ca.crt"),
-			LogsProviderClientCertPath: testservers.Cert("rlpgateway.crt"),
-			LogsProviderClientKeyPath:  testservers.Cert("rlpgateway.key"),
+			LogsProviderCAPath:         testservers.LoggregatorTestCerts.CA(),
+			LogsProviderClientCertPath: testservers.LoggregatorTestCerts.Cert("rlpgateway"),
+			LogsProviderClientKeyPath:  testservers.LoggregatorTestCerts.Key("rlpgateway"),
 			LogsProviderCommonName:     "reverselogproxy",
 
 			StreamTimeout: 10 * time.Minute,
 
 			HTTP: app.HTTP{
 				GatewayAddr: ":0",
-				CertPath:    testservers.Cert("localhost.crt"),
-				KeyPath:     testservers.Cert("localhost.key"),
+				CertPath:    localhostCerts.Cert("localhost"),
+				KeyPath:     localhostCerts.Key("localhost"),
 			},
 
 			LogAccessAuthorization: app.LogAccessAuthorization{
-				CertPath:   testservers.Cert("capi.crt"),
-				KeyPath:    testservers.Cert("capi.key"),
-				CAPath:     testservers.Cert("loggregator-ca.crt"),
+				CertPath:   testservers.LoggregatorTestCerts.Cert("capi"),
+				KeyPath:    testservers.LoggregatorTestCerts.Key("capi"),
+				CAPath:     testservers.LoggregatorTestCerts.CA(),
 				CommonName: "capi",
 			},
 
 			LogAdminAuthorization: app.LogAdminAuthorization{
 				ClientID:     "client",
 				ClientSecret: "secret",
-				CAPath:       testservers.Cert("loggregator-ca.crt"),
+				CAPath:       testservers.LoggregatorTestCerts.CA(),
 			},
 		}
 	})
@@ -72,17 +74,17 @@ var _ = Describe("Gateway", func() {
 			internalLogAccess := newAuthorizationServer(
 				http.StatusOK,
 				"{}",
-				testservers.Cert("capi.crt"),
-				testservers.Cert("capi.key"),
+				testservers.LoggregatorTestCerts.Cert("capi"),
+				testservers.LoggregatorTestCerts.Key("capi"),
 			)
 			logAdmin := newAuthorizationServer(
 				http.StatusBadRequest,
 				invalidTokenResponse,
-				testservers.Cert("uaa.crt"),
-				testservers.Cert("uaa.key"),
+				testservers.LoggregatorTestCerts.Cert("uaa"),
+				testservers.LoggregatorTestCerts.Key("uaa"),
 			)
 
-			logsProvider = newStubLogsProvider()
+			logsProvider = newStubLogsProvider(testservers.LoggregatorTestCerts)
 			logsProvider.toSend = 10
 
 			cfg.LogsProviderAddr = logsProvider.addr()
@@ -138,17 +140,17 @@ var _ = Describe("Gateway", func() {
 			internalLogAccess := newAuthorizationServer(
 				http.StatusBadRequest,
 				"{}",
-				testservers.Cert("capi.crt"),
-				testservers.Cert("capi.key"),
+				testservers.LoggregatorTestCerts.Cert("capi"),
+				testservers.LoggregatorTestCerts.Key("capi"),
 			)
 			logAdmin := newAuthorizationServer(
 				http.StatusOK,
 				validTokenResponse,
-				testservers.Cert("uaa.crt"),
-				testservers.Cert("uaa.key"),
+				testservers.LoggregatorTestCerts.Cert("uaa"),
+				testservers.LoggregatorTestCerts.Key("uaa"),
 			)
 
-			logsProvider = newStubLogsProvider()
+			logsProvider = newStubLogsProvider(testservers.LoggregatorTestCerts)
 			logsProvider.toSend = 10
 
 			cfg.LogsProviderAddr = logsProvider.addr()
@@ -193,17 +195,17 @@ var _ = Describe("Gateway", func() {
 			internalLogAccess := newAuthorizationServer(
 				http.StatusBadRequest,
 				"{}",
-				testservers.Cert("capi.crt"),
-				testservers.Cert("capi.key"),
+				testservers.LoggregatorTestCerts.Cert("capi"),
+				testservers.LoggregatorTestCerts.Key("capi"),
 			)
 			logAdmin := newAuthorizationServer(
 				http.StatusBadRequest,
 				invalidTokenResponse,
-				testservers.Cert("uaa.crt"),
-				testservers.Cert("uaa.key"),
+				testservers.LoggregatorTestCerts.Cert("uaa"),
+				testservers.LoggregatorTestCerts.Key("uaa"),
 			)
 
-			logsProvider = newStubLogsProvider()
+			logsProvider = newStubLogsProvider(testservers.LoggregatorTestCerts)
 
 			cfg.LogsProviderAddr = logsProvider.addr()
 			cfg.LogAccessAuthorization.Addr = internalLogAccess.URL
@@ -241,17 +243,17 @@ var _ = Describe("Gateway", func() {
 			internalLogAccess := newAuthorizationServer(
 				http.StatusOK,
 				"{}",
-				testservers.Cert("capi.crt"),
-				testservers.Cert("capi.key"),
+				testservers.LoggregatorTestCerts.Cert("capi"),
+				testservers.LoggregatorTestCerts.Key("capi"),
 			)
 			logAdmin := newAuthorizationServer(
 				http.StatusBadRequest,
 				invalidTokenResponse,
-				testservers.Cert("uaa.crt"),
-				testservers.Cert("uaa.key"),
+				testservers.LoggregatorTestCerts.Cert("uaa"),
+				testservers.LoggregatorTestCerts.Key("uaa"),
 			)
 
-			logsProvider = newStubLogsProvider()
+			logsProvider = newStubLogsProvider(testservers.LoggregatorTestCerts)
 			logsProvider.toSend = 1
 
 			cfg.LogsProviderAddr = logsProvider.addr()
@@ -359,11 +361,11 @@ type stubLogsProvider struct {
 	toSend   int
 }
 
-func newStubLogsProvider() *stubLogsProvider {
+func newStubLogsProvider(testCerts *testservers.TestCerts) *stubLogsProvider {
 	creds, err := plumbing.NewServerCredentials(
-		testservers.Cert("reverselogproxy.crt"),
-		testservers.Cert("reverselogproxy.key"),
-		testservers.Cert("loggregator-ca.crt"),
+		testCerts.Cert("reverselogproxy"),
+		testCerts.Key("reverselogproxy"),
+		testCerts.CA(),
 	)
 	if err != nil {
 		panic(err)

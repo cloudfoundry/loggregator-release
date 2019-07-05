@@ -14,9 +14,9 @@ import (
 
 func DopplerEgressV1Client(addr string) (func(), plumbing.DopplerClient) {
 	creds, err := plumbing.NewClientCredentials(
-		testservers.Cert("doppler.crt"),
-		testservers.Cert("doppler.key"),
-		testservers.Cert("loggregator-ca.crt"),
+		testservers.LoggregatorTestCerts.Cert("doppler"),
+		testservers.LoggregatorTestCerts.Key("doppler"),
+		testservers.LoggregatorTestCerts.CA(),
 		"doppler",
 	)
 	Expect(err).ToNot(HaveOccurred())
@@ -30,9 +30,9 @@ func DopplerEgressV1Client(addr string) (func(), plumbing.DopplerClient) {
 
 func DopplerEgressV2Client(addr string) (func(), loggregator_v2.EgressClient) {
 	creds, err := plumbing.NewClientCredentials(
-		testservers.Cert("doppler.crt"),
-		testservers.Cert("doppler.key"),
-		testservers.Cert("loggregator-ca.crt"),
+		testservers.LoggregatorTestCerts.Cert("doppler"),
+		testservers.LoggregatorTestCerts.Key("doppler"),
+		testservers.LoggregatorTestCerts.CA(),
 		"doppler",
 	)
 	Expect(err).ToNot(HaveOccurred())
@@ -46,9 +46,9 @@ func DopplerEgressV2Client(addr string) (func(), loggregator_v2.EgressClient) {
 
 func DopplerIngressV1Client(addr string) (func(), plumbing.DopplerIngestor_PusherClient) {
 	creds, err := plumbing.NewClientCredentials(
-		testservers.Cert("doppler.crt"),
-		testservers.Cert("doppler.key"),
-		testservers.Cert("loggregator-ca.crt"),
+		testservers.LoggregatorTestCerts.Cert("doppler"),
+		testservers.LoggregatorTestCerts.Key("doppler"),
+		testservers.LoggregatorTestCerts.CA(),
 		"doppler",
 	)
 	Expect(err).ToNot(HaveOccurred())
@@ -84,9 +84,9 @@ func DopplerIngressV1Client(addr string) (func(), plumbing.DopplerIngestor_Pushe
 
 func DopplerIngressV2Client(addr string) (func(), loggregator_v2.Ingress_SenderClient) {
 	creds, err := plumbing.NewClientCredentials(
-		testservers.Cert("doppler.crt"),
-		testservers.Cert("doppler.key"),
-		testservers.Cert("loggregator-ca.crt"),
+		testservers.LoggregatorTestCerts.Cert("doppler"),
+		testservers.LoggregatorTestCerts.Key("doppler"),
+		testservers.LoggregatorTestCerts.CA(),
 		"doppler",
 	)
 	Expect(err).ToNot(HaveOccurred())
