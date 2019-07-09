@@ -21,10 +21,10 @@ require (
 	github.com/elazarl/goproxy/ext v0.0.0-20190703090003-6125c262ffb0 // indirect
 	github.com/gogo/protobuf v1.2.1
 	github.com/golang/protobuf v1.3.1
-	github.com/gorilla/handlers v1.4.0
+	github.com/gorilla/handlers v1.4.1
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/websocket v1.4.0
-	github.com/grpc-ecosystem/grpc-gateway v1.9.3 // indirect
+	github.com/grpc-ecosystem/grpc-gateway v1.9.4 // indirect
 	github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e // indirect
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
@@ -37,7 +37,7 @@ require (
 	golang.org/x/sys v0.0.0-20190626221950-04f50cda93cb // indirect
 	golang.org/x/text v0.3.2 // indirect
 	google.golang.org/appengine v1.4.0 // indirect
-	google.golang.org/genproto v0.0.0-20190701230453-710ae3a149df // indirect
+	google.golang.org/genproto v0.0.0-20190708153700-3bdd9d9f5532 // indirect
 	google.golang.org/grpc v1.22.0
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 )
