@@ -1,6 +1,9 @@
 package plumbing_test
 
 import (
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"log"
 	"net"
 	"time"
 
@@ -18,29 +21,22 @@ import (
 
 var _ = Describe("GRPCConnector", func() {
 	var (
-		req         *plumbing.SubscriptionRequest
-		connector   *plumbing.GRPCConnector
-		listeners   []net.Listener
-		grpcServers []*grpc.Server
+		req       *plumbing.SubscriptionRequest
+		connector *plumbing.GRPCConnector
 
-		mockDopplerServerA *mockDopplerServer
-		mockDopplerServerB *mockDopplerServer
+		mockDopplerServerA *spyRouter
+		mockDopplerServerB *spyRouter
 		mockFinder         *mockFinder
 
 		metricClient *testhelper.SpyMetricClient
 	)
 
 	BeforeEach(func() {
-		mockDopplerServerA = newMockDopplerServer()
-		mockDopplerServerB = newMockDopplerServer()
+		mockDopplerServerA = startMockDopplerServer()
+		mockDopplerServerB = startMockDopplerServer()
 		mockFinder = newMockFinder()
 
 		pool := plumbing.NewPool(2, grpc.WithInsecure())
-
-		lisA, serverA := startGRPCServer(mockDopplerServerA, "127.0.0.1:0")
-		lisB, serverB := startGRPCServer(mockDopplerServerB, "127.0.0.1:0")
-		listeners = append(listeners, lisA, lisB)
-		grpcServers = append(grpcServers, serverA, serverB)
 
 		req = &plumbing.SubscriptionRequest{
 			ShardID: "test-sub-id",
@@ -53,16 +49,8 @@ var _ = Describe("GRPCConnector", func() {
 	})
 
 	AfterEach(func() {
-		for _, lis := range listeners {
-			Expect(lis.Close()).To(Succeed())
-		}
-
-		for _, server := range grpcServers {
-			server.Stop()
-		}
-
-		listeners = nil
-		grpcServers = nil
+		mockDopplerServerA.Stop()
+		mockDopplerServerB.Stop()
 	})
 
 	Describe("Subscribe()", func() {
@@ -88,7 +76,7 @@ var _ = Describe("GRPCConnector", func() {
 
 				BeforeEach(func() {
 					event := plumbing.Event{
-						GRPCDopplers: createGrpcURIs(listeners),
+						GRPCDopplers: createGrpcURIs(mockDopplerServerA, mockDopplerServerB),
 					}
 
 					var ready chan struct{}
@@ -100,7 +88,7 @@ var _ = Describe("GRPCConnector", func() {
 
 				It("connects to the doppler with the correct request", func() {
 					var r *plumbing.SubscriptionRequest
-					Eventually(mockDopplerServerA.BatchSubscribeInput.Req).Should(Receive(&r))
+					Eventually(mockDopplerServerA.requests).Should(Receive(&r))
 					Expect(proto.Equal(r, req)).To(BeTrue())
 				})
 
@@ -122,12 +110,12 @@ var _ = Describe("GRPCConnector", func() {
 				})
 
 				It("does not close the doppler connection when a client exits", func() {
-					Eventually(mockDopplerServerA.BatchSubscribeInput.Stream).Should(Receive())
+					Eventually(mockDopplerServerA.streams).Should(Receive())
 					cancelFunc()
 
 					newData, _, ready := readFromSubscription(context.Background(), req, connector)
 					Eventually(ready).Should(BeClosed())
-					Eventually(mockDopplerServerA.BatchSubscribeCalled).Should(HaveLen(2))
+					Eventually(mockDopplerServerA.requests).Should(HaveLen(2))
 
 					senderA := captureSubscribeSender(mockDopplerServerA)
 					err := senderA.Send(&plumbing.BatchResponse{
@@ -140,30 +128,33 @@ var _ = Describe("GRPCConnector", func() {
 
 				Context("when another doppler comes online", func() {
 					var secondEvent plumbing.Event
+					var mockDopplerServerC *spyRouter
 
 					BeforeEach(func() {
-						Eventually(mockDopplerServerA.BatchSubscribeCalled).Should(HaveLen(1))
-						Eventually(mockDopplerServerB.BatchSubscribeCalled).Should(HaveLen(1))
+						Eventually(mockDopplerServerA.requests).Should(HaveLen(1))
+						Eventually(mockDopplerServerB.requests).Should(HaveLen(1))
 
-						mockDopplerServerC := newMockDopplerServer()
-						lisC, serverC := startGRPCServer(mockDopplerServerC, "127.0.0.1:0")
-						listeners = append(listeners, lisC)
-						grpcServers = append(grpcServers, serverC)
+						mockDopplerServerC = startMockDopplerServer()
 
 						secondEvent = plumbing.Event{
-							GRPCDopplers: createGrpcURIs(listeners),
+							GRPCDopplers: createGrpcURIs(mockDopplerServerA, mockDopplerServerB, mockDopplerServerC),
 						}
 						mockFinder.NextOutput.Ret0 <- secondEvent
 					})
 
+					AfterEach(func() {
+						mockDopplerServerC.Stop()
+					})
+
 					It("does not reconnect to pre-existing dopplers", func() {
-						Consistently(mockDopplerServerA.BatchSubscribeCalled).Should(HaveLen(1))
-						Consistently(mockDopplerServerB.BatchSubscribeCalled).Should(HaveLen(1))
+						Consistently(mockDopplerServerA.requests).Should(HaveLen(1))
+						Consistently(mockDopplerServerB.requests).Should(HaveLen(1))
 					})
 				})
 
 				Context("when a doppler is removed permanently", func() {
 					var secondEvent plumbing.Event
+					var listener net.Listener
 
 					BeforeEach(func() {
 						senderA := captureSubscribeSender(mockDopplerServerA)
@@ -174,14 +165,17 @@ var _ = Describe("GRPCConnector", func() {
 						Eventually(data).Should(Receive(Equal([]byte("some-data-a"))))
 
 						secondEvent = plumbing.Event{
-							GRPCDopplers: createGrpcURIs(listeners[1:]),
+							GRPCDopplers: createGrpcURIs(mockDopplerServerB),
 						}
 						mockFinder.NextOutput.Ret0 <- secondEvent
 
-						Expect(listeners[0].Close()).To(Succeed())
-						grpcServers[0].Stop()
+						mockDopplerServerA.Stop()
 						time.Sleep(1 * time.Second)
-						listeners[0] = startListener(listeners[0].Addr().String())
+						listener = startListener(mockDopplerServerA.addr.String())
+					})
+
+					AfterEach(func() {
+						listener.Close()
 					})
 
 					It("does not attempt reconnect", func() {
@@ -189,7 +183,7 @@ var _ = Describe("GRPCConnector", func() {
 						go func(lis net.Listener) {
 							conn, _ := lis.Accept()
 							c <- conn
-						}(listeners[0])
+						}(listener)
 						Consistently(c, 2).ShouldNot(Receive())
 					})
 				})
@@ -213,7 +207,7 @@ var _ = Describe("GRPCConnector", func() {
 						senderA = captureSubscribeSender(mockDopplerServerA)
 
 						secondEvent = plumbing.Event{
-							GRPCDopplers: createGrpcURIs(nil),
+							GRPCDopplers: []string{},
 						}
 
 						mockFinder.NextOutput.Ret0 <- secondEvent
@@ -245,14 +239,14 @@ var _ = Describe("GRPCConnector", func() {
 
 						BeforeEach(func() {
 							thirdEvent = plumbing.Event{
-								GRPCDopplers: createGrpcURIs(listeners),
+								GRPCDopplers: createGrpcURIs(mockDopplerServerA, mockDopplerServerB),
 							}
 
 							mockFinder.NextOutput.Ret0 <- thirdEvent
 						})
 
 						It("doesn't create a second connection", func() {
-							Consistently(mockDopplerServerA.BatchSubscribeCalled, 1).Should(HaveLen(1))
+							Consistently(mockDopplerServerA.requests, 1).Should(HaveLen(1))
 						})
 
 						Context("when the first connection is closed", func() {
@@ -295,7 +289,7 @@ var _ = Describe("GRPCConnector", func() {
 
 				BeforeEach(func() {
 					event = plumbing.Event{
-						GRPCDopplers: createGrpcURIs(listeners),
+						GRPCDopplers: createGrpcURIs(mockDopplerServerA, mockDopplerServerB),
 					}
 
 					mockFinder.NextOutput.Ret0 <- event
@@ -307,33 +301,39 @@ var _ = Describe("GRPCConnector", func() {
 
 				It("connects to the doppler with the correct request", func() {
 					var r *plumbing.SubscriptionRequest
-					Eventually(mockDopplerServerA.BatchSubscribeInput.Req).Should(Receive(&r))
+					Eventually(mockDopplerServerA.requests).Should(Receive(&r))
 					Expect(proto.Equal(r, req)).To(BeTrue())
 				})
 			})
 
 			Context("when new doppler is not available right away", func() {
 				var (
-					event plumbing.Event
+					event    plumbing.Event
+					listener net.Listener
 				)
 
 				BeforeEach(func() {
 					event = plumbing.Event{
-						GRPCDopplers: createGrpcURIs(listeners),
+						GRPCDopplers: createGrpcURIs(mockDopplerServerA, mockDopplerServerB),
 					}
 
-					Expect(listeners[0].Close()).To(Succeed())
-					grpcServers[0].Stop()
-
+					mockDopplerServerA.Stop()
 					mockFinder.NextOutput.Ret0 <- event
 
 					_, _, _ = readFromSubscription(ctx, req, connector)
-					Eventually(mockDopplerServerB.BatchSubscribeCalled).ShouldNot(HaveLen(0))
-					listeners[0], grpcServers[0] = startGRPCServer(mockDopplerServerA, listeners[0].Addr().String())
+					Eventually(mockDopplerServerB.requests).ShouldNot(HaveLen(0))
+
+					listener = startListener(mockDopplerServerA.addr.String())
+
+					mockDopplerServerA.grpcServer = grpc.NewServer()
+					plumbing.RegisterDopplerServer(mockDopplerServerA.grpcServer, mockDopplerServerA)
+					go func() {
+						log.Println(mockDopplerServerA.grpcServer.Serve(listener))
+					}()
 				})
 
 				It("attempts to reconnect", func() {
-					Eventually(mockDopplerServerA.BatchSubscribeInput.Stream, 5).Should(Receive())
+					Eventually(mockDopplerServerA.streams, 5).Should(Receive())
 				})
 			})
 
@@ -347,15 +347,15 @@ var _ = Describe("GRPCConnector", func() {
 
 				BeforeEach(func() {
 					event = plumbing.Event{
-						GRPCDopplers: createGrpcURIs(listeners),
+						GRPCDopplers: createGrpcURIs(mockDopplerServerA, mockDopplerServerB),
 					}
 
 					mockFinder.NextOutput.Ret0 <- event
 
 					data, _, ready = readFromSubscription(ctx, req, connector)
 					Eventually(ready).Should(BeClosed())
-					Eventually(mockDopplerServerA.BatchSubscribeCalled).Should(HaveLen(1))
-					Eventually(mockDopplerServerB.BatchSubscribeCalled).Should(HaveLen(1))
+					Eventually(mockDopplerServerA.requests).Should(HaveLen(1))
+					Eventually(mockDopplerServerB.requests).Should(HaveLen(1))
 
 					senderA = captureSubscribeSender(mockDopplerServerA)
 					err := senderA.Send(&plumbing.BatchResponse{
@@ -365,12 +365,11 @@ var _ = Describe("GRPCConnector", func() {
 
 					Eventually(data).Should(Receive(Equal([]byte("test-payload-1"))))
 
-					Expect(listeners[0].Close()).To(Succeed())
-					grpcServers[0].Stop()
+					mockDopplerServerA.Stop()
+					mockDopplerServerA = startMockDopplerServer()
 
-					listeners[0], grpcServers[0] = startGRPCServer(mockDopplerServerA, "127.0.0.1:0")
 					event = plumbing.Event{
-						GRPCDopplers: createGrpcURIs(listeners),
+						GRPCDopplers: createGrpcURIs(mockDopplerServerA, mockDopplerServerB),
 					}
 
 					mockFinder.NextOutput.Ret0 <- event
@@ -411,16 +410,67 @@ func readFromSubscription(ctx context.Context, req *plumbing.SubscriptionRequest
 	return data, errs, ready
 }
 
-func createGrpcURIs(listeners []net.Listener) []string {
+func createGrpcURIs(ms ...*spyRouter) []string {
 	var results []string
-	for _, lis := range listeners {
-		results = append(results, lis.Addr().String())
+	for _, m := range ms {
+		results = append(results, m.addr.String())
 	}
 	return results
 }
 
-func captureSubscribeSender(doppler *mockDopplerServer) plumbing.Doppler_BatchSubscribeServer {
+func captureSubscribeSender(doppler *spyRouter) plumbing.Doppler_BatchSubscribeServer {
 	var server plumbing.Doppler_BatchSubscribeServer
-	EventuallyWithOffset(1, doppler.BatchSubscribeInput.Stream, 5).Should(Receive(&server))
+	EventuallyWithOffset(1, doppler.streams, 5).Should(Receive(&server))
 	return server
+}
+
+type spyRouter struct {
+	addr       net.Addr
+	grpcServer *grpc.Server
+	requests   chan *plumbing.SubscriptionRequest
+	streams    chan plumbing.Doppler_BatchSubscribeServer
+}
+
+func startMockDopplerServer() *spyRouter {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	Expect(err).ToNot(HaveOccurred())
+
+	mockServer := &spyRouter{
+		addr:       lis.Addr(),
+		grpcServer: grpc.NewServer(),
+		requests:   make(chan *plumbing.SubscriptionRequest, 100),
+		streams:    make(chan plumbing.Doppler_BatchSubscribeServer, 100),
+	}
+
+	plumbing.RegisterDopplerServer(mockServer.grpcServer, mockServer)
+
+	go func() {
+		log.Println(mockServer.grpcServer.Serve(lis))
+	}()
+
+	return mockServer
+}
+
+func (m *spyRouter) Subscribe(req *plumbing.SubscriptionRequest, stream plumbing.Doppler_SubscribeServer) error {
+	return status.Errorf(codes.Unimplemented, "Use batched receiver")
+}
+
+func (m *spyRouter) BatchSubscribe(req *plumbing.SubscriptionRequest, stream plumbing.Doppler_BatchSubscribeServer) error {
+	m.requests <- req
+	m.streams <- stream
+
+	<-stream.Context().Done()
+
+	return nil
+}
+
+func (m *spyRouter) ContainerMetrics(ctx context.Context, req *plumbing.ContainerMetricsRequest) (resp *plumbing.ContainerMetricsResponse, err error) {
+	panic("not implemented")
+}
+func (m *spyRouter) RecentLogs(ctx context.Context, req *plumbing.RecentLogsRequest) (resp *plumbing.RecentLogsResponse, err error) {
+	panic("not implemented")
+}
+
+func (m *spyRouter) Stop() {
+	m.grpcServer.Stop()
 }

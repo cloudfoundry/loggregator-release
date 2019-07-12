@@ -78,16 +78,14 @@ var _ = Describe("Pool", func() {
 
 	Describe("Subscribe()", func() {
 		var (
-			mockDoppler1 *mockDopplerServer
-			lis1         net.Listener
-			server1      *grpc.Server
+			mockDoppler1 *spyRouter
 
 			ctx context.Context
 			req *plumbing.SubscriptionRequest
 		)
 
 		BeforeEach(func() {
-			mockDoppler1 = newMockDopplerServer()
+			mockDoppler1 = startMockDopplerServer()
 
 			ctx = context.Background()
 
@@ -96,19 +94,19 @@ var _ = Describe("Pool", func() {
 			}
 		})
 
+		AfterEach(func() {
+			mockDoppler1.Stop()
+		})
+
 		Context("when the doppler is already available", func() {
 			BeforeEach(func() {
-				lis1, server1 = startGRPCServer(mockDoppler1, "127.0.0.1:0")
-				listeners = append(listeners, lis1)
-				servers = append(servers, server1)
-
-				pool.RegisterDoppler(lis1.Addr().String())
+				pool.RegisterDoppler(mockDoppler1.addr.String())
 			})
 
 			It("picks a random connection to subscribe to", func() {
 				data := make(chan [][]byte, 100)
 				for i := 0; i < 10; i++ {
-					rx := fetchRx(pool, lis1.Addr().String(), ctx, req)
+					rx := fetchRx(pool, mockDoppler1.addr.String(), ctx, req)
 
 					go consumeReceiver(rx, data)
 				}

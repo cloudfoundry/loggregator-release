@@ -40,7 +40,9 @@ func startGRPCServer(ds plumbing.DopplerServer, addr string) (net.Listener, *grp
 	s := grpc.NewServer()
 
 	plumbing.RegisterDopplerServer(s, ds)
-	go s.Serve(lis)
+	go func() {
+		log.Println(s.Serve(lis))
+	}()
 
 	return lis, s
 }
