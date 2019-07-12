@@ -85,11 +85,17 @@ func WithDomains(domains ...string) SignOption {
 	}
 }
 
-// BuildSignedCertificate creates a new signed certificate which is valid for
+// BuildSignedCertificate creates a new signed certificate with a default expiry date.
+func (a *Authority) BuildSignedCertificate(name string, options ...SignOption) (*Certificate, error) {
+	expiry := time.Now().AddDate(1, 0, 0)
+	return a.BuildSignedCertificateWithExpiry(name, expiry, options...)
+}
+
+// BuildSignedCertificateWithExpiry creates a new signed certificate which is valid for
 // `localhost` and `127.0.0.1` by default. This can be changed by passing in
 // the various options. The certificates it creates should only be used
 // ephemerally in tests.
-func (a *Authority) BuildSignedCertificate(name string, options ...SignOption) (*Certificate, error) {
+func (a *Authority) BuildSignedCertificateWithExpiry(name string, expiry time.Time, options ...SignOption) (*Certificate, error) {
 	key, err := pkix.CreateRSAKey(keySize)
 	if err != nil {
 		return nil, err
@@ -107,8 +113,6 @@ func (a *Authority) BuildSignedCertificate(name string, options ...SignOption) (
 		return nil, err
 	}
 	csrLock.Unlock()
-
-	expiry := time.Now().AddDate(1, 0, 0)
 
 	crt, err := pkix.CreateCertificateHost(a.cert, a.key, csr, expiry)
 	if err != nil {
