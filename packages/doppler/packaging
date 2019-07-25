@@ -2,6 +2,5 @@ set -ex
 
 source /var/vcap/packages/golang-1-linux/bosh/compile.env
 unset GOPATH
-export HOME=/var/vcap
 
 go build -mod=vendor -o ${BOSH_INSTALL_TARGET}/doppler ./router/
