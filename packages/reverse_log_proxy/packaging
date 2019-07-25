@@ -1,7 +1,7 @@
 set -ex
 
-export GOROOT=$(readlink -nf /var/vcap/packages/golang1.12.4)
-export PATH=$GOROOT/bin:$PATH
+source /var/vcap/packages/golang-1-linux/bosh/compile.env
+unset GOPATH
 export HOME=/var/vcap
 
 go build -mod=vendor -o ${BOSH_INSTALL_TARGET}/rlp ./rlp/

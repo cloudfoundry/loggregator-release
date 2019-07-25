@@ -2,7 +2,7 @@
 name: loggregator_trafficcontroller
 
 dependencies:
-- golang1.12.4
+- golang-1-linux
 
 files:
 - healthendpoint/**/*.go

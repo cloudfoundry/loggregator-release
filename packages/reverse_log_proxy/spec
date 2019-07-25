@@ -2,7 +2,7 @@
 name: reverse_log_proxy
 
 dependencies:
-- golang1.12.4
+- golang-1-linux
 
 files:
 - healthendpoint/**/*.go
