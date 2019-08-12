@@ -178,7 +178,7 @@ func setField(value reflect.Value, input string, hasEnvTag bool) (missing []stri
 		return setPointerToStruct(value, input, hasEnvTag)
 	}
 
-	return nil, nil
+	return nil, fmt.Errorf("unsupported type %s", value.Kind())
 }
 
 func separateOnComma(input string) []string {
@@ -315,7 +315,7 @@ func setSlice(value reflect.Value, input string, hasEnvTag bool) error {
 func setMap(value reflect.Value, input string) error {
 	inputs := separateOnComma(input)
 
-	m := make(map[string]string)
+	m := reflect.MakeMap(value.Type())
 	for _, i := range inputs {
 		kv := strings.SplitN(i, ":", 2)
 
@@ -324,13 +324,19 @@ func setMap(value reflect.Value, input string) error {
 		}
 
 		if len(kv) < 2 {
-			return fmt.Errorf("map[string]string key '%s' is missing a value", kv[0])
+			return fmt.Errorf("%s key '%s' is missing a value", value.Type(), kv[0])
 		}
 
-		m[kv[0]] = kv[1]
+		castedKey := reflect.New(value.Type().Key()).Elem()
+		castedValue := reflect.New(value.Type().Elem()).Elem()
+
+		setField(castedKey, kv[0], false)
+		setField(castedValue, kv[1], false)
+
+		m.SetMapIndex(castedKey, castedValue)
 	}
 
-	value.Set(reflect.ValueOf(m))
+	value.Set(m)
 
 	return nil
 }

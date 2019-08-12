@@ -4,8 +4,8 @@ go 1.12
 
 require (
 	code.cloudfoundry.org/go-batching v0.0.0-20171020220229-924d2a9b48ac
-	code.cloudfoundry.org/go-diodes v0.0.0-20180905200951-72629b5276e3
-	code.cloudfoundry.org/go-envstruct v1.4.0
+	code.cloudfoundry.org/go-diodes v0.0.0-20190809170250-f77fb823c7ee
+	code.cloudfoundry.org/go-envstruct v1.5.0
 	code.cloudfoundry.org/go-loggregator v7.4.0+incompatible
 	code.cloudfoundry.org/go-pubsub v0.0.0-20180503211407-becd51dc37cb
 	code.cloudfoundry.org/grpc-throughputlb v0.0.0-20180905204614-e98a1ee09867
@@ -34,7 +34,7 @@ require (
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
 	github.com/prometheus/client_golang v1.1.0
 	golang.org/x/net v0.0.0-20190724013045-ca1201d0de80
-	golang.org/x/sys v0.0.0-20190804053845-51ab0e2deafa // indirect
+	golang.org/x/sys v0.0.0-20190812073006-9eafafc0a87e // indirect
 	golang.org/x/text v0.3.2 // indirect
 	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20190801165951-fa694d86fc64 // indirect

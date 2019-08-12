@@ -1,8 +1,8 @@
 # code.cloudfoundry.org/go-batching v0.0.0-20171020220229-924d2a9b48ac
 code.cloudfoundry.org/go-batching
-# code.cloudfoundry.org/go-diodes v0.0.0-20180905200951-72629b5276e3
+# code.cloudfoundry.org/go-diodes v0.0.0-20190809170250-f77fb823c7ee
 code.cloudfoundry.org/go-diodes
-# code.cloudfoundry.org/go-envstruct v1.4.0
+# code.cloudfoundry.org/go-envstruct v1.5.0
 code.cloudfoundry.org/go-envstruct
 # code.cloudfoundry.org/go-loggregator v7.4.0+incompatible
 code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2
@@ -138,7 +138,7 @@ golang.org/x/net/html
 golang.org/x/net/http/httpguts
 golang.org/x/net/idna
 golang.org/x/net/html/atom
-# golang.org/x/sys v0.0.0-20190804053845-51ab0e2deafa
+# golang.org/x/sys v0.0.0-20190812073006-9eafafc0a87e
 golang.org/x/sys/windows
 golang.org/x/sys/unix
 # golang.org/x/text v0.3.2
