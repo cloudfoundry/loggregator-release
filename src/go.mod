@@ -33,8 +33,9 @@ require (
 	github.com/poy/eachers v0.0.0-20181020210610-23942921fe77 // indirect
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
 	github.com/prometheus/client_golang v1.1.0
+	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4 // indirect
 	golang.org/x/net v0.0.0-20190724013045-ca1201d0de80
-	golang.org/x/sys v0.0.0-20190812073006-9eafafc0a87e // indirect
+	golang.org/x/sys v0.0.0-20190813064441-fde4db37ae7a // indirect
 	golang.org/x/text v0.3.2 // indirect
 	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20190801165951-fa694d86fc64 // indirect
