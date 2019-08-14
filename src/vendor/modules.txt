@@ -167,7 +167,7 @@ google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/api/httpbody
 google.golang.org/genproto/protobuf/field_mask
-# google.golang.org/grpc v1.22.2
+# google.golang.org/grpc v1.23.0
 google.golang.org/grpc
 google.golang.org/grpc/codes
 google.golang.org/grpc/credentials

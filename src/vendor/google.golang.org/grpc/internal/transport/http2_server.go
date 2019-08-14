@@ -767,6 +767,10 @@ func (t *http2Server) WriteHeader(s *Stream, md metadata.MD) error {
 	return nil
 }
 
+func (t *http2Server) setResetPingStrikes() {
+	atomic.StoreUint32(&t.resetPingStrikes, 1)
+}
+
 func (t *http2Server) writeHeaderLocked(s *Stream) error {
 	// TODO(mmukhi): Benchmark if the performance gets better if count the metadata and other header fields
 	// first and create a slice of that exact size.
@@ -781,9 +785,7 @@ func (t *http2Server) writeHeaderLocked(s *Stream) error {
 		streamID:  s.id,
 		hf:        headerFields,
 		endStream: false,
-		onWrite: func() {
-			atomic.StoreUint32(&t.resetPingStrikes, 1)
-		},
+		onWrite:   t.setResetPingStrikes,
 	})
 	if !success {
 		if err != nil {
@@ -843,9 +845,7 @@ func (t *http2Server) WriteStatus(s *Stream, st *status.Status) error {
 		streamID:  s.id,
 		hf:        headerFields,
 		endStream: true,
-		onWrite: func() {
-			atomic.StoreUint32(&t.resetPingStrikes, 1)
-		},
+		onWrite:   t.setResetPingStrikes,
 	}
 	s.hdrMu.Unlock()
 	success, err := t.controlBuf.execute(t.checkForHeaderListSize, trailingHeader)
@@ -897,12 +897,10 @@ func (t *http2Server) Write(s *Stream, hdr []byte, data []byte, opts *Options) e
 	hdr = append(hdr, data[:emptyLen]...)
 	data = data[emptyLen:]
 	df := &dataFrame{
-		streamID: s.id,
-		h:        hdr,
-		d:        data,
-		onEachWrite: func() {
-			atomic.StoreUint32(&t.resetPingStrikes, 1)
-		},
+		streamID:    s.id,
+		h:           hdr,
+		d:           data,
+		onEachWrite: t.setResetPingStrikes,
 	}
 	if err := s.wq.get(int32(len(hdr) + len(data))); err != nil {
 		select {
@@ -968,6 +966,7 @@ func (t *http2Server) keepalive() {
 			select {
 			case <-maxAge.C:
 				// Close the connection after grace period.
+				infof("transport: closing server transport due to maximum connection age.")
 				t.Close()
 				// Resetting the timer so that the clean-up doesn't deadlock.
 				maxAge.Reset(infinity)
@@ -981,6 +980,7 @@ func (t *http2Server) keepalive() {
 				continue
 			}
 			if pingSent {
+				infof("transport: closing server transport due to idleness.")
 				t.Close()
 				// Resetting the timer so that the clean-up doesn't deadlock.
 				keepalive.Reset(infinity)
