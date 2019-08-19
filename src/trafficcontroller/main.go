@@ -1,6 +1,7 @@
 package main
 
 import (
+	"code.cloudfoundry.org/tlsconfig"
 	"crypto/x509"
 	"io/ioutil"
 	"log"
@@ -59,9 +60,17 @@ func main() {
 }
 
 func uaaHTTPClient(conf *app.Config) *http.Client {
-	tlsConfig := plumbing.NewTLSConfig()
+	tlsConfig, err := tlsconfig.Build(
+		tlsconfig.WithInternalServiceDefaults(),
+	).Client(
+		tlsconfig.WithAuthorityFromFile(conf.UaaCACert),
+	)
+
+	if err != nil {
+		log.Fatalf("Unable to create UAA HTTP Client: %s", err)
+	}
+
 	tlsConfig.InsecureSkipVerify = conf.SkipCertVerify
-	tlsConfig.RootCAs = loadUaaCA(conf)
 
 	transport := &http.Transport{
 		TLSHandshakeTimeout: 10 * time.Second,
@@ -75,12 +84,14 @@ func uaaHTTPClient(conf *app.Config) *http.Client {
 }
 
 func ccHTTPClient(conf *app.Config) *http.Client {
-	tlsConfig, err := plumbing.NewClientMutualTLSConfig(
-		conf.CCTLSClientConfig.CertFile,
-		conf.CCTLSClientConfig.KeyFile,
-		conf.CCTLSClientConfig.CAFile,
-		conf.CCTLSClientConfig.ServerName,
+	tlsConfig, err := tlsconfig.Build(
+		tlsconfig.WithInternalServiceDefaults(),
+		tlsconfig.WithIdentityFromFile(conf.CCTLSClientConfig.CertFile, conf.CCTLSClientConfig.KeyFile),
+	).Client(
+		tlsconfig.WithAuthorityFromFile(conf.CCTLSClientConfig.CAFile),
+		tlsconfig.WithServerName(conf.CCTLSClientConfig.ServerName),
 	)
+
 	if err != nil {
 		log.Fatalf("Unable to create CC HTTP Client: %s", err)
 	}

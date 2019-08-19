@@ -1,6 +1,7 @@
 package trafficcontroller_test
 
 import (
+	"code.cloudfoundry.org/tlsconfig"
 	"net"
 
 	"code.cloudfoundry.org/loggregator/plumbing"
@@ -11,7 +12,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
-
 
 type FakeDoppler struct {
 	GrpcEndpoint         string
@@ -46,11 +46,16 @@ func (fakeDoppler *FakeDoppler) Start() error {
 		return err
 	}
 
-	tlsConfig, err := plumbing.NewServerMutualTLSConfig(
-		testservers.LoggregatorTestCerts.Cert("doppler"),
-		testservers.LoggregatorTestCerts.Key("doppler"),
-		testservers.LoggregatorTestCerts.CA(),
+	tlsConfig, err := tlsconfig.Build(
+		tlsconfig.WithInternalServiceDefaults(),
+		tlsconfig.WithIdentityFromFile(
+			testservers.LoggregatorTestCerts.Cert("doppler"),
+			testservers.LoggregatorTestCerts.Key("doppler"),
+		),
+	).Server(
+		tlsconfig.WithClientAuthenticationFromFile(testservers.LoggregatorTestCerts.CA()),
 	)
+
 	if err != nil {
 		return err
 	}

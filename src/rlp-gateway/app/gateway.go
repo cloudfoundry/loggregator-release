@@ -116,6 +116,7 @@ func (g *Gateway) buildTlsConfig() *tls.Config {
 		tlsconfig.WithInternalServiceDefaults(),
 		tlsconfig.WithIdentityFromFile(g.cfg.HTTP.CertPath, g.cfg.HTTP.KeyPath),
 	).Server()
+
 	if err != nil {
 		g.log.Fatalf("failed to build tls config: %s", err)
 	}
@@ -137,9 +138,17 @@ func (g *Gateway) Addr() string {
 }
 
 func buildAdminAuthClient(cfg Config) *http.Client {
-	tlsConfig := plumbing.NewTLSConfig()
+	tlsConfig, err := tlsconfig.Build(
+		tlsconfig.WithInternalServiceDefaults(),
+	).Client(
+		tlsconfig.WithAuthorityFromFile(cfg.LogAdminAuthorization.CAPath),
+	)
+
+	if err != nil {
+		log.Fatalf("unable to create admin auth client: %s", err)
+	}
+
 	tlsConfig.InsecureSkipVerify = cfg.SkipCertVerify
-	tlsConfig.RootCAs = loadUaaCA(cfg.LogAdminAuthorization.CAPath)
 
 	transport := &http.Transport{
 		TLSHandshakeTimeout: 10 * time.Second,
@@ -154,12 +163,14 @@ func buildAdminAuthClient(cfg Config) *http.Client {
 }
 
 func buildAccessAuthorizationClient(cfg Config) *http.Client {
-	tlsConfig, err := plumbing.NewClientMutualTLSConfig(
-		cfg.LogAccessAuthorization.CertPath,
-		cfg.LogAccessAuthorization.KeyPath,
-		cfg.LogAccessAuthorization.CAPath,
-		cfg.LogAccessAuthorization.CommonName,
+	tlsConfig, err := tlsconfig.Build(
+		tlsconfig.WithInternalServiceDefaults(),
+		tlsconfig.WithIdentityFromFile(cfg.LogAccessAuthorization.CertPath, cfg.LogAccessAuthorization.KeyPath),
+	).Client(
+		tlsconfig.WithAuthorityFromFile(cfg.LogAccessAuthorization.CAPath),
+		tlsconfig.WithServerName(cfg.LogAccessAuthorization.CommonName),
 	)
+
 	if err != nil {
 		log.Fatalf("unable to create log access HTTP Client: %s", err)
 	}

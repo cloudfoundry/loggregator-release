@@ -1,6 +1,7 @@
 package app
 
 import (
+	"code.cloudfoundry.org/tlsconfig"
 	"log"
 	"net"
 	"time"
@@ -189,26 +190,29 @@ func (d *Router) Start() {
 		100,
 	)
 
-	var opts []plumbing.ConfigOption
-	if len(d.c.GRPC.CipherSuites) > 0 {
-		opts = append(opts, plumbing.WithCipherSuites(d.c.GRPC.CipherSuites))
-	}
-	tlsConfig, err := plumbing.NewServerMutualTLSConfig(
-		d.c.GRPC.CertFile,
-		d.c.GRPC.KeyFile,
-		d.c.GRPC.CAFile,
-		opts...,
+	tlsConf, err := tlsconfig.Build(
+		tlsconfig.WithInternalServiceDefaults(),
+		tlsconfig.WithIdentityFromFile(d.c.GRPC.CertFile, d.c.GRPC.KeyFile),
+	).Server(
+		tlsconfig.WithClientAuthenticationFromFile(d.c.GRPC.CAFile),
 	)
+
+	if len(d.c.GRPC.CipherSuites) > 0 {
+		opt := plumbing.WithCipherSuites(d.c.GRPC.CipherSuites)
+		opt(tlsConf)
+	}
+
 	if err != nil {
 		log.Panicf("Failed to create tls config for router server: %s", err)
 	}
+
 	srv, err := server.NewServer(
 		d.c.GRPC.Port,
 		v1Ingress,
 		v1Egress,
 		v2Ingress,
 		v2Egress,
-		grpc.Creds(credentials.NewTLS(tlsConfig)),
+		grpc.Creds(credentials.NewTLS(tlsConf)),
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			MinTime:             10 * time.Second,
 			PermitWithoutStream: true,
