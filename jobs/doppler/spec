@@ -28,10 +28,6 @@ provides:
   - metron_endpoint.grpc_port
 
 properties:
-  doppler.maxRetainedLogMessages:
-    description: number of log messages to retain per application
-    default: 100
-
   loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"
   loggregator.tls.doppler.cert:
@@ -47,14 +43,6 @@ properties:
   doppler.grpc_port:
     description: Port for outgoing log messages via GRPC
     default: 8082
-
-  doppler.container_metric_ttl_seconds:
-    description: "TTL (in seconds) for container usage metrics"
-    default: 120
-
-  doppler.sink_inactivity_timeout_seconds:
-    description: "Interval before removing a sink due to inactivity"
-    default: 3600
 
   doppler.pprof_port:
     description: "The pprof port for runtime profiling data"

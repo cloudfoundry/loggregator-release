@@ -27,8 +27,6 @@ func BuildRouterConfig(agentUDPPort, agentGRPCPort int) app.Config {
 		},
 
 		MetricBatchIntervalMilliseconds: 10,
-		MaxRetainedLogMessages:          10,
-		SinkInactivityTimeoutSeconds:    120,
 	}
 }
 

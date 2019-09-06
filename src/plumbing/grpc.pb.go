@@ -17,10 +17,6 @@ It has these top-level messages:
 	MetricFilter
 	Response
 	BatchResponse
-	ContainerMetricsRequest
-	ContainerMetricsResponse
-	RecentLogsRequest
-	RecentLogsResponse
 */
 package plumbing
 
@@ -271,70 +267,6 @@ func (m *BatchResponse) GetPayload() [][]byte {
 	return nil
 }
 
-type ContainerMetricsRequest struct {
-	AppID string `protobuf:"bytes,1,opt,name=appID" json:"appID,omitempty"`
-}
-
-func (m *ContainerMetricsRequest) Reset()                    { *m = ContainerMetricsRequest{} }
-func (m *ContainerMetricsRequest) String() string            { return proto.CompactTextString(m) }
-func (*ContainerMetricsRequest) ProtoMessage()               {}
-func (*ContainerMetricsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
-
-func (m *ContainerMetricsRequest) GetAppID() string {
-	if m != nil {
-		return m.AppID
-	}
-	return ""
-}
-
-type ContainerMetricsResponse struct {
-	Payload [][]byte `protobuf:"bytes,1,rep,name=payload,proto3" json:"payload,omitempty"`
-}
-
-func (m *ContainerMetricsResponse) Reset()                    { *m = ContainerMetricsResponse{} }
-func (m *ContainerMetricsResponse) String() string            { return proto.CompactTextString(m) }
-func (*ContainerMetricsResponse) ProtoMessage()               {}
-func (*ContainerMetricsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
-
-func (m *ContainerMetricsResponse) GetPayload() [][]byte {
-	if m != nil {
-		return m.Payload
-	}
-	return nil
-}
-
-type RecentLogsRequest struct {
-	AppID string `protobuf:"bytes,1,opt,name=appID" json:"appID,omitempty"`
-}
-
-func (m *RecentLogsRequest) Reset()                    { *m = RecentLogsRequest{} }
-func (m *RecentLogsRequest) String() string            { return proto.CompactTextString(m) }
-func (*RecentLogsRequest) ProtoMessage()               {}
-func (*RecentLogsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
-
-func (m *RecentLogsRequest) GetAppID() string {
-	if m != nil {
-		return m.AppID
-	}
-	return ""
-}
-
-type RecentLogsResponse struct {
-	Payload [][]byte `protobuf:"bytes,1,rep,name=payload,proto3" json:"payload,omitempty"`
-}
-
-func (m *RecentLogsResponse) Reset()                    { *m = RecentLogsResponse{} }
-func (m *RecentLogsResponse) String() string            { return proto.CompactTextString(m) }
-func (*RecentLogsResponse) ProtoMessage()               {}
-func (*RecentLogsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
-
-func (m *RecentLogsResponse) GetPayload() [][]byte {
-	if m != nil {
-		return m.Payload
-	}
-	return nil
-}
-
 func init() {
 	proto.RegisterType((*EnvelopeData)(nil), "plumbing.EnvelopeData")
 	proto.RegisterType((*PushResponse)(nil), "plumbing.PushResponse")
@@ -344,10 +276,6 @@ func init() {
 	proto.RegisterType((*MetricFilter)(nil), "plumbing.MetricFilter")
 	proto.RegisterType((*Response)(nil), "plumbing.Response")
 	proto.RegisterType((*BatchResponse)(nil), "plumbing.BatchResponse")
-	proto.RegisterType((*ContainerMetricsRequest)(nil), "plumbing.ContainerMetricsRequest")
-	proto.RegisterType((*ContainerMetricsResponse)(nil), "plumbing.ContainerMetricsResponse")
-	proto.RegisterType((*RecentLogsRequest)(nil), "plumbing.RecentLogsRequest")
-	proto.RegisterType((*RecentLogsResponse)(nil), "plumbing.RecentLogsResponse")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -363,8 +291,6 @@ const _ = grpc.SupportPackageIsVersion4
 type DopplerClient interface {
 	Subscribe(ctx context.Context, in *SubscriptionRequest, opts ...grpc.CallOption) (Doppler_SubscribeClient, error)
 	BatchSubscribe(ctx context.Context, in *SubscriptionRequest, opts ...grpc.CallOption) (Doppler_BatchSubscribeClient, error)
-	ContainerMetrics(ctx context.Context, in *ContainerMetricsRequest, opts ...grpc.CallOption) (*ContainerMetricsResponse, error)
-	RecentLogs(ctx context.Context, in *RecentLogsRequest, opts ...grpc.CallOption) (*RecentLogsResponse, error)
 }
 
 type dopplerClient struct {
@@ -439,31 +365,11 @@ func (x *dopplerBatchSubscribeClient) Recv() (*BatchResponse, error) {
 	return m, nil
 }
 
-func (c *dopplerClient) ContainerMetrics(ctx context.Context, in *ContainerMetricsRequest, opts ...grpc.CallOption) (*ContainerMetricsResponse, error) {
-	out := new(ContainerMetricsResponse)
-	err := grpc.Invoke(ctx, "/plumbing.Doppler/ContainerMetrics", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *dopplerClient) RecentLogs(ctx context.Context, in *RecentLogsRequest, opts ...grpc.CallOption) (*RecentLogsResponse, error) {
-	out := new(RecentLogsResponse)
-	err := grpc.Invoke(ctx, "/plumbing.Doppler/RecentLogs", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // Server API for Doppler service
 
 type DopplerServer interface {
 	Subscribe(*SubscriptionRequest, Doppler_SubscribeServer) error
 	BatchSubscribe(*SubscriptionRequest, Doppler_BatchSubscribeServer) error
-	ContainerMetrics(context.Context, *ContainerMetricsRequest) (*ContainerMetricsResponse, error)
-	RecentLogs(context.Context, *RecentLogsRequest) (*RecentLogsResponse, error)
 }
 
 func RegisterDopplerServer(s *grpc.Server, srv DopplerServer) {
@@ -512,55 +418,9 @@ func (x *dopplerBatchSubscribeServer) Send(m *BatchResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Doppler_ContainerMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ContainerMetricsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DopplerServer).ContainerMetrics(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/plumbing.Doppler/ContainerMetrics",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DopplerServer).ContainerMetrics(ctx, req.(*ContainerMetricsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Doppler_RecentLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RecentLogsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DopplerServer).RecentLogs(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/plumbing.Doppler/RecentLogs",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DopplerServer).RecentLogs(ctx, req.(*RecentLogsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 var _Doppler_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "plumbing.Doppler",
 	HandlerType: (*DopplerServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "ContainerMetrics",
-			Handler:    _Doppler_ContainerMetrics_Handler,
-		},
-		{
-			MethodName: "RecentLogs",
-			Handler:    _Doppler_RecentLogs_Handler,
-		},
-	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Subscribe",

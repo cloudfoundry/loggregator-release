@@ -28,16 +28,11 @@ type DataSetter interface {
 	Set(data []byte)
 }
 
-// EnvelopeStore returns Envelopes recent logs requests.
-type EnvelopeStore interface {
-	RecentLogsFor(appID string) []*events.Envelope
-}
 
 // DopplerServer is the GRPC server component that accepts requests for firehose
 // streams, application streams, and recent logs.
 type DopplerServer struct {
 	registrar           Registrar
-	envelopeStore       EnvelopeStore
 	egressMetric        *metricemitter.Counter
 	egressDropped       *metricemitter.Counter
 	subscriptionsMetric *metricemitter.Gauge
@@ -60,7 +55,6 @@ type MetricClient interface {
 // NewDopplerServer creates a new DopplerServer.
 func NewDopplerServer(
 	registrar Registrar,
-	envelopeStore EnvelopeStore,
 	metricClient MetricClient,
 	droppedMetric *metricemitter.Counter,
 	subscriptionsMetric *metricemitter.Gauge,
@@ -76,7 +70,6 @@ func NewDopplerServer(
 
 	m := &DopplerServer{
 		registrar:           registrar,
-		envelopeStore:       envelopeStore,
 		egressMetric:        egressMetric,
 		egressDropped:       droppedMetric,
 		subscriptionsMetric: subscriptionsMetric,
@@ -106,19 +99,6 @@ func (m *DopplerServer) BatchSubscribe(req *plumbing.SubscriptionRequest, sender
 	defer m.health.Dec("subscriptionCount")
 
 	return m.sendBatchData(req, sender)
-}
-
-//TODO: Deprecated
-func (m *DopplerServer) ContainerMetrics(ctx context.Context, req *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error) {
-	return nil, nil
-}
-
-// RecentLogs is called by GRPC on recent logs requests.
-func (m *DopplerServer) RecentLogs(ctx context.Context, req *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error) {
-	envelopes := m.envelopeStore.RecentLogsFor(req.AppID)
-	return &plumbing.RecentLogsResponse{
-		Payload: marshalEnvelopes(envelopes),
-	}, nil
 }
 
 func marshalEnvelopes(envelopes []*events.Envelope) [][]byte {

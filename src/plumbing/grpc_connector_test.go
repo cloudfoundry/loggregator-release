@@ -464,13 +464,6 @@ func (m *spyRouter) BatchSubscribe(req *plumbing.SubscriptionRequest, stream plu
 	return nil
 }
 
-func (m *spyRouter) ContainerMetrics(ctx context.Context, req *plumbing.ContainerMetricsRequest) (resp *plumbing.ContainerMetricsResponse, err error) {
-	panic("not implemented")
-}
-func (m *spyRouter) RecentLogs(ctx context.Context, req *plumbing.RecentLogsRequest) (resp *plumbing.RecentLogsResponse, err error) {
-	panic("not implemented")
-}
-
 func (m *spyRouter) Stop() {
 	m.grpcServer.Stop()
 }

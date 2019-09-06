@@ -25,7 +25,6 @@ var _ = Describe("v1 doppler server", func() {
 		mockRegistrar   *spyRegistrar
 		mockCleanup     func()
 		cleanupCalled   chan struct{}
-		mockDataDumper  *spyDataDumper
 		healthRegistrar *SpyHealthRegistrar
 
 		metricClient        *testhelper.SpyMetricClient
@@ -47,7 +46,6 @@ var _ = Describe("v1 doppler server", func() {
 		cleanupCalled = make(chan struct{})
 		mockCleanup = buildCleanup(cleanupCalled)
 		mockRegistrar.cleanup = mockCleanup
-		mockDataDumper = newSpyDataDumper()
 		healthRegistrar = newSpyHealthRegistrar()
 		batchInterval = 50 * time.Millisecond
 
@@ -65,7 +63,6 @@ var _ = Describe("v1 doppler server", func() {
 		BeforeEach(func() {
 			dopplerClient, subscribeRequest, listener, connCloser = dopplerSetup(
 				mockRegistrar,
-				mockDataDumper,
 				batchInterval,
 				healthRegistrar,
 				metricClient,
@@ -184,7 +181,6 @@ var _ = Describe("v1 doppler server", func() {
 			BeforeEach(func() {
 				dopplerClient, subscribeRequest, listener, connCloser = dopplerSetup(
 					mockRegistrar,
-					mockDataDumper,
 					batchInterval,
 					healthRegistrar,
 					metricClient,
@@ -225,7 +221,6 @@ var _ = Describe("v1 doppler server", func() {
 			BeforeEach(func() {
 				dopplerClient, subscribeRequest, listener, connCloser = dopplerSetup(
 					mockRegistrar,
-					mockDataDumper,
 					batchInterval,
 					healthRegistrar,
 					metricClient,
@@ -286,7 +281,6 @@ var _ = Describe("v1 doppler server", func() {
 				BeforeEach(func() {
 					dopplerClient, subscribeRequest, listener, connCloser = dopplerSetup(
 						mockRegistrar,
-						mockDataDumper,
 						batchInterval,
 						healthRegistrar,
 						metricClient,
@@ -317,7 +311,6 @@ var _ = Describe("v1 doppler server", func() {
 				BeforeEach(func() {
 					dopplerClient, subscribeRequest, listener, connCloser = dopplerSetup(
 						mockRegistrar,
-						mockDataDumper,
 						time.Hour,
 						healthRegistrar,
 						metricClient,
@@ -347,54 +340,10 @@ var _ = Describe("v1 doppler server", func() {
 			})
 		})
 	})
-
-	Describe("recent logs", func() {
-		BeforeEach(func() {
-			dopplerClient, subscribeRequest, listener, connCloser = dopplerSetup(
-				mockRegistrar,
-				mockDataDumper,
-				batchInterval,
-				healthRegistrar,
-				metricClient,
-				egressDropped,
-				subscriptionsMetric,
-			)
-
-		})
-
-		It("returns recent logs from its data dumper", func() {
-			envelope, data := buildLogMessage()
-			mockDataDumper.recentLogsForEnvelopes = []*events.Envelope{
-				envelope,
-			}
-			resp, err := dopplerClient.RecentLogs(context.TODO(),
-				&plumbing.RecentLogsRequest{AppID: "some-app"})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(resp.Payload).To(ContainElement(
-				data,
-			))
-			Expect(mockDataDumper.recentLogsForAppID).To(Equal("some-app"))
-		})
-
-		It("throw away invalid envelopes from its data dumper", func() {
-			envelope, _ := buildLogMessage()
-			mockDataDumper.recentLogsForEnvelopes = []*events.Envelope{
-				{},
-				envelope,
-			}
-
-			resp, err := dopplerClient.RecentLogs(context.TODO(),
-				&plumbing.RecentLogsRequest{AppID: "some-app"})
-
-			Expect(err).ToNot(HaveOccurred())
-			Expect(resp.Payload).To(HaveLen(1))
-		})
-	})
 })
 
 func dopplerSetup(
 	mockRegistrar *spyRegistrar,
-	mockDataDumper *spyDataDumper,
 	batchInterval time.Duration,
 	healthRegistrar *SpyHealthRegistrar,
 	metricClient *testhelper.SpyMetricClient,
@@ -408,7 +357,6 @@ func dopplerSetup(
 ) {
 	manager := v1.NewDopplerServer(
 		mockRegistrar,
-		mockDataDumper,
 		metricClient,
 		droppedMetric,
 		subscriptionsMetric,

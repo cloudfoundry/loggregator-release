@@ -16,15 +16,6 @@ type mockDopplerServer struct {
 	SubscribeOutput struct {
 		Err chan error
 	}
-	RecentLogsCalled chan bool
-	RecentLogsInput  struct {
-		Ctx chan context.Context
-		Req chan *plumbing.RecentLogsRequest
-	}
-	RecentLogsOutput struct {
-		Resp chan *plumbing.RecentLogsResponse
-		Err  chan error
-	}
 }
 
 func newMockDopplerServer() *mockDopplerServer {
@@ -33,11 +24,6 @@ func newMockDopplerServer() *mockDopplerServer {
 	m.SubscribeInput.Req = make(chan *plumbing.SubscriptionRequest, 100)
 	m.SubscribeInput.Stream = make(chan plumbing.Doppler_SubscribeServer, 100)
 	m.SubscribeOutput.Err = make(chan error, 100)
-	m.RecentLogsCalled = make(chan bool, 100)
-	m.RecentLogsInput.Ctx = make(chan context.Context, 100)
-	m.RecentLogsInput.Req = make(chan *plumbing.RecentLogsRequest, 100)
-	m.RecentLogsOutput.Resp = make(chan *plumbing.RecentLogsResponse, 100)
-	m.RecentLogsOutput.Err = make(chan error, 100)
 	return m
 }
 func (m *mockDopplerServer) Subscribe(req *plumbing.SubscriptionRequest, stream plumbing.Doppler_SubscribeServer) (err error) {
@@ -45,12 +31,6 @@ func (m *mockDopplerServer) Subscribe(req *plumbing.SubscriptionRequest, stream 
 	m.SubscribeInput.Req <- req
 	m.SubscribeInput.Stream <- stream
 	return <-m.SubscribeOutput.Err
-}
-func (m *mockDopplerServer) RecentLogs(ctx context.Context, req *plumbing.RecentLogsRequest) (resp *plumbing.RecentLogsResponse, err error) {
-	m.RecentLogsCalled <- true
-	m.RecentLogsInput.Ctx <- ctx
-	m.RecentLogsInput.Req <- req
-	return <-m.RecentLogsOutput.Resp, <-m.RecentLogsOutput.Err
 }
 
 type mockDoppler_SubscribeServer struct {

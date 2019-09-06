@@ -35,8 +35,6 @@ func NewRouter(grpc GRPC, opts ...RouterOption) *Router {
 	r := &Router{
 		c: &Config{
 			GRPC:                         grpc,
-			MaxRetainedLogMessages:       100,
-			SinkInactivityTimeoutSeconds: 3600,
 			HealthAddr:                   "localhost:14825",
 			Agent: Agent{
 				GRPCAddress: "127.0.0.1:3458",
@@ -71,19 +69,6 @@ func WithMetricReporting(
 	}
 }
 
-// WithPersistence turns on recent log storage.
-func WithPersistence(
-	maxRetainedLogMessages uint32,
-	sinkInactivityTimeoutSeconds int,
-) RouterOption {
-	return func(r *Router) {
-		r.c.MaxRetainedLogMessages = maxRetainedLogMessages
-		r.c.SinkInactivityTimeoutSeconds = sinkInactivityTimeoutSeconds
-	}
-}
-
-//
-
 // Start enables the Router to start receiving envelope, accepting
 // subscriptions and routing data.
 func (d *Router) Start() {
@@ -101,17 +86,6 @@ func (d *Router) Start() {
 	d.healthListener = healthendpoint.StartServer(d.c.HealthAddr, promRegistry)
 	d.addrs.Health = d.healthListener.Addr().String()
 	healthRegistrar := initHealthRegistrar(promRegistry)
-
-	//------------------------------
-	// In memory store of
-	// - recent logs
-	//------------------------------
-	sinkManager := sinks.NewSinkManager(
-		d.c.MaxRetainedLogMessages,
-		time.Duration(d.c.SinkInactivityTimeoutSeconds)*time.Second,
-		metricClient,
-		healthRegistrar,
-	)
 
 	//------------------------------
 	// Ingress (gRPC v1 and v2)
@@ -165,7 +139,6 @@ func (d *Router) Start() {
 	v1Router := v1.NewRouter()
 	v1Egress := v1.NewDopplerServer(
 		v1Router,
-		sinkManager,
 		metricClient,
 		droppedEgress,
 		subscriptionsMetric,
@@ -228,7 +201,7 @@ func (d *Router) Start() {
 	//------------------------------
 	// Start
 	//------------------------------
-	messageRouter := sinks.NewMessageRouter(sinkManager, v1Router)
+	messageRouter := sinks.NewMessageRouter(v1Router)
 	go messageRouter.Start(v1Buf)
 
 	repeater := v2.NewRepeater(v2PubSub.Publish, v2Buf.Next)

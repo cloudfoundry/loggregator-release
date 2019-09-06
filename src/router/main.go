@@ -27,10 +27,6 @@ func main() {
 
 	r := app.NewRouter(
 		conf.GRPC,
-		app.WithPersistence(
-			conf.MaxRetainedLogMessages,
-			conf.SinkInactivityTimeoutSeconds,
-		),
 		app.WithMetricReporting(
 			conf.HealthAddr,
 			conf.Agent,

@@ -64,16 +64,7 @@ var _ = Describe("Start", func() {
 	}, 10)
 
 	It("limits the number of allowed connections", func() {
-		doppler, _, dopplerLis := setupDoppler(testservers.LoggregatorTestCerts)
-
-		go func() {
-			for {
-				doppler.ContainerMetricsOutput.Err <- nil
-				doppler.ContainerMetricsOutput.Resp <- &plumbing.ContainerMetricsResponse{
-					Payload: [][]byte{buildContainerMetric()},
-				}
-			}
-		}()
+		_, _, dopplerLis := setupDoppler(testservers.LoggregatorTestCerts)
 
 		egressAddr, _ := setupRLP(dopplerLis, "127.0.0.1:0", testservers.LoggregatorTestCerts)
 		createStream := func() error {

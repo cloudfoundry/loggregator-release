@@ -25,10 +25,6 @@ type GRPC struct {
 type Config struct {
 	GRPC GRPC
 
-	// persistence
-	MaxRetainedLogMessages       uint32 `env:"ROUTER_MAX_RETAINED_LOG_MESSAGES"`
-	SinkInactivityTimeoutSeconds int    `env:"ROUTER_SINK_INACTIVITY_TIMEOUT_SECONDS"`
-
 	// health
 	PProfPort                       uint32 `env:"ROUTER_PPROF_PORT"`
 	HealthAddr                      string `env:"ROUTER_HEALTH_ADDR"`
@@ -59,10 +55,6 @@ func LoadConfig() (*Config, error) {
 }
 
 func (c *Config) validate() (err error) {
-	if c.MaxRetainedLogMessages == 0 {
-		return errors.New("Need max number of log messages to retain per application")
-	}
-
 	if len(c.GRPC.CAFile) == 0 {
 		return errors.New("invalid router config, no GRPC.CAFile provided")
 	}
