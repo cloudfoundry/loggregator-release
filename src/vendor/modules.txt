@@ -139,7 +139,7 @@ golang.org/x/net/html
 golang.org/x/net/http/httpguts
 golang.org/x/net/idna
 golang.org/x/net/html/atom
-# golang.org/x/sys v0.0.0-20190910064555-bbd175535a8b
+# golang.org/x/sys v0.0.0-20190912141932-bc967efca4b8
 golang.org/x/sys/windows
 golang.org/x/sys/unix
 # golang.org/x/text v0.3.2
@@ -163,12 +163,12 @@ golang.org/x/text/runes
 golang.org/x/text/internal/language
 golang.org/x/text/internal/language/compact
 golang.org/x/text/internal/tag
-# google.golang.org/genproto v0.0.0-20190905072037-92dd089d5514
+# google.golang.org/genproto v0.0.0-20190911173649-1774047e7e51
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/api/httpbody
 google.golang.org/genproto/protobuf/field_mask
-# google.golang.org/grpc v1.23.0
+# google.golang.org/grpc v1.23.1
 google.golang.org/grpc
 google.golang.org/grpc/codes
 google.golang.org/grpc/credentials
