@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"code.cloudfoundry.org/go-loggregator/metrics"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,10 +17,10 @@ type CAPIClient struct {
 	client                           HTTPClient
 	capi                             string
 	externalCapi                     string
-	storeAppsLatency                 func(float64)
-	storeListServiceInstancesLatency func(float64)
-	storeLogAccessLatency            func(float64)
-	storeServiceInstancesLatency     func(float64)
+	storeAppsLatency                 metrics.Gauge
+	storeListServiceInstancesLatency metrics.Gauge
+	storeLogAccessLatency            metrics.Gauge
+	storeServiceInstancesLatency     metrics.Gauge
 }
 
 // NewCAPIClient returns a new CAPIClient
@@ -41,13 +42,17 @@ func NewCAPIClient(
 	}
 
 	return &CAPIClient{
-		client:                           client,
-		capi:                             capiAddr,
-		externalCapi:                     externalCapiAddr,
-		storeAppsLatency:                 m.NewGauge("LastCAPIV3AppsLatency"),
-		storeListServiceInstancesLatency: m.NewGauge("LastCAPIV2ListServiceInstancesLatency"),
-		storeLogAccessLatency:            m.NewGauge("LastCAPIV4LogAccessLatency"),
-		storeServiceInstancesLatency:     m.NewGauge("LastCAPIV2ServiceInstancesLatency"),
+		client:       client,
+		capi:         capiAddr,
+		externalCapi: externalCapiAddr,
+		storeAppsLatency: m.NewGauge("LastCAPIV3AppsLatency",
+			metrics.WithHelpText("Last request latency to CAPI v3 apps endpoint in nanoseconds")),
+		storeListServiceInstancesLatency: m.NewGauge("LastCAPIV2ListServiceInstancesLatency",
+			metrics.WithHelpText("Last request latency to CAPI v2 list service instances endpoint in nanoseconds")),
+		storeLogAccessLatency: m.NewGauge("LastCAPIV4LogAccessLatency",
+			metrics.WithHelpText("Last request latency to CAPI v4 logs access endpoint in nanoseconds")),
+		storeServiceInstancesLatency: m.NewGauge("LastCAPIV2ServiceInstancesLatency",
+			metrics.WithHelpText("Last request latency to CAPI v2 service instances endpoint in nanoseconds")),
 	}
 }
 
@@ -63,7 +68,7 @@ func (c *CAPIClient) IsAuthorized(sourceID, token string) bool {
 	req.Header.Set("Authorization", token)
 	start := time.Now()
 	resp, err := c.client.Do(req)
-	c.storeLogAccessLatency(float64(time.Since(start)))
+	c.storeLogAccessLatency.Set(float64(time.Since(start)))
 
 	if err != nil {
 		log.Printf("CAPI request failed: %s", err)
@@ -88,7 +93,7 @@ func (c *CAPIClient) IsAuthorized(sourceID, token string) bool {
 	req.Header.Set("Authorization", token)
 	start = time.Now()
 	resp, err = c.client.Do(req)
-	c.storeServiceInstancesLatency(float64(time.Since(start)))
+	c.storeServiceInstancesLatency.Set(float64(time.Since(start)))
 	if err != nil {
 		log.Printf("External CAPI request failed: %s", err)
 		return false
@@ -113,7 +118,7 @@ func (c *CAPIClient) AvailableSourceIDs(token string) []string {
 	req.Header.Set("Authorization", token)
 	start := time.Now()
 	resp, err := c.client.Do(req)
-	c.storeAppsLatency(float64(time.Since(start)))
+	c.storeAppsLatency.Set(float64(time.Since(start)))
 	if err != nil {
 		log.Printf("CAPI request failed: %s", err)
 		return nil
@@ -149,7 +154,7 @@ func (c *CAPIClient) AvailableSourceIDs(token string) []string {
 	req.Header.Set("Authorization", token)
 	start = time.Now()
 	resp, err = c.client.Do(req)
-	c.storeListServiceInstancesLatency(float64(time.Since(start)))
+	c.storeListServiceInstancesLatency.Set(float64(time.Since(start)))
 	if err != nil {
 		log.Printf("External CAPI request failed: %s", err)
 		return nil

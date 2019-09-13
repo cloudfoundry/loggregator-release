@@ -24,6 +24,10 @@ type certKeyPair struct {
 	keyFile  string
 }
 
+func (tc *TestCerts) CertTestCA() *certtest.Authority {
+	return tc.ca
+}
+
 func (tc *TestCerts) CA() string {
 	return tc.caFile
 }

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"code.cloudfoundry.org/go-loggregator/metrics"
 	"encoding/json"
 	"errors"
 	"io"
@@ -14,7 +15,7 @@ import (
 
 // Metrics defines the interface for creating metrics
 type Metrics interface {
-	NewGauge(name string) func(value float64)
+	NewGauge(name string, opts ...metrics.MetricOption) metrics.Gauge
 }
 
 // HTTClient defines the interface for communication over HTTP
@@ -35,7 +36,7 @@ type UAAClient struct {
 	uaa          *url.URL
 	client       string
 	clientSecret string
-	storeLatency func(float64)
+	latency      metrics.Gauge
 }
 
 // NewUAAClient returns a UAA client
@@ -59,7 +60,7 @@ func NewUAAClient(
 		client:       client,
 		clientSecret: clientSecret,
 		httpClient:   httpClient,
-		storeLatency: m.NewGauge("LastUAALatency"),
+		latency:      m.NewGauge("LastUAALatency", metrics.WithHelpText("Last request latency to UAA in nanoseconds.")),
 	}
 }
 
@@ -83,7 +84,7 @@ func (c *UAAClient) Read(token string) (Oauth2Client, error) {
 
 	start := time.Now()
 	resp, err := c.httpClient.Do(req)
-	c.storeLatency(float64(time.Since(start)))
+	c.latency.Set(float64(time.Since(start)))
 	if err != nil {
 		log.Printf("UAA request failed: %s", err)
 		return Oauth2Client{}, err

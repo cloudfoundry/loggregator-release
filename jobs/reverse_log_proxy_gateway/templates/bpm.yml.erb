@@ -1,5 +1,7 @@
 <%
   cc = link('cloud_controller')
+
+  certs_dir="/var/vcap/jobs/reverse_log_proxy_gateway/config/certs"
 %>
 
 processes:
@@ -13,27 +15,32 @@ processes:
       PROFILE_EXECUTABLE: "/var/vcap/packages/profiler/profiler.sh"
 
       LOGS_PROVIDER_ADDR: "127.0.0.1:<%= link('reverse_log_proxy').p('reverse_log_proxy.egress.port') %>"
-      LOGS_PROVIDER_CLIENT_CERT_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/reverse_log_proxy.crt"
-      LOGS_PROVIDER_CLIENT_KEY_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/reverse_log_proxy.key"
-      LOGS_PROVIDER_CA_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/mutual_tls_ca.crt"
+      LOGS_PROVIDER_CLIENT_CERT_PATH: "<%= certs_dir %>/reverse_log_proxy.crt"
+      LOGS_PROVIDER_CLIENT_KEY_PATH: "<%= certs_dir %>/reverse_log_proxy.key"
+      LOGS_PROVIDER_CA_PATH: "<%= certs_dir %>/mutual_tls_ca.crt"
       LOGS_PROVIDER_COMMON_NAME: "<%= p('logs_provider.common_name') %>"
 
       GATEWAY_ADDR: "<%= p('http.address') %>"
-      HTTP_CERT_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/reverse_log_proxy_gateway.crt"
-      HTTP_KEY_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/reverse_log_proxy_gateway.key"
+      HTTP_CERT_PATH: "<%= certs_dir %>/reverse_log_proxy_gateway.crt"
+      HTTP_KEY_PATH: "<%= certs_dir %>/reverse_log_proxy_gateway.key"
 
       # External ADDR is plaintext because it assumes go-router is doing SSL
       # termination.
       LOG_ACCESS_ADDR_EXTERNAL: "<%= "http://#{cc.address}:9022" %>"
       LOG_ACCESS_ADDR: "<%= "https://#{cc.address}:9023" %>"
-      LOG_ACCESS_CERT_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/cc.crt"
-      LOG_ACCESS_KEY_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/cc.key"
-      LOG_ACCESS_CA_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/cc_ca.crt"
+      LOG_ACCESS_CERT_PATH: "<%= certs_dir %>/cc.crt"
+      LOG_ACCESS_KEY_PATH: "<%= certs_dir %>/cc.key"
+      LOG_ACCESS_CA_PATH: "<%= certs_dir %>/cc_ca.crt"
       LOG_ACCESS_COMMON_NAME: "<%= p('cc.common_name') %>"
 
       LOG_ADMIN_CLIENT_ID: "<%= p('uaa.client_id') %>"
       LOG_ADMIN_CLIENT_SECRET: "<%= p('uaa.client_secret') %>"
       LOG_ADMIN_ADDR: "<%= p('uaa.internal_addr') %>"
-      LOG_ADMIN_CA_PATH: "/var/vcap/jobs/reverse_log_proxy_gateway/config/certs/uaa_ca.crt"
+      LOG_ADMIN_CA_PATH: "<%= certs_dir %>/uaa_ca.crt"
 
       SKIP_CERT_VERIFY: "<%= p('skip_cert_verify') %>"
+
+      METRICS_PORT: "<%= "#{p("metrics.port")}" %>"
+      METRICS_CA_FILE_PATH: "<%= certs_dir %>/metrics_ca.crt"
+      METRICS_CERT_FILE_PATH: "<%= certs_dir %>/metrics.crt"
+      METRICS_KEY_FILE_PATH: "<%= certs_dir %>/metrics.key"

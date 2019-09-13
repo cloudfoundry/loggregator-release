@@ -1,0 +1,6 @@
+---
+port: <%= p("metrics.port") %>
+source_id: "reverse_log_proxy_gateway"
+instance_id: <%= spec.id || spec.index.to_s %>
+scheme: https
+server_name: <%= p('metrics.server_name') %>

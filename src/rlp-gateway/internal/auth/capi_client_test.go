@@ -1,6 +1,7 @@
 package auth_test
 
 import (
+	"code.cloudfoundry.org/loggregator/internal/testhelper"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -18,12 +19,12 @@ var _ = Describe("CAPIClient", func() {
 	var (
 		capiClient *spyHTTPClient
 		client     *auth.CAPIClient
-		metrics    *spyMetrics
+		metrics    *testhelper.SpyMetricClient
 	)
 
 	BeforeEach(func() {
 		capiClient = newSpyHTTPClient()
-		metrics = newSpyMetrics()
+		metrics = testhelper.NewMetricClient()
 		client = auth.NewCAPIClient(
 			"https://capi.com",
 			"http://external.capi.com",
@@ -85,8 +86,8 @@ var _ = Describe("CAPIClient", func() {
 			}
 			client.IsAuthorized("source-id", "my-token")
 
-			Expect(metrics.m["LastCAPIV4LogAccessLatency"]).ToNot(BeZero())
-			Expect(metrics.m["LastCAPIV2ServiceInstancesLatency"]).ToNot(BeZero())
+			Expect(metrics.GetMetric("LastCAPIV4LogAccessLatency", nil).Value()).ToNot(BeZero())
+			Expect(metrics.GetMetric("LastCAPIV2ServiceInstancesLatency", nil).Value()).ToNot(BeZero())
 		})
 
 		It("is goroutine safe", func() {
@@ -171,8 +172,8 @@ var _ = Describe("CAPIClient", func() {
 		It("stores the latency", func() {
 			client.AvailableSourceIDs("my-token")
 
-			Expect(metrics.m["LastCAPIV3AppsLatency"]).ToNot(BeZero())
-			Expect(metrics.m["LastCAPIV2ListServiceInstancesLatency"]).ToNot(BeZero())
+			Expect(metrics.GetMetric("LastCAPIV3AppsLatency", nil).Value()).ToNot(BeZero())
+			Expect(metrics.GetMetric("LastCAPIV2ListServiceInstancesLatency", nil).Value()).ToNot(BeZero())
 		})
 
 		It("is goroutine safe", func() {

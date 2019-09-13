@@ -1,6 +1,7 @@
 package auth_test
 
 import (
+	"code.cloudfoundry.org/loggregator/internal/testhelper"
 	"log"
 	"sync"
 
@@ -20,12 +21,12 @@ var _ = Describe("UAAClient", func() {
 	var (
 		client     *auth.UAAClient
 		httpClient *spyHTTPClient
-		metrics    *spyMetrics
+		metrics    *testhelper.SpyMetricClient
 	)
 
 	BeforeEach(func() {
 		httpClient = newSpyHTTPClient()
-		metrics = newSpyMetrics()
+		metrics = testhelper.NewMetricClient()
 		client = auth.NewUAAClient(
 			"https://uaa.com",
 			"some-client",
@@ -102,7 +103,7 @@ var _ = Describe("UAAClient", func() {
 	It("sets the last request latency metric", func() {
 		client.Read("my-token")
 
-		Expect(metrics.m["LastUAALatency"]).ToNot(BeZero())
+		Expect(metrics.GetMetric("LastUAALatency",nil).Value()).ToNot(BeZero())
 	})
 
 	It("returns error when token is blank", func() {
@@ -190,23 +191,4 @@ func (s *spyHTTPClient) Do(r *http.Request) (*http.Response, error) {
 	}
 
 	return &resp, nil
-}
-
-type spyMetrics struct {
-	mu sync.Mutex
-	m  map[string]float64
-}
-
-func newSpyMetrics() *spyMetrics {
-	return &spyMetrics{
-		m: make(map[string]float64),
-	}
-}
-
-func (s *spyMetrics) NewGauge(name string) func(float64) {
-	return func(v float64) {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-		s.m[name] = v
-	}
 }

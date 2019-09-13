@@ -3,9 +3,9 @@ package app_test
 import (
 	"bufio"
 	"bytes"
+	"code.cloudfoundry.org/loggregator/internal/testhelper"
 	"context"
 	"crypto/tls"
-	"expvar"
 	"fmt"
 	"log"
 	"net"
@@ -17,7 +17,6 @@ import (
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator/plumbing" // TODO: Resolve duplicate proto error
 	"code.cloudfoundry.org/loggregator/rlp-gateway/app"
-	"code.cloudfoundry.org/loggregator/rlp-gateway/internal/metrics"
 	"code.cloudfoundry.org/loggregator/testservers"
 	"google.golang.org/grpc"
 
@@ -34,9 +33,12 @@ var _ = Describe("Gateway", func() {
 		cfg          app.Config
 
 		logger  = log.New(GinkgoWriter, "", log.LstdFlags)
-		metrics = metrics.New(expvar.NewMap("RLPGateway"))
+		metrics = testhelper.NewMetricClient()
 
 		localhostCerts = testservers.GenerateCerts("localhost")
+
+		internalLogAccess *httptest.Server
+		logAdmin          *httptest.Server
 	)
 
 	BeforeEach(func() {
@@ -61,6 +63,12 @@ var _ = Describe("Gateway", func() {
 				CommonName: "capi",
 			},
 
+			MetricsServer: app.MetricsServer{
+				CertFile: testservers.LoggregatorTestCerts.Cert("metrics"),
+				KeyFile:  testservers.LoggregatorTestCerts.Key("metrics"),
+				CAFile:   testservers.LoggregatorTestCerts.CA(),
+			},
+
 			LogAdminAuthorization: app.LogAdminAuthorization{
 				ClientID:     "client",
 				ClientSecret: "secret",
@@ -69,15 +77,21 @@ var _ = Describe("Gateway", func() {
 		}
 	})
 
+	AfterEach(func() {
+		internalLogAccess.Close()
+		logAdmin.Close()
+		logsProvider.listener.Close()
+	})
+
 	Context("with valid log access authorization", func() {
 		BeforeEach(func() {
-			internalLogAccess := newAuthorizationServer(
+			internalLogAccess = newAuthorizationServer(
 				http.StatusOK,
 				"{}",
 				testservers.LoggregatorTestCerts.Cert("capi"),
 				testservers.LoggregatorTestCerts.Key("capi"),
 			)
-			logAdmin := newAuthorizationServer(
+			logAdmin = newAuthorizationServer(
 				http.StatusBadRequest,
 				invalidTokenResponse,
 				testservers.LoggregatorTestCerts.Cert("uaa"),
@@ -97,7 +111,7 @@ var _ = Describe("Gateway", func() {
 			gateway.Start(false)
 			defer gateway.Stop()
 
-			client := newTestClient()
+			client := newTestClient(&tls.Config{InsecureSkipVerify: true})
 			go func() {
 				defer GinkgoRecover()
 				resp, err := client.open("https://" + gateway.Addr() + "/v2/read?log&source_id=deadbeef-dead-dead-dead-deaddeafbeef")
@@ -117,7 +131,7 @@ var _ = Describe("Gateway", func() {
 			gateway.Start(false)
 			defer gateway.Stop()
 
-			client := newTestClient()
+			client := newTestClient(&tls.Config{InsecureSkipVerify: true})
 			Expect(func() {
 				client.open("https://" + gateway.Addr() + "/v2/read?log&source_id=deadbeef-dead-dead-dead-deaddeafbeef")
 			}).ToNot(Panic())
@@ -128,7 +142,7 @@ var _ = Describe("Gateway", func() {
 			gateway.Start(false)
 			defer gateway.Stop()
 
-			client := newTestClient()
+			client := newTestClient(&tls.Config{InsecureSkipVerify: true})
 			resp, err := client.open("http://" + gateway.Addr() + "/v2/read?log&source_id=deadbeef")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
@@ -137,13 +151,13 @@ var _ = Describe("Gateway", func() {
 
 	Context("when the user is an admin", func() {
 		BeforeEach(func() {
-			internalLogAccess := newAuthorizationServer(
+			internalLogAccess = newAuthorizationServer(
 				http.StatusBadRequest,
 				"{}",
 				testservers.LoggregatorTestCerts.Cert("capi"),
 				testservers.LoggregatorTestCerts.Key("capi"),
 			)
-			logAdmin := newAuthorizationServer(
+			logAdmin = newAuthorizationServer(
 				http.StatusOK,
 				validTokenResponse,
 				testservers.LoggregatorTestCerts.Cert("uaa"),
@@ -163,7 +177,7 @@ var _ = Describe("Gateway", func() {
 			gateway.Start(false)
 			defer gateway.Stop()
 
-			client := newTestClient()
+			client := newTestClient(&tls.Config{InsecureSkipVerify: true})
 			go func() {
 				defer GinkgoRecover()
 				resp, err := client.open("https://" + gateway.Addr() + "/v2/read?log&source_id=deadbeef-dead-dead-dead-deaddeafbeef")
@@ -183,7 +197,7 @@ var _ = Describe("Gateway", func() {
 			gateway.Start(false)
 			defer gateway.Stop()
 
-			client := newTestClient()
+			client := newTestClient(&tls.Config{InsecureSkipVerify: true})
 			Expect(func() {
 				client.open("https://" + gateway.Addr() + "/v2/read?log")
 			}).ToNot(Panic())
@@ -192,13 +206,13 @@ var _ = Describe("Gateway", func() {
 
 	Context("when the user does not have log access", func() {
 		BeforeEach(func() {
-			internalLogAccess := newAuthorizationServer(
+			internalLogAccess = newAuthorizationServer(
 				http.StatusBadRequest,
 				"{}",
 				testservers.LoggregatorTestCerts.Cert("capi"),
 				testservers.LoggregatorTestCerts.Key("capi"),
 			)
-			logAdmin := newAuthorizationServer(
+			logAdmin = newAuthorizationServer(
 				http.StatusBadRequest,
 				invalidTokenResponse,
 				testservers.LoggregatorTestCerts.Cert("uaa"),
@@ -217,7 +231,7 @@ var _ = Describe("Gateway", func() {
 			gateway.Start(false)
 			defer gateway.Stop()
 
-			client := newTestClient()
+			client := newTestClient(&tls.Config{InsecureSkipVerify: true})
 			resp, err := client.open("https://" + gateway.Addr() + "/v2/read?log&source_id=some-id")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
@@ -228,7 +242,7 @@ var _ = Describe("Gateway", func() {
 			gateway.Start(false)
 			defer gateway.Stop()
 
-			client := newTestClient()
+			client := newTestClient(&tls.Config{InsecureSkipVerify: true})
 			resp, err := client.open("https://" + gateway.Addr() + "/v2/read?log")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
@@ -237,16 +251,15 @@ var _ = Describe("Gateway", func() {
 
 	Describe("TLS security", func() {
 		tlsConfigTest := func(tlsConfig *tls.Config) {
-			client := newTestClient()
-			client.tlsConfig = tlsConfig
+			client := newTestClient(tlsConfig)
 
-			internalLogAccess := newAuthorizationServer(
+			internalLogAccess = newAuthorizationServer(
 				http.StatusOK,
 				"{}",
 				testservers.LoggregatorTestCerts.Cert("capi"),
 				testservers.LoggregatorTestCerts.Key("capi"),
 			)
-			logAdmin := newAuthorizationServer(
+			logAdmin = newAuthorizationServer(
 				http.StatusBadRequest,
 				invalidTokenResponse,
 				testservers.LoggregatorTestCerts.Cert("uaa"),
@@ -323,27 +336,36 @@ var _ = Describe("Gateway", func() {
 	})
 })
 
+var ughConfig *tls.Config
+
 func buildTLSConfig(maxVersion, cipherSuite uint16) *tls.Config {
-	ca, err := certtest.BuildCA("tlsconfig")
-	Expect(err).ToNot(HaveOccurred())
+	if ughConfig == nil {
+		ca, err := certtest.BuildCA("tlsconfig")
+		Expect(err).ToNot(HaveOccurred())
 
-	pool, err := ca.CertPool()
-	Expect(err).ToNot(HaveOccurred())
+		pool, err := ca.CertPool()
+		Expect(err).ToNot(HaveOccurred())
 
-	clientCrt, err := ca.BuildSignedCertificate("client")
-	Expect(err).ToNot(HaveOccurred())
+		clientCrt, err := ca.BuildSignedCertificate("client")
+		Expect(err).ToNot(HaveOccurred())
 
-	clientTLSCrt, err := clientCrt.TLSCertificate()
-	Expect(err).ToNot(HaveOccurred())
+		clientTLSCrt, err := clientCrt.TLSCertificate()
+		Expect(err).ToNot(HaveOccurred())
 
-	return &tls.Config{
-		Certificates:       []tls.Certificate{clientTLSCrt},
-		RootCAs:            pool,
-		ServerName:         "",
-		MaxVersion:         uint16(maxVersion),
-		CipherSuites:       []uint16{cipherSuite},
-		InsecureSkipVerify: true,
+		ughConfig = &tls.Config{
+			Certificates:       []tls.Certificate{clientTLSCrt},
+			RootCAs:            pool,
+			ServerName:         "",
+			MaxVersion:         uint16(maxVersion),
+			CipherSuites:       []uint16{cipherSuite},
+			InsecureSkipVerify: true,
+		}
 	}
+
+	ughConfig.MaxVersion = maxVersion
+	ughConfig.CipherSuites = []uint16{cipherSuite}
+
+	return ughConfig
 }
 
 var (
@@ -418,12 +440,18 @@ func (s *stubLogsProvider) addr() string {
 type testClient struct {
 	mu         sync.Mutex
 	_envelopes []*loggregator_v2.Envelope
-	tlsConfig  *tls.Config
+	client     *http.Client
 }
 
-func newTestClient() *testClient {
+func newTestClient(tlsConfig *tls.Config) *testClient {
+	tr := &http.Transport{
+		TLSClientConfig: tlsConfig,
+	}
+
 	return &testClient{
-		tlsConfig: &tls.Config{InsecureSkipVerify: true},
+		client: &http.Client{
+			Transport: tr,
+		},
 	}
 }
 
@@ -434,12 +462,7 @@ func (tc *testClient) open(url string) (*http.Response, error) {
 	}
 	req.Header.Set("Authorization", "my-token")
 
-	tr := &http.Transport{
-		TLSClientConfig: tc.tlsConfig,
-	}
-	client := &http.Client{Transport: tr}
-
-	resp, err := client.Do(req)
+	resp, err := tc.client.Do(req)
 	if err != nil {
 		panic(err)
 	}

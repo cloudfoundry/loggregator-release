@@ -1,11 +1,10 @@
 package app
 
 import (
+	"code.cloudfoundry.org/go-loggregator/metrics"
 	"code.cloudfoundry.org/tlsconfig"
 	"crypto/tls"
-	"crypto/x509"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -14,10 +13,14 @@ import (
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"code.cloudfoundry.org/loggregator/rlp-gateway/internal/auth"
 	"code.cloudfoundry.org/loggregator/rlp-gateway/internal/ingress"
-	"code.cloudfoundry.org/loggregator/rlp-gateway/internal/metrics"
 	"code.cloudfoundry.org/loggregator/rlp-gateway/internal/web"
 	"github.com/gorilla/handlers"
 )
+
+type Metrics interface {
+	NewGauge(name string, opts ...metrics.MetricOption) metrics.Gauge
+	NewCounter(name string, opts ...metrics.MetricOption) metrics.Counter
+}
 
 // Gateway provides a high level for running the RLP gateway
 type Gateway struct {
@@ -25,14 +28,14 @@ type Gateway struct {
 	listener      net.Listener
 	server        *http.Server
 	log           *log.Logger
-	metrics       *metrics.Metrics
+	metrics       Metrics
 	httpLogOutput io.Writer
 }
 
 // NewGateway creates a new Gateway
 func NewGateway(
 	cfg Config,
-	metrics *metrics.Metrics,
+	metrics Metrics,
 	log *log.Logger,
 	httpLogOutput io.Writer,
 ) *Gateway {
@@ -186,19 +189,4 @@ func buildAccessAuthorizationClient(cfg Config) *http.Client {
 		Timeout:   20 * time.Second,
 		Transport: transport,
 	}
-}
-
-func loadUaaCA(uaaCertPath string) *x509.CertPool {
-	caCert, err := ioutil.ReadFile(uaaCertPath)
-	if err != nil {
-		log.Fatalf("failed to read UAA CA certificate: %s", err)
-	}
-
-	certPool := x509.NewCertPool()
-	ok := certPool.AppendCertsFromPEM(caCert)
-	if !ok {
-		log.Fatal("failed to parse UAA CA certificate.")
-	}
-
-	return certPool
 }

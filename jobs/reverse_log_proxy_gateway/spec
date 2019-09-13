@@ -13,6 +13,10 @@ templates:
   cc.key.erb: config/certs/cc.key
   uaa_ca.crt.erb: config/certs/uaa_ca.crt
   profile.sh.erb: bin/profile.sh
+  metrics_ca.crt.erb: config/certs/metrics_ca.crt
+  metrics.crt.erb: config/certs/metrics.crt
+  metrics.key.erb: config/certs/metrics.key
+  prom_scraper_config.yml.erb: config/prom_scraper_config.yml
 
 packages:
 - reverse_log_proxy_gateway
@@ -70,3 +74,15 @@ properties:
   skip_cert_verify:
     description: "Whether to accept certificates signed by an unknown CA"
     default: false
+
+  metrics.port:
+    description: "Port the agent uses to serve metrics and debug information"
+    default: 8089
+  metrics.ca_cert:
+    description: "TLS CA cert to verify requests to metrics endpoint."
+  metrics.cert:
+    description: "TLS certificate for metrics server signed by the metrics CA"
+  metrics.key:
+    description: "TLS private key for metrics server signed by the metrics CA"
+  metrics.server_name:
+    description: "The server name used in the scrape configuration for the metrics endpoint"
