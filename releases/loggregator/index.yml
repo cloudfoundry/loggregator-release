@@ -237,6 +237,8 @@ builds:
     version: "83"
   c488130f-a2f3-4f5a-bdbd-b2881c45429f:
     version: "59"
+  c5411825-be39-4053-5514-712590487172:
+    version: 105.6.0
   c70406cd-0939-4905-bbc4-f56768feb1d5:
     version: "23"
   c7e13fa1-0312-4d88-53c7-d089c4a4154e:
@@ -307,4 +309,6 @@ builds:
     version: "101.6"
   fd9eb56f-1f5a-470f-bc8b-52c20dbfbd24:
     version: "33"
+  fe8b05f1-da69-46cd-51ef-2112c0e228ab:
+    version: 106.0.0
 format-version: "2"
