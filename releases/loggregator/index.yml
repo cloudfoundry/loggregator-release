@@ -309,4 +309,6 @@ builds:
     version: "101.6"
   fd9eb56f-1f5a-470f-bc8b-52c20dbfbd24:
     version: "33"
+  fe8b05f1-da69-46cd-51ef-2112c0e228ab:
+    version: 106.0.0
 format-version: "2"
