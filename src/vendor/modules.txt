@@ -128,7 +128,7 @@ github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
 # github.com/square/certstrap v1.1.2-0.20181030173000-b612375892a7
 github.com/square/certstrap/pkix
-# golang.org/x/net v0.0.0-20190916140828-c8589233b77d
+# golang.org/x/net v0.0.0-20190918130420-a8b05e9114ab
 golang.org/x/net/context
 golang.org/x/net/netutil
 golang.org/x/net/trace
