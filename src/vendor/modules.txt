@@ -60,7 +60,7 @@ github.com/gorilla/handlers
 github.com/gorilla/mux
 # github.com/gorilla/websocket v1.4.1
 github.com/gorilla/websocket
-# github.com/grpc-ecosystem/grpc-gateway v1.11.1
+# github.com/grpc-ecosystem/grpc-gateway v1.11.2
 github.com/grpc-ecosystem/grpc-gateway/runtime
 github.com/grpc-ecosystem/grpc-gateway/utilities
 github.com/grpc-ecosystem/grpc-gateway/internal
