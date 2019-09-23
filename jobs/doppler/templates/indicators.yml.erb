@@ -1,83 +1,91 @@
 ---
-apiVersion: v0
-
-product:
-  name: loggregator
-  version: latest
+apiVersion: indicatorprotocol.io/v1
+kind: IndicatorDocument
 
 metadata:
-  deployment: <%= spec.deployment %>
+  labels:
+    deployment: <%= spec.deployment %>
 
-indicators:
-- name: log_loss_rate_ksi
-  promql: 100*rate(dropped{source_id="doppler",direction="ingress"}[5m]) / ignoring(direction) rate(ingress{source_id="doppler"}[5m])
-  thresholds:
-  - level: warning
-    gte: 0.5
-  - level: critical
-    gte: 1
-  documentation:
-    title: Log Transport Loss Rate
+spec:
+  product:
+    name: loggregator
+    version: latest
+
+  indicators:
+  - name: log_loss_rate_ksi
+    promql: 100*rate(dropped{source_id="doppler",direction="ingress"}[5m]) / ignoring(direction) rate(ingress{source_id="doppler"}[5m])
+    thresholds:
+    - level: warning
+      operator: gte
+      value: 0.5
+    - level: critical
+      operator: gte
+      value: 1
+    documentation:
+      title: Log Transport Loss Rate
+      description: |
+        Excessive dropped messages can indicate the Dopplers and/or Traffic
+        Controllers are not processing messages fast enough.
+
+        The recommended scaling indicator is to look at the total dropped as a
+        percentage of the total throughput and scale if the derived loss rate
+        value grows greater than `0.01`.
+    recommended_response: |
+      Scale up the number of `log-api` and `doppler` instances.
+
+      **Note:** At approximately 40 `doppler` instances and 20 `log-api` instances,
+      horizontal scaling is no longer useful for improving Firehose performance.
+      To improve performance, add vertical scale to the existing `doppler` and
+      `log-api` instances by increasing CPU resources.
+
+  - name: doppler_message_rate_ksi
+    promql: rate(ingress{source_id="doppler"}[5m])
+    thresholds:
+    - level: warning
+      operator: gte
+      value: 16000
+    documentation:
+      title: Doppler Message Rate Capacity
+      description: |
+        The recommended scaling indicator is to look at the average load on the
+        Doppler instances, and increase the number of Doppler instances when the
+        derived rate is 16,000 envelopes per second, or 1 million envelopes per
+        minute.
+    recommended_response: |
+      Increase the number of `doppler` instances.
+
+  - name: rlp_loss_ksi
+    promql: 100*rate(dropped{source_id="reverse_log_proxy"}[5m]) / ignoring(direction,protocol) rate(ingress{source_id="reverse_log_proxy"}[5m])
+    thresholds:
+    - level: warning
+      operator: gte
+      value: 1
+    - level: critical
+      operator: gte
+      value: 10
+    documentation:
+      title: Reverse Log Proxy Loss Rate
+      description: |
+        Excessive dropped messages can indicate that the RLP is overloaded and
+        that the Traffic Controllers need to be scaled.
+
+        The recommended scaling indicator is to look at the maximum per minute
+        loss rate over a 5-minute window and scale if the derived loss rate
+        value grows greater than `0.1`.
+    recommended_response: |
+      Scale up the number of log-api instances to further balance log load.
+
+  layout:
+    owner: Loggregator Team
+    title: Loggregator
     description: |
-      Excessive dropped messages can indicate the Dopplers and/or Traffic
-      Controllers are not processing messages fast enough.
-
-      The recommended scaling indicator is to look at the total dropped as a
-      percentage of the total throughput and scale if the derived loss rate
-      value grows greater than `0.01`.
-  recommended_response: |
-    Scale up the number of `log-api` and `doppler` instances.
-
-    **Note:** At approximately 40 `doppler` instances and 20 `log-api` instances,
-    horizontal scaling is no longer useful for improving Firehose performance.
-    To improve performance, add vertical scale to the existing `doppler` and
-    `log-api` instances by increasing CPU resources.
-
-- name: doppler_message_rate_ksi
-  promql: rate(ingress{source_id="doppler"}[5m])
-  thresholds:
-  - level: warning
-    gte: 16000
-  documentation:
-    title: Doppler Message Rate Capacity
-    description: |
-      The recommended scaling indicator is to look at the average load on the
-      Doppler instances, and increase the number of Doppler instances when the
-      derived rate is 16,000 envelopes per second, or 1 million envelopes per
-      minute.
-  recommended_response: |
-    Increase the number of `doppler` instances.
-
-- name: rlp_loss_ksi
-  promql: 100*rate(dropped{source_id="reverse_log_proxy"}[5m]) / ignoring(direction,protocol) rate(ingress{source_id="reverse_log_proxy"}[5m])
-  thresholds:
-  - level: warning
-    gte: 1
-  - level: critical
-    gte: 10
-  documentation:
-    title: Reverse Log Proxy Loss Rate
-    description: |
-      Excessive dropped messages can indicate that the RLP is overloaded and
-      that the Traffic Controllers need to be scaled.
-
-      The recommended scaling indicator is to look at the maximum per minute
-      loss rate over a 5-minute window and scale if the derived loss rate
-      value grows greater than `0.1`.
-  recommended_response: |
-    Scale up the number of log-api instances to further balance log load.
-
-layout:
-  owner: Loggregator Team
-  title: Loggregator
-  description: |
-     This topic explains how to monitor the health of Cloud Foundry
-     Loggregator using the metrics and key performance indicators (KPIs)
-     generated by the service.
-  sections:
-  - title: Key Performance Indicators for Loggregator
-    description: This section describes the KPIs that you can use to monitor the health of Loggregator.
-    indicators:
-    - log_loss_rate_ksi
-    - doppler_message_rate_ksi
-    - rlp_loss_ksi
+       This topic explains how to monitor the health of Cloud Foundry
+       Loggregator using the metrics and key performance indicators (KPIs)
+       generated by the service.
+    sections:
+    - title: Key Performance Indicators for Loggregator
+      description: This section describes the KPIs that you can use to monitor the health of Loggregator.
+      indicators:
+      - log_loss_rate_ksi
+      - doppler_message_rate_ksi
+      - rlp_loss_ksi
