@@ -14,7 +14,7 @@ spec:
 
   indicators:
   - name: log_loss_rate_ksi
-    promql: 100*rate(dropped{source_id="doppler",direction="ingress"}[5m]) / ignoring(direction) rate(ingress{source_id="doppler"}[5m])
+    promql: 100*sum(rate(dropped{source_id="doppler",direction="ingress"}[5m])) by (index) / sum(rate(ingress{source_id="doppler"}[5m])) by (index)
     thresholds:
     - level: warning
       operator: gte
@@ -56,7 +56,7 @@ spec:
       Increase the number of `doppler` instances.
 
   - name: rlp_loss_ksi
-    promql: 100*rate(dropped{source_id="reverse_log_proxy"}[5m]) / ignoring(direction,protocol) rate(ingress{source_id="reverse_log_proxy"}[5m])
+    promql: 100*sum(rate(dropped{source_id="reverse_log_proxy"}[5m])) by (index) / sum(rate(ingress{source_id="reverse_log_proxy"}[5m])) by (index)
     thresholds:
     - level: warning
       operator: gte
