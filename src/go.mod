@@ -34,7 +34,7 @@ require (
 	github.com/prometheus/procfs v0.0.5 // indirect
 	github.com/square/certstrap v1.2.0 // indirect
 	golang.org/x/net v0.0.0-20190926025831-c00fd9afed17
-	golang.org/x/sys v0.0.0-20190924154521-2837fb4f24fe // indirect
+	golang.org/x/sys v0.0.0-20190926180325-855e68c8590b // indirect
 	golang.org/x/text v0.3.2 // indirect
 	google.golang.org/genproto v0.0.0-20190925194540-b8fbc687dcfb // indirect
 	google.golang.org/grpc v1.24.0
