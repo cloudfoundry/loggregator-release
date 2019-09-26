@@ -164,7 +164,7 @@ golang.org/x/text/runes
 golang.org/x/text/internal/language
 golang.org/x/text/internal/language/compact
 golang.org/x/text/internal/tag
-# google.golang.org/genproto v0.0.0-20190925194540-b8fbc687dcfb
+# google.golang.org/genproto v0.0.0-20190926190326-7ee9db18f195
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/api/httpbody
