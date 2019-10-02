@@ -75,7 +75,7 @@ github.com/mailru/easyjson/jwriter
 github.com/mailru/easyjson/buffer
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
-# github.com/onsi/ginkgo v1.10.1
+# github.com/onsi/ginkgo v1.10.2
 github.com/onsi/ginkgo
 github.com/onsi/ginkgo/config
 github.com/onsi/ginkgo/extensions/table
@@ -126,7 +126,7 @@ github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
 # github.com/square/certstrap v1.2.0
 github.com/square/certstrap/pkix
-# golang.org/x/net v0.0.0-20190930134127-c5a3c61f89f3
+# golang.org/x/net v0.0.0-20191002035440-2ec189313ef0
 golang.org/x/net/context
 golang.org/x/net/netutil
 golang.org/x/net/trace
@@ -138,7 +138,7 @@ golang.org/x/net/html
 golang.org/x/net/http/httpguts
 golang.org/x/net/idna
 golang.org/x/net/html/atom
-# golang.org/x/sys v0.0.0-20191001151750-bb3f8db39f24
+# golang.org/x/sys v0.0.0-20191002091554-b397fe3ad8ed
 golang.org/x/sys/windows
 golang.org/x/sys/unix
 # golang.org/x/text v0.3.2
@@ -205,5 +205,5 @@ google.golang.org/grpc/internal/syscall
 gopkg.in/fsnotify.v1
 # gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 gopkg.in/tomb.v1
-# gopkg.in/yaml.v2 v2.2.3
+# gopkg.in/yaml.v2 v2.2.4
 gopkg.in/yaml.v2

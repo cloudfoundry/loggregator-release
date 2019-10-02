@@ -25,7 +25,7 @@ require (
 	github.com/gorilla/websocket v1.4.1
 	github.com/grpc-ecosystem/grpc-gateway v1.11.3 // indirect
 	github.com/mailru/easyjson v0.7.0 // indirect
-	github.com/onsi/ginkgo v1.10.1
+	github.com/onsi/ginkgo v1.10.2
 	github.com/onsi/gomega v1.7.0
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
 	github.com/prometheus/client_golang v1.1.0
@@ -33,11 +33,11 @@ require (
 	github.com/prometheus/common v0.7.0 // indirect
 	github.com/prometheus/procfs v0.0.5 // indirect
 	github.com/square/certstrap v1.2.0 // indirect
-	golang.org/x/net v0.0.0-20190930134127-c5a3c61f89f3
-	golang.org/x/sys v0.0.0-20191001151750-bb3f8db39f24 // indirect
+	golang.org/x/net v0.0.0-20191002035440-2ec189313ef0
+	golang.org/x/sys v0.0.0-20191002091554-b397fe3ad8ed // indirect
 	golang.org/x/text v0.3.2 // indirect
 	google.golang.org/genproto v0.0.0-20190927181202-20e1ac93f88c // indirect
 	google.golang.org/grpc v1.24.0
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
-	gopkg.in/yaml.v2 v2.2.3 // indirect
+	gopkg.in/yaml.v2 v2.2.4 // indirect
 )
