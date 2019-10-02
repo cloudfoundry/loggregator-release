@@ -14,7 +14,7 @@ code.cloudfoundry.org/go-pubsub/pubsub-gen/setters
 code.cloudfoundry.org/go-pubsub/internal/node
 # code.cloudfoundry.org/grpc-throughputlb v0.0.0-20180905204614-e98a1ee09867
 code.cloudfoundry.org/grpc-throughputlb
-# code.cloudfoundry.org/log-cache v2.3.1+incompatible
+# code.cloudfoundry.org/log-cache v2.3.1+incompatible => code.cloudfoundry.org/log-cache-release/src v0.0.0-20191002191123-8c97ac62a57b
 code.cloudfoundry.org/log-cache/pkg/client
 code.cloudfoundry.org/log-cache/pkg/rpc/logcache_v1
 code.cloudfoundry.org/log-cache/pkg/marshaler
@@ -162,7 +162,7 @@ golang.org/x/text/runes
 golang.org/x/text/internal/language
 golang.org/x/text/internal/language/compact
 golang.org/x/text/internal/tag
-# google.golang.org/genproto v0.0.0-20191002192902-579ee97b777a
+# google.golang.org/genproto v0.0.0-20190927181202-20e1ac93f88c
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/api/httpbody
