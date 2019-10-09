@@ -8,6 +8,7 @@ $BOSH_INSTALL_TARGET = Resolve-Path "${env:BOSH_INSTALL_TARGET}"
 $env:GOROOT="C:\var\vcap\packages\golang1.13.1-windows\go"
 $env:GOPATH="${BOSH_INSTALL_TARGET}"
 $env:PATH="${env:GOROOT}\bin;${env:PATH}"
+$env:HOME="C:\var\vcap"
 $pkg_name="metron"
 $pkg_path="code.cloudfoundry.org/loggregator-agent/cmd/agent"
 
