@@ -26,9 +26,9 @@ require (
 	github.com/onsi/gomega v1.7.0
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
 	github.com/prometheus/client_golang v1.1.0
-	golang.org/x/net v0.0.0-20191003171128-d98b1b443823
-	golang.org/x/sys v0.0.0-20191005200804-aed5e4c7ecf9 // indirect
-	google.golang.org/genproto v0.0.0-20191002211648-c459b9ce5143 // indirect
+	golang.org/x/net v0.0.0-20191009170851-d66e71096ffb
+	golang.org/x/sys v0.0.0-20191009170203-06d7bd2c5f4f // indirect
+	google.golang.org/genproto v0.0.0-20191007204434-a023cd5227bd // indirect
 	google.golang.org/grpc v1.24.0
 )
 
