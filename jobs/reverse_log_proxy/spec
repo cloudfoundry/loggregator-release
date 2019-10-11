@@ -25,6 +25,9 @@ provides:
   - reverse_log_proxy.egress.port
 
 properties:
+  reverse_log_proxy.enabled:
+    description: "Enable v2 Logstream"
+    default: true
   reverse_log_proxy.egress.port:
     description: "The port of Loggregator's v2 API"
     default: 8082

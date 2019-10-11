@@ -40,6 +40,9 @@ properties:
       TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 and TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384.
     default: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
 
+  doppler.enabled:
+    description: "Enable v1 Firehose and v2 Logstream"
+    default: true
   doppler.grpc_port:
     description: Port for outgoing log messages via GRPC
     default: 8082

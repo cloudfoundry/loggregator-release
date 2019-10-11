@@ -1,5 +1,7 @@
+<% if p('logs_provider.enabled') %>
 check process reverse_log_proxy_gateway
   with pidfile /var/vcap/sys/run/bpm/reverse_log_proxy_gateway/reverse_log_proxy_gateway.pid
   start program "/var/vcap/jobs/bpm/bin/bpm start reverse_log_proxy_gateway"
   stop program "/var/vcap/jobs/bpm/bin/bpm stop reverse_log_proxy_gateway" with timeout 60 seconds
   group vcap
+<% end %>

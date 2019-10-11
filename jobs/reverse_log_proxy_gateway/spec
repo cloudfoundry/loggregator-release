@@ -43,6 +43,9 @@ properties:
   http.key:
     description: "The TLS key for the gateway server"
 
+  logs_provider.enabled:
+    description: "Enable v2 Logstream"
+    default: true
   logs_provider.ca_cert:
     description: "CA root required for key/cert verification"
   logs_provider.client_cert:

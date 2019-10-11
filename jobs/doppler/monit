@@ -1,5 +1,7 @@
+<% if p('doppler.enabled') %>
 check process doppler
   with pidfile /var/vcap/sys/run/bpm/doppler/doppler.pid
   start program "/var/vcap/jobs/bpm/bin/bpm start doppler"
   stop program "/var/vcap/jobs/bpm/bin/bpm stop doppler" with timeout 60 seconds
   group vcap
+<% end %>
