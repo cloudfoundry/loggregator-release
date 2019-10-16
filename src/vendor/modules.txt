@@ -27,6 +27,8 @@ code.cloudfoundry.org/tlsconfig/certtest
 github.com/beorn7/perks/quantile
 # github.com/blang/semver v3.5.1+incompatible
 github.com/blang/semver
+# github.com/cespare/xxhash/v2 v2.1.0
+github.com/cespare/xxhash/v2
 # github.com/cloudfoundry/noaa v2.1.0+incompatible
 github.com/cloudfoundry/noaa/consumer
 github.com/cloudfoundry/noaa
@@ -110,7 +112,7 @@ github.com/onsi/gomega/matchers/support/goraph/bipartitegraph
 github.com/onsi/gomega/matchers/support/goraph/edge
 github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util
-# github.com/prometheus/client_golang v1.1.0
+# github.com/prometheus/client_golang v1.2.0
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/promhttp
 github.com/prometheus/client_golang/prometheus/internal
