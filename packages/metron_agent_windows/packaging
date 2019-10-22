@@ -5,7 +5,7 @@ trap { $host.SetShouldExit(1) }
 
 $BOSH_INSTALL_TARGET = Resolve-Path "${env:BOSH_INSTALL_TARGET}"
 
-$env:GOROOT="C:\var\vcap\packages\golang1.13.1-windows\go"
+$env:GOROOT="C:\var\vcap\packages\golang1.13.3-windows\go"
 $env:GOPATH="${BOSH_INSTALL_TARGET}"
 $env:PATH="${env:GOROOT}\bin;${env:PATH}"
 $env:HOME="C:\var\vcap"

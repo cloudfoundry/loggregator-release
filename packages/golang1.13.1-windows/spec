@@ -1,8 +1,8 @@
 ---
-name: golang1.13.1-windows
+name: golang1.13.3-windows
 
 dependencies: []
 
 files:
 - exiter.ps1
-- golang/go1.13.1.windows-amd64.zip
+- golang/go1.13.3.windows-amd64.zip

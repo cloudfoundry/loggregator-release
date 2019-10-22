@@ -1,7 +1,7 @@
 ---
 name: reverse_log_proxy
 dependencies:
-- golang1.13.1
+- golang1.13.3
 files:
 - code.cloudfoundry.org/go-batching/*.go # gosub
 - code.cloudfoundry.org/go-envstruct/*.go # gosub
