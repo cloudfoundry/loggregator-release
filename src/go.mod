@@ -22,8 +22,8 @@ require (
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/websocket v1.4.1
 	github.com/mailru/easyjson v0.7.0 // indirect
-	github.com/onsi/ginkgo v1.10.2
-	github.com/onsi/gomega v1.7.0
+	github.com/onsi/ginkgo v1.10.3
+	github.com/onsi/gomega v1.7.1
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
 	github.com/prometheus/client_golang v1.2.1
 	golang.org/x/net v0.0.0-20191028085509-fe3aa8a45271
