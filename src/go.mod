@@ -27,15 +27,11 @@ require (
 	github.com/onsi/gomega v1.7.1
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
 	github.com/prometheus/client_golang v1.2.1
-	golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136 // indirect
-	golang.org/x/lint v0.0.0-20190930215403-16217165b5de // indirect
-	golang.org/x/net v0.0.0-20191108063844-7e6e90b9ea88
+	golang.org/x/net v0.0.0-20191108174545-380dde419d29
 	golang.org/x/sys v0.0.0-20191105231009-c1f44814a5cd // indirect
-	golang.org/x/tools v0.0.0-20191108175616-46f5a7f28bf0 // indirect
 	google.golang.org/genproto v0.0.0-20191028173616-919d9bdd9fe6 // indirect
 	google.golang.org/grpc v1.25.0
 	gopkg.in/yaml.v2 v2.2.5 // indirect
-	honnef.co/go/tools v0.0.1-2019.2.3 // indirect
 )
 
 replace code.cloudfoundry.org/log-cache => code.cloudfoundry.org/log-cache-release/src v0.0.0-20191002191123-8c97ac62a57b
