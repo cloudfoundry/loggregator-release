@@ -20,6 +20,7 @@ package dns
 
 import (
 	"fmt"
+	"google.golang.org/grpc/serviceconfig"
 	"net"
 	"os"
 	"reflect"
@@ -49,6 +50,14 @@ type testClientConn struct {
 	m2     sync.Mutex
 	sc     string
 	s      int
+}
+
+func (t *testClientConn) ReportError(error) {
+	panic("implement me")
+}
+
+func (t *testClientConn) ParseServiceConfig(serviceConfigJSON string) *serviceconfig.ParseResult {
+	panic("implement me")
 }
 
 func (t *testClientConn) UpdateState(resolver.State) {
