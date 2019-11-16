@@ -28,10 +28,10 @@ require (
 	github.com/onsi/gomega v1.7.1
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
 	github.com/prometheus/client_golang v1.2.1
-	github.com/prometheus/procfs v0.0.6 // indirect
-	golang.org/x/net v0.0.0-20191112182307-2180aed22343
+	github.com/prometheus/procfs v0.0.7 // indirect
+	golang.org/x/net v0.0.0-20191116160921-f9c825593386
 	golang.org/x/sys v0.0.0-20191115151921-52ab43148777 // indirect
-	google.golang.org/genproto v0.0.0-20191114150713-6bbd007550de // indirect
+	google.golang.org/genproto v0.0.0-20191115221424-83cc0476cb11 // indirect
 	google.golang.org/grpc v1.25.1
 	gopkg.in/yaml.v2 v2.2.5 // indirect
 )
