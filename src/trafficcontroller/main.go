@@ -2,7 +2,6 @@ package main
 
 import (
 	"code.cloudfoundry.org/tlsconfig"
-	"crypto/x509"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -105,23 +104,4 @@ func ccHTTPClient(conf *app.Config) *http.Client {
 		Timeout:   20 * time.Second,
 		Transport: transport,
 	}
-}
-
-func loadUaaCA(conf *app.Config) *x509.CertPool {
-	if conf.UaaHost != "" {
-		caCert, err := ioutil.ReadFile(conf.UaaCACert)
-		if err != nil {
-			log.Fatalf("Failed to read UAA CA certificate: %s", err)
-		}
-
-		certPool := x509.NewCertPool()
-		ok := certPool.AppendCertsFromPEM(caCert)
-		if !ok {
-			log.Fatal("Failed to parse UAA CA certificate.")
-		}
-
-		return certPool
-	}
-
-	return nil
 }

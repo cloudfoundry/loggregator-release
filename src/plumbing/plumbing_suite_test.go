@@ -6,9 +6,6 @@ import (
 	"net"
 	"testing"
 
-	"code.cloudfoundry.org/loggregator/plumbing"
-
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
 
 	. "github.com/onsi/ginkgo"
@@ -33,16 +30,4 @@ func startListener(addr string) net.Listener {
 	Eventually(f).Should(Succeed())
 
 	return lis
-}
-
-func startGRPCServer(ds plumbing.DopplerServer, addr string) (net.Listener, *grpc.Server) {
-	lis := startListener(addr)
-	s := grpc.NewServer()
-
-	plumbing.RegisterDopplerServer(s, ds)
-	go func() {
-		log.Println(s.Serve(lis))
-	}()
-
-	return lis, s
 }

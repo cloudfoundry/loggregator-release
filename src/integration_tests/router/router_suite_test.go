@@ -94,11 +94,6 @@ func decodeProtoBufEnvelope(actual []byte) *events.Envelope {
 	return &receivedEnvelope
 }
 
-func decodeProtoBufLogMessage(actual []byte) *events.LogMessage {
-	receivedEnvelope := decodeProtoBufEnvelope(actual)
-	return receivedEnvelope.GetLogMessage()
-}
-
 func unmarshalMessage(messageBytes []byte) events.Envelope {
 	var envelope events.Envelope
 	err := proto.Unmarshal(messageBytes, &envelope)

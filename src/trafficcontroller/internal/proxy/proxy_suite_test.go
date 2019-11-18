@@ -59,11 +59,6 @@ func (a *AdminAuthorizer) Authorize(authToken string) (bool, error) {
 	return a.Result.Status == http.StatusOK, errors.New(a.Result.ErrorMessage)
 }
 
-type recentLogsRequest struct {
-	ctx   context.Context
-	appID string
-}
-
 type subscribeRequest struct {
 	ctx     context.Context
 	request *plumbing.SubscriptionRequest
@@ -73,7 +68,6 @@ type SpyGRPCConnector struct {
 	mu               sync.Mutex
 	subscriptions    *subscribeRequest
 	subscriptionsErr error
-	recentLogs       *recentLogsRequest
 }
 
 func newSpyGRPCConnector(err error) *SpyGRPCConnector {
