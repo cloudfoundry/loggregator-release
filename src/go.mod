@@ -29,7 +29,7 @@ require (
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
 	github.com/prometheus/client_golang v1.2.1
 	github.com/prometheus/procfs v0.0.7 // indirect
-	golang.org/x/net v0.0.0-20191116160921-f9c825593386
+	golang.org/x/net v0.0.0-20191118183410-d06c31c94cae
 	golang.org/x/sys v0.0.0-20191118133127-cf1e2d577169 // indirect
 	google.golang.org/genproto v0.0.0-20191115221424-83cc0476cb11 // indirect
 	google.golang.org/grpc v1.25.1
