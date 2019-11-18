@@ -23,12 +23,10 @@ var _ = Describe("DopplerProxy", func() {
 
 		mockGrpcConnector       *mockGrpcConnector
 		mockDopplerStreamClient *mockReceiver
-		mockHealth              *mockHealth
 
 		mockSender *testhelper.SpyMetricClient
 
 		recentLogsHandler *spyRecentLogsHandler
-		logCacheClient    *fakeLogCacheClient
 	)
 
 	BeforeEach(func() {
@@ -38,26 +36,20 @@ var _ = Describe("DopplerProxy", func() {
 		mockGrpcConnector = newMockGrpcConnector()
 		mockDopplerStreamClient = newMockReceiver()
 		mockSender = testhelper.NewMetricClient()
-		mockHealth = newMockHealth()
 
 		mockGrpcConnector.SubscribeOutput.Ret0 <- mockDopplerStreamClient.Recv
 
 		recentLogsHandler = newSpyRecentLogsHandler()
-
-		logCacheClient = newFakeLogCacheClient()
 
 		dopplerProxy = proxy.NewDopplerProxy(
 			auth.Authorize,
 			adminAuth.Authorize,
 			mockGrpcConnector,
 			"cookieDomain",
-			50*time.Millisecond,
 			time.Hour,
 			mockSender,
-			mockHealth,
 			recentLogsHandler,
 			false,
-			logCacheClient,
 		)
 
 		recorder = httptest.NewRecorder()
@@ -116,18 +108,6 @@ var _ = Describe("DopplerProxy", func() {
 			Entry("stream requests", "/apps/12bdb5e8-ba61-48e3-9dda-30ecd1446663/stream", "stream"),
 			Entry("firehose requests", "/firehose/streamID", "firehose"),
 		)
-
-		It("sets the health value for firehose count", func() {
-			req, _ := http.NewRequest("GET", "/firehose/streamID", nil)
-			dopplerProxy.ServeHTTP(recorder, req)
-			Eventually(mockHealth.SetInput.Name, 3).Should(Receive(Equal("firehoseStreamCount")))
-		})
-
-		It("sets the health value for app stream count", func() {
-			req, _ := http.NewRequest("GET", "/apps/appID/stream", nil)
-			dopplerProxy.ServeHTTP(recorder, req)
-			Eventually(mockHealth.SetInput.Name, 3).Should(Receive(Equal("appStreamCount")))
-		})
 	})
 
 	It("calls the recent logs handler", func() {
@@ -156,13 +136,10 @@ var _ = Describe("DopplerProxy", func() {
 			adminAuth.Authorize,
 			mockGrpcConnector,
 			"cookieDomain",
-			50*time.Millisecond,
 			time.Hour,
 			mockSender,
-			mockHealth,
 			recentLogsHandler,
 			true,
-			logCacheClient,
 		)
 		dopplerProxy.ServeHTTP(recorder, req)
 		Expect(recorder.Code).To(Equal(http.StatusOK))

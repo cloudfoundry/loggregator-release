@@ -28,7 +28,6 @@ func main() {
 	r := app.NewRouter(
 		conf.GRPC,
 		app.WithMetricReporting(
-			conf.HealthAddr,
 			conf.Agent,
 			conf.MetricBatchIntervalMilliseconds,
 			conf.MetricSourceID,

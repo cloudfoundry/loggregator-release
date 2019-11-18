@@ -17,7 +17,6 @@ func BuildTrafficControllerConf(routerAddr string, agentPort int, logCacheAddr s
 	return tcConf.Config{
 		IP:                    "127.0.0.1",
 		RouterAddrs:           []string{routerAddr},
-		HealthAddr:            "localhost:0",
 		LogCacheAddr:          logCacheAddr,
 		SystemDomain:          "vcap.me",
 		SkipCertVerify:        true,
@@ -62,7 +61,6 @@ func BuildTrafficControllerConfWithoutLogCache(routerAddr string, agentPort int)
 
 type TrafficControllerPorts struct {
 	WS     int
-	Health int
 	PProf  int
 }
 
@@ -83,7 +81,6 @@ func StartTrafficController(conf tcConf.Config) (cleanup func(), tp TrafficContr
 
 	By("waiting for trafficcontroller to listen")
 	tp.WS = waitForPortBinding("ws", tcSession.Err)
-	tp.Health = waitForPortBinding("health", tcSession.Err)
 	tp.PProf = waitForPortBinding("pprof", tcSession.Err)
 
 	cleanup = func() {

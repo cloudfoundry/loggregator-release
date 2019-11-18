@@ -29,7 +29,6 @@ type EgressServer struct {
 	egressMetric        *metricemitter.Counter
 	droppedMetric		*metricemitter.Counter
 	subscriptionsMetric *metricemitter.Gauge
-	health              HealthRegistrar
 	batchInterval       time.Duration
 	batchSize           uint
 }
@@ -40,7 +39,6 @@ func NewEgressServer(
 	m MetricClient,
 	droppedMetric *metricemitter.Counter,
 	subscriptionsMetric *metricemitter.Gauge,
-	h HealthRegistrar,
 	batchInterval time.Duration,
 	batchSize uint,
 ) *EgressServer {
@@ -55,7 +53,6 @@ func NewEgressServer(
 		egressMetric:        egressMetric,
 		droppedMetric: 		 droppedMetric,
 		subscriptionsMetric: subscriptionsMetric,
-		health:              h,
 		batchInterval:       batchInterval,
 		batchSize:           batchSize,
 	}
@@ -81,8 +78,6 @@ func (s *EgressServer) BatchedReceiver(
 ) error {
 	s.subscriptionsMetric.Increment(1.0)
 	defer s.subscriptionsMetric.Decrement(1.0)
-	s.health.Inc("subscriptionCount")
-	defer s.health.Dec("subscriptionCount")
 
 	d := diodes.NewOneToOneWaiterEnvelopeV2(1000, s,
 		gendiode.WithWaiterContext(sender.Context()),

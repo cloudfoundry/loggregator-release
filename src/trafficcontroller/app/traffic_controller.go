@@ -12,8 +12,6 @@ import (
 	"time"
 
 	logcache "code.cloudfoundry.org/log-cache/pkg/client"
-	"code.cloudfoundry.org/loggregator/healthendpoint"
-
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	_ "code.cloudfoundry.org/loggregator/plumbing/dns"
@@ -21,7 +19,6 @@ import (
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/auth"
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/balancer/roundrobin"
 	"google.golang.org/grpc/keepalive"
@@ -74,43 +71,6 @@ func (t *TrafficController) Start() {
 		t.conf.UaaClientSecret,
 	)
 	adminAuthorizer := auth.NewAdminAccessAuthorizer(t.disableAccessControl, &uaaClient)
-
-	// Start the health endpoint listener
-	promRegistry := prometheus.NewRegistry()
-	healthendpoint.StartServer(t.conf.HealthAddr, promRegistry)
-	healthRegistry := healthendpoint.New(promRegistry, map[string]prometheus.Gauge{
-		// metric-documentation-health: (firehoseStreamCount)
-		// Number of open firehose streams
-		"firehoseStreamCount": prometheus.NewGauge(
-			prometheus.GaugeOpts{
-				Namespace: "loggregator",
-				Subsystem: "trafficcontroller",
-				Name:      "firehoseStreamCount",
-				Help:      "Number of open firehose streams",
-			},
-		),
-		// metric-documentation-health: (appStreamCount)
-		// Number of open app streams
-		"appStreamCount": prometheus.NewGauge(
-			prometheus.GaugeOpts{
-				Namespace: "loggregator",
-				Subsystem: "trafficcontroller",
-				Name:      "appStreamCount",
-				Help:      "Number of open app streams",
-			},
-		),
-		// metric-documentation-health: (slowConsumerCount)
-		// Number of stream consumers disconnected to avoid backpressure on
-		// the Loggregator system.
-		"slowConsumerCount": prometheus.NewGauge(
-			prometheus.GaugeOpts{
-				Namespace: "loggregator",
-				Subsystem: "trafficcontroller",
-				Name:      "slowConsumerCount",
-				Help:      "Number of stream consumers disconnected to avoid backpressure on the Loggregator system",
-			},
-		),
-	})
 
 	creds, err := plumbing.NewClientCredentials(
 		t.conf.GRPC.CertFile,
@@ -168,12 +128,9 @@ func (t *TrafficController) Start() {
 			grpcConnector,
 			"doppler."+t.conf.SystemDomain,
 			5*time.Second,
-			5*time.Second,
 			t.metricClient,
-			healthRegistry,
 			recentLogsHandler,
 			t.disableAccessControl,
-			logCacheClient,
 		),
 	)
 

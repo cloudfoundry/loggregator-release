@@ -50,9 +50,6 @@ properties:
   doppler.pprof_port:
     description: "The pprof port for runtime profiling data"
     default: 0
-  doppler.health_addr:
-    description: "The host:port to expose health metrics for doppler"
-    default: "localhost:14825"
 
   metron_endpoint.host:
     description: "The host used to emit messages to the Metron agent"

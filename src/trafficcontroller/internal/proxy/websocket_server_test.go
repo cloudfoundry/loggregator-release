@@ -17,14 +17,12 @@ var _ = Describe("WebsocketServer", func() {
 	Describe("Slow Consumer", func() {
 		var (
 			metricClient *testhelper.SpyMetricClient
-			mockHealth   *mockHealth
 		)
 
 		BeforeEach(func() {
 			metricClient = testhelper.NewMetricClient()
-			mockHealth = newMockHealth()
 			em := metricClient.NewCounter("egress")
-			s := NewWebSocketServer(time.Millisecond, metricClient, mockHealth)
+			s := NewWebSocketServer(time.Millisecond, metricClient)
 
 			req, _ := http.NewRequest("GET", "/some", nil)
 			req.RemoteAddr = "some-address"
@@ -54,10 +52,6 @@ nozzles, or slow user connections to Loggregator`)
 			Eventually(func() string {
 				return sanitizeWhitespace(metricClient.GetEvent("Traffic Controller has disconnected slow consumer"))
 			}).Should(Equal(expectedBody))
-		})
-
-		It("increments a health counter", func() {
-			Eventually(mockHealth.IncInput.Name).Should(Receive(Equal("slowConsumerCount")))
 		})
 	})
 })

@@ -32,7 +32,6 @@ var _ = Describe("Router", func() {
 		router = app.NewRouter(
 			grpcConfig,
 			app.WithMetricReporting(
-				"localhost:0",
 				app.Agent{
 					GRPCAddress: spyAgent.addr,
 				},
@@ -52,8 +51,6 @@ var _ = Describe("Router", func() {
 		It("returns a struct with all the addrs", func() {
 			addrs := router.Addrs()
 
-			Expect(addrs.Health).ToNot(Equal(""))
-			Expect(addrs.Health).ToNot(Equal("0.0.0.0:0"))
 			Expect(addrs.GRPC).ToNot(Equal(""))
 			Expect(addrs.GRPC).ToNot(Equal("0.0.0.0:0"))
 		})

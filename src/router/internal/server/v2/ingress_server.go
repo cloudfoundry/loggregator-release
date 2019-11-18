@@ -10,13 +10,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// HealthRegistrar describes the health interface for keeping track of various
-// values.
-type HealthRegistrar interface {
-	Inc(name string)
-	Dec(name string)
-}
-
 // MetricClient creates new CounterMetrics to be emitted periodically.
 type MetricClient interface {
 	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
@@ -26,20 +19,17 @@ type IngressServer struct {
 	v1Buf         *diodes.ManyToOneEnvelope
 	v2Buf         *diodes.ManyToOneEnvelopeV2
 	ingressMetric *metricemitter.Counter
-	health        HealthRegistrar
 }
 
 func NewIngressServer(
 	v1Buf *diodes.ManyToOneEnvelope,
 	v2Buf *diodes.ManyToOneEnvelopeV2,
 	ingressMetric *metricemitter.Counter,
-	health HealthRegistrar,
 ) *IngressServer {
 	return &IngressServer{
 		v1Buf:         v1Buf,
 		v2Buf:         v2Buf,
 		ingressMetric: ingressMetric,
-		health:        health,
 	}
 }
 
@@ -51,9 +41,6 @@ func (i IngressServer) Send(
 }
 
 func (i IngressServer) BatchSender(s loggregator_v2.Ingress_BatchSenderServer) error {
-	i.health.Inc("ingressStreamCount")
-	defer i.health.Dec("ingressStreamCount")
-
 	for {
 		v2eBatch, err := s.Recv()
 		if err != nil {
@@ -79,9 +66,6 @@ func (i IngressServer) BatchSender(s loggregator_v2.Ingress_BatchSenderServer) e
 // TODO Remove the Sender method onces we are certain all Metrons are using
 // the BatchSender method
 func (i IngressServer) Sender(s loggregator_v2.Ingress_SenderServer) error {
-	i.health.Inc("ingressStreamCount")
-	defer i.health.Dec("ingressStreamCount")
-
 	for {
 		v2e, err := s.Recv()
 		if err != nil {

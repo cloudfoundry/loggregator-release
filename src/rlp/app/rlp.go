@@ -10,10 +10,7 @@ import (
 
 	"golang.org/x/net/netutil"
 
-	"github.com/prometheus/client_golang/prometheus"
-
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
-	"code.cloudfoundry.org/loggregator/healthendpoint"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"code.cloudfoundry.org/loggregator/rlp/internal/egress"
@@ -50,9 +47,6 @@ type RLP struct {
 	egressListener net.Listener
 	egressServer   *grpc.Server
 
-	healthAddr string
-	health     *healthendpoint.Registrar
-
 	metricClient MetricClient
 }
 
@@ -66,7 +60,6 @@ func NewRLP(m MetricClient, opts ...RLPOption) *RLP {
 		maxEgressConnections: 500,
 		maxEgressStreams:     500,
 		metricClient:         m,
-		healthAddr:           "localhost:0",
 		ctx:                  ctx,
 		ctxCancel:            cancel,
 	}
@@ -112,14 +105,6 @@ func WithIngressDialOptions(opts ...grpc.DialOption) RLPOption {
 	}
 }
 
-// WithHealthAddr specifies the host and port to bind to for servicing the
-// health endpoint.
-func WithHealthAddr(addr string) RLPOption {
-	return func(r *RLP) {
-		r.healthAddr = addr
-	}
-}
-
 // WithMaxEgressConnections specifies the number of connections the RLP will
 // accept on the egress endpoint.
 func WithMaxEgressConnections(max int) RLPOption {
@@ -143,7 +128,6 @@ func (r *RLP) EgressAddr() net.Addr {
 // Start starts a remote log proxy. This connects to various gRPC servers and
 // listens for gRPC connections for egressing data.
 func (r *RLP) Start() {
-	r.setupHealthEndpoint()
 	r.setupIngress()
 	r.setupEgress()
 	r.serveEgress()
@@ -194,30 +178,12 @@ func (r *RLP) setupEgress() {
 		egress.NewServer(
 			r.connector,
 			r.metricClient,
-			r.health,
 			r.ctx,
 			100,
 			100*time.Millisecond,
 			egress.WithMaxStreams(r.maxEgressStreams),
 		),
 	)
-}
-
-func (r *RLP) setupHealthEndpoint() {
-	promRegistry := prometheus.NewRegistry()
-	healthendpoint.StartServer(r.healthAddr, promRegistry)
-	r.health = healthendpoint.New(promRegistry, map[string]prometheus.Gauge{
-		// metric-documentation-health: (subscriptionCount)
-		// Number of open subscriptions
-		"subscriptionCount": prometheus.NewGauge(
-			prometheus.GaugeOpts{
-				Namespace: "loggregator",
-				Subsystem: "reverseLogProxy",
-				Name:      "subscriptionCount",
-				Help:      "Number of open subscriptions",
-			},
-		),
-	})
 }
 
 func (r *RLP) serveEgress() {

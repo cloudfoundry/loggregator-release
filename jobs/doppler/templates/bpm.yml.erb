@@ -11,6 +11,5 @@ processes:
       ROUTER_CIPHER_SUITES: "<%=  p("loggregator.tls.cipher_suites").split(":").join(',') %>"
 
       ROUTER_PPROF_PORT: "<%=  p("doppler.pprof_port") %>"
-      ROUTER_HEALTH_ADDR: "<%=  p("doppler.health_addr") %>"
     limits:
       open_files: 65536

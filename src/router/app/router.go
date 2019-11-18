@@ -3,19 +3,16 @@ package app
 import (
 	"code.cloudfoundry.org/tlsconfig"
 	"log"
-	"net"
 	"time"
 
 	gendiodes "code.cloudfoundry.org/go-diodes"
 	"code.cloudfoundry.org/loggregator/diodes"
-	"code.cloudfoundry.org/loggregator/healthendpoint"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"code.cloudfoundry.org/loggregator/router/internal/server"
 	v1 "code.cloudfoundry.org/loggregator/router/internal/server/v1"
 	v2 "code.cloudfoundry.org/loggregator/router/internal/server/v2"
 	"code.cloudfoundry.org/loggregator/router/internal/sinks"
-	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -24,7 +21,6 @@ import (
 // Router routes envelopes from producers to any subscribers.
 type Router struct {
 	c              *Config
-	healthListener net.Listener
 	server         *server.Server
 	addrs          Addrs
 }
@@ -35,7 +31,6 @@ func NewRouter(grpc GRPC, opts ...RouterOption) *Router {
 	r := &Router{
 		c: &Config{
 			GRPC:                         grpc,
-			HealthAddr:                   "localhost:14825",
 			Agent: Agent{
 				GRPCAddress: "127.0.0.1:3458",
 			},
@@ -56,13 +51,11 @@ type RouterOption func(*Router)
 // WithMetricReporting returns a RouterOption that enables Router to emit
 // metrics about itself.
 func WithMetricReporting(
-	healthAddr string,
 	agent Agent,
 	metricBatchIntervalMilliseconds uint,
 	sourceID string,
 ) RouterOption {
 	return func(r *Router) {
-		r.c.HealthAddr = healthAddr
 		r.c.Agent = agent
 		r.c.MetricBatchIntervalMilliseconds = metricBatchIntervalMilliseconds
 		r.c.MetricSourceID = sourceID
@@ -78,14 +71,6 @@ func (d *Router) Start() {
 	// v2 Metrics (gRPC)
 	//------------------------------
 	metricClient := initV2Metrics(d.c)
-
-	//------------------------------
-	// Health
-	//------------------------------
-	promRegistry := prometheus.NewRegistry()
-	d.healthListener = healthendpoint.StartServer(d.c.HealthAddr, promRegistry)
-	d.addrs.Health = d.healthListener.Addr().String()
-	healthRegistrar := initHealthRegistrar(promRegistry)
 
 	//------------------------------
 	// Ingress (gRPC v1 and v2)
@@ -134,7 +119,6 @@ func (d *Router) Start() {
 		v1Buf,
 		v2Buf,
 		ingress,
-		healthRegistrar,
 	)
 	v1Router := v1.NewRouter()
 	v1Egress := v1.NewDopplerServer(
@@ -142,7 +126,6 @@ func (d *Router) Start() {
 		metricClient,
 		droppedEgress,
 		subscriptionsMetric,
-		healthRegistrar,
 		100*time.Millisecond,
 		100,
 	)
@@ -150,7 +133,6 @@ func (d *Router) Start() {
 		v1Buf,
 		v2Buf,
 		ingress,
-		healthRegistrar,
 	)
 	v2PubSub := v2.NewPubSub()
 	v2Egress := v2.NewEgressServer(
@@ -158,7 +140,6 @@ func (d *Router) Start() {
 		metricClient,
 		droppedEgress,
 		subscriptionsMetric,
-		healthRegistrar,
 		100*time.Millisecond,
 		100,
 	)
@@ -215,7 +196,6 @@ func (d *Router) Start() {
 // Addrs stores listener addresses of the router process.
 type Addrs struct {
 	GRPC   string
-	Health string
 }
 
 // Addrs returns a copy of the listeners' addresses.
@@ -223,10 +203,9 @@ func (d *Router) Addrs() Addrs {
 	return d.addrs
 }
 
-// Stop closes the gRPC and health listeners.
+// Stop closes the gRPC listeners.
 func (d *Router) Stop() {
 	// TODO: Drain
-	d.healthListener.Close()
 	d.server.Stop()
 }
 
@@ -256,39 +235,4 @@ func initV2Metrics(c *Config) *metricemitter.Client {
 	}
 
 	return metricClient
-}
-
-func initHealthRegistrar(r prometheus.Registerer) *healthendpoint.Registrar {
-	return healthendpoint.New(r, map[string]prometheus.Gauge{
-		// metric-documentation-health: (ingressStreamCount)
-		// Number of open firehose streams
-		"ingressStreamCount": prometheus.NewGauge(
-			prometheus.GaugeOpts{
-				Namespace: "loggregator",
-				Subsystem: "router",
-				Name:      "ingressStreamCount",
-				Help:      "Number of open ingress streams",
-			},
-		),
-		// metric-documentation-health: (subscriptionCount)
-		// Number of open subscriptions
-		"subscriptionCount": prometheus.NewGauge(
-			prometheus.GaugeOpts{
-				Namespace: "loggregator",
-				Subsystem: "router",
-				Name:      "subscriptionCount",
-				Help:      "Number of open subscriptions",
-			},
-		),
-		// metric-documentation-health: (recentLogCacheCount)
-		// Number of recent log caches
-		"recentLogCacheCount": prometheus.NewGauge(
-			prometheus.GaugeOpts{
-				Namespace: "loggregator",
-				Subsystem: "router",
-				Name:      "recentLogCacheCount",
-				Help:      "Number of recent log caches",
-			},
-		),
-	})
 }

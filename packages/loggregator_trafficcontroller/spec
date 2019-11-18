@@ -5,7 +5,6 @@ dependencies:
 - golang-1-linux
 
 files:
-- healthendpoint/**/*.go
 - metricemitter/**/*.go
 - plumbing/**/*.go
 - profiler/**/*.go

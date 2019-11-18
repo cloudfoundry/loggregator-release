@@ -6,7 +6,6 @@ dependencies:
 
 files:
 - diodes/**/*.go
-- healthendpoint/**/*.go
 - metricemitter/**/*.go
 - plumbing/**/*.go
 - profiler/**/*.go

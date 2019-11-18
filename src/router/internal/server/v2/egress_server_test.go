@@ -24,7 +24,6 @@ var _ = Describe("EgressServer", func() {
 				testhelper.NewMetricClient(),
 				&metricemitter.Counter{},
 				&metricemitter.Gauge{},
-				nil,
 				time.Millisecond,
 				10,
 			)
@@ -36,7 +35,6 @@ var _ = Describe("EgressServer", func() {
 
 	Describe("BatchedReceiver", func() {
 		It("forwards messages to a connected client", func() {
-			healthRegistrar := newSpyHealthRegistrar()
 			spyReceiver := &spyBatchReceiver{
 				_context: context.Background(),
 			}
@@ -46,7 +44,6 @@ var _ = Describe("EgressServer", func() {
 				testhelper.NewMetricClient(),
 				&metricemitter.Counter{},
 				&metricemitter.Gauge{},
-				healthRegistrar,
 				time.Millisecond,
 				10,
 			)
@@ -57,7 +54,6 @@ var _ = Describe("EgressServer", func() {
 		})
 
 		It("flushes if there are no more envelopes in the diode", func() {
-			healthRegistrar := newSpyHealthRegistrar()
 			spyReceiver := &spyBatchReceiver{
 				_context: context.Background(),
 			}
@@ -69,7 +65,6 @@ var _ = Describe("EgressServer", func() {
 				testhelper.NewMetricClient(),
 				&metricemitter.Counter{},
 				&metricemitter.Gauge{},
-				healthRegistrar,
 				time.Hour,
 				2000,
 			)
@@ -83,7 +78,6 @@ var _ = Describe("EgressServer", func() {
 		})
 
 		It("returns if the context is cancelled", func() {
-			healthRegistrar := newSpyHealthRegistrar()
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
 			spyReceiver := &spyBatchReceiver{
@@ -95,7 +89,6 @@ var _ = Describe("EgressServer", func() {
 				testhelper.NewMetricClient(),
 				&metricemitter.Counter{},
 				&metricemitter.Gauge{},
-				healthRegistrar,
 				time.Millisecond,
 				10,
 			)
@@ -105,7 +98,6 @@ var _ = Describe("EgressServer", func() {
 		})
 
 		It("returns an error if one occurrs", func() {
-			healthRegistrar := newSpyHealthRegistrar()
 			spyReceiver := &spyBatchReceiver{
 				_context: context.Background(),
 				err:      errors.New("some error"),
@@ -116,7 +108,6 @@ var _ = Describe("EgressServer", func() {
 				testhelper.NewMetricClient(),
 				&metricemitter.Counter{},
 				&metricemitter.Gauge{},
-				healthRegistrar,
 				time.Millisecond,
 				10,
 			)
@@ -126,7 +117,6 @@ var _ = Describe("EgressServer", func() {
 		})
 
 		It("calls cleanup when exiting", func() {
-			healthRegistrar := newSpyHealthRegistrar()
 			spyReceiver := &spyBatchReceiver{
 				_context: context.Background(),
 				err:      errors.New("some error"),
@@ -137,7 +127,6 @@ var _ = Describe("EgressServer", func() {
 				testhelper.NewMetricClient(),
 				&metricemitter.Counter{},
 				&metricemitter.Gauge{},
-				healthRegistrar,
 				time.Millisecond,
 				10,
 			)
@@ -148,7 +137,6 @@ var _ = Describe("EgressServer", func() {
 		})
 
 		It("passes the request to the subscriber", func() {
-			healthRegistrar := newSpyHealthRegistrar()
 			spyReceiver := &spyBatchReceiver{
 				_context: context.Background(),
 			}
@@ -158,7 +146,6 @@ var _ = Describe("EgressServer", func() {
 				testhelper.NewMetricClient(),
 				&metricemitter.Counter{},
 				&metricemitter.Gauge{},
-				healthRegistrar,
 				time.Millisecond,
 				10,
 			)
@@ -173,7 +160,6 @@ var _ = Describe("EgressServer", func() {
 
 		It("increments and decrements the subscription count", func() {
 			subscriptionsMetric := &metricemitter.Gauge{}
-			healthRegistrar := newSpyHealthRegistrar()
 			ctx, cancel := context.WithCancel(context.Background())
 			spyReceiver := &spyBatchReceiver{
 				_context: ctx,
@@ -184,7 +170,6 @@ var _ = Describe("EgressServer", func() {
 				testhelper.NewMetricClient(),
 				&metricemitter.Counter{},
 				subscriptionsMetric,
-				healthRegistrar,
 				time.Millisecond,
 				10,
 			)
@@ -195,17 +180,11 @@ var _ = Describe("EgressServer", func() {
 			go server.BatchedReceiver(req, spyReceiver)
 
 			Eventually(func() float64 {
-				return healthRegistrar.Get("subscriptionCount")
-			}).Should(Equal(1.0))
-			Eventually(func() float64 {
 				return subscriptionsMetric.GetValue()
 			}).Should(Equal(1.0))
 
 			cancel()
 
-			Eventually(func() float64 {
-				return healthRegistrar.Get("subscriptionCount")
-			}).Should(Equal(0.0))
 			Eventually(func() float64 {
 				return subscriptionsMetric.GetValue()
 			}).Should(Equal(0.0))
@@ -214,7 +193,6 @@ var _ = Describe("EgressServer", func() {
 
 		It("emits a metric for the number of envelopes sent", func() {
 			metricClient := testhelper.NewMetricClient()
-			healthRegistrar := newSpyHealthRegistrar()
 			spyReceiver := &spyBatchReceiver{
 				_context: context.Background(),
 			}
@@ -225,7 +203,6 @@ var _ = Describe("EgressServer", func() {
 				metricClient,
 				&metricemitter.Counter{},
 				&metricemitter.Gauge{},
-				healthRegistrar,
 				time.Millisecond,
 				10,
 			)
@@ -238,7 +215,6 @@ var _ = Describe("EgressServer", func() {
 
 		It("emits a metric for the number of envelopes dropped", func() {
 			metricClient := testhelper.NewMetricClient()
-			healthRegistrar := newSpyHealthRegistrar()
 			subscriber := &spySubscriber{
 				wait: time.Millisecond,
 			}
@@ -250,7 +226,6 @@ var _ = Describe("EgressServer", func() {
 				metricClient,
 				egressDropped,
 				&metricemitter.Gauge{},
-				healthRegistrar,
 				10*time.Second,
 				10,
 			)

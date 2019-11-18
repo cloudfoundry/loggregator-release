@@ -2,7 +2,6 @@ package v2_test
 
 import (
 	"io"
-	"sync"
 
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator/diodes"
@@ -19,7 +18,6 @@ var _ = Describe("IngressServer", func() {
 		v2Buf                *diodes.ManyToOneEnvelopeV2
 		spySenderServer      *spyIngressSender
 		spyBatchSenderServer *spyIngressBatchSender
-		healthRegistrar      *SpyHealthRegistrar
 
 		ingressMetric *metricemitter.Counter
 		ingestor      *v2.IngressServer
@@ -30,7 +28,6 @@ var _ = Describe("IngressServer", func() {
 		v2Buf = diodes.NewManyToOneEnvelopeV2(5, nil)
 		spyBatchSenderServer = newSpyIngressBatchSender(false)
 		spySenderServer = newSpyIngressSender(false)
-		healthRegistrar = newSpyHealthRegistrar()
 
 		ingressMetric = metricemitter.NewCounter("ingress", "doppler")
 
@@ -38,7 +35,6 @@ var _ = Describe("IngressServer", func() {
 			v1Buf,
 			v2Buf,
 			ingressMetric,
-			healthRegistrar,
 		)
 	})
 
@@ -131,72 +127,7 @@ var _ = Describe("IngressServer", func() {
 		_, ok := v1Buf.TryNext()
 		Expect(ok).ToNot(BeTrue())
 	})
-
-	Describe("health monitoring", func() {
-		Describe("Sender()", func() {
-			It("increments and decrements the number of ingress streams", func() {
-				spySenderServer = newSpyIngressSender(true)
-				go ingestor.Sender(spySenderServer)
-
-				Eventually(func() float64 {
-					return healthRegistrar.Get("ingressStreamCount")
-				}).Should(Equal(1.0))
-
-				close(spySenderServer.done)
-
-				Eventually(func() float64 {
-					return healthRegistrar.Get("ingressStreamCount")
-				}).Should(Equal(0.0))
-			})
-		})
-
-		Describe("BatchSender()", func() {
-			It("increments and decrements the number of ingress streams", func() {
-				spyBatchSenderServer = newSpyIngressBatchSender(true)
-				go ingestor.BatchSender(spyBatchSenderServer)
-
-				Eventually(func() float64 {
-					return healthRegistrar.Get("ingressStreamCount")
-				}).Should(Equal(1.0))
-
-				close(spyBatchSenderServer.done)
-
-				Eventually(func() float64 {
-					return healthRegistrar.Get("ingressStreamCount")
-				}).Should(Equal(0.0))
-			})
-		})
-	})
 })
-
-type SpyHealthRegistrar struct {
-	mu     sync.Mutex
-	values map[string]float64
-}
-
-func newSpyHealthRegistrar() *SpyHealthRegistrar {
-	return &SpyHealthRegistrar{
-		values: make(map[string]float64),
-	}
-}
-
-func (s *SpyHealthRegistrar) Inc(name string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.values[name]++
-}
-
-func (s *SpyHealthRegistrar) Dec(name string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.values[name]--
-}
-
-func (s *SpyHealthRegistrar) Get(name string) float64 {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.values[name]
-}
 
 type spyIngressBatchSender struct {
 	loggregator_v2.Ingress_BatchSenderServer

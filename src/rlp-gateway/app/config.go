@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	envstruct "code.cloudfoundry.org/go-envstruct"
+	"code.cloudfoundry.org/go-envstruct"
 )
 
 // LogAccessAuthorization holds the configuration for verifying log access.

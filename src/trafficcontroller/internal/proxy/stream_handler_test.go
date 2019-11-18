@@ -23,31 +23,24 @@ var _ = Describe("StreamHandler", func() {
 
 		connector      *SpyGRPCConnector
 		mockSender     *testhelper.SpyMetricClient
-		mockHealth     *mockHealth
-		logCacheClient *fakeLogCacheClient
 	)
 
 	BeforeEach(func() {
 		auth = LogAuthorizer{Result: AuthorizerResult{Status: http.StatusOK}}
 		adminAuth = AdminAuthorizer{Result: AuthorizerResult{Status: http.StatusOK}}
-		logCacheClient = newFakeLogCacheClient()
 
 		connector = newSpyGRPCConnector(nil)
 		mockSender = testhelper.NewMetricClient()
-		mockHealth = newMockHealth()
 
 		dopplerProxy = proxy.NewDopplerProxy(
 			auth.Authorize,
 			adminAuth.Authorize,
 			connector,
 			"cookieDomain",
-			50*time.Millisecond,
 			time.Hour,
 			mockSender,
-			mockHealth,
 			newSpyRecentLogsHandler(),
 			false,
-			logCacheClient,
 		)
 
 		recorder = httptest.NewRecorder()

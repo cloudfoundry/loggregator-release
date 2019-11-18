@@ -3,7 +3,6 @@ package egress_test
 import (
 	"errors"
 	"io"
-	"sync"
 	"time"
 
 	"golang.org/x/net/context"
@@ -28,7 +27,6 @@ var _ = Describe("Server", func() {
 			server := egress.NewServer(
 				receiver,
 				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
 				context.TODO(),
 				1,
 				time.Nanosecond,
@@ -59,7 +57,6 @@ var _ = Describe("Server", func() {
 			server := egress.NewServer(
 				receiver,
 				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
 				context.TODO(),
 				1,
 				time.Nanosecond,
@@ -84,7 +81,6 @@ var _ = Describe("Server", func() {
 			server := egress.NewServer(
 				receiver,
 				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
 				context.TODO(),
 				1,
 				time.Nanosecond,
@@ -107,7 +103,6 @@ var _ = Describe("Server", func() {
 			server := egress.NewServer(
 				receiver,
 				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
 				context.TODO(),
 				1,
 				time.Nanosecond,
@@ -132,7 +127,6 @@ var _ = Describe("Server", func() {
 			server := egress.NewServer(
 				receiver,
 				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
 				context.TODO(),
 				1,
 				time.Nanosecond,
@@ -166,7 +160,6 @@ var _ = Describe("Server", func() {
 			server := egress.NewServer(
 				receiver,
 				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
 				context.TODO(),
 				1,
 				time.Nanosecond,
@@ -206,7 +199,6 @@ var _ = Describe("Server", func() {
 			server := egress.NewServer(
 				receiver,
 				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
 				context.TODO(),
 				1,
 				time.Nanosecond,
@@ -237,7 +229,6 @@ var _ = Describe("Server", func() {
 			server := egress.NewServer(
 				receiver,
 				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
 				ctx,
 				1,
 				time.Nanosecond,
@@ -270,7 +261,6 @@ var _ = Describe("Server", func() {
 			server := egress.NewServer(
 				receiver,
 				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
 				context.TODO(),
 				1,
 				time.Nanosecond,
@@ -326,7 +316,6 @@ var _ = Describe("Server", func() {
 				server = egress.NewServer(
 					receiver,
 					testhelper.NewMetricClient(),
-					newSpyHealthRegistrar(),
 					context.TODO(),
 					1,
 					time.Nanosecond,
@@ -448,7 +437,6 @@ var _ = Describe("Server", func() {
 				server := egress.NewServer(
 					receiver,
 					metricClient,
-					newSpyHealthRegistrar(),
 					context.TODO(),
 					1,
 					time.Nanosecond,
@@ -480,7 +468,6 @@ var _ = Describe("Server", func() {
 				server := egress.NewServer(
 					receiver,
 					metricClient,
-					newSpyHealthRegistrar(),
 					context.TODO(),
 					1,
 					time.Nanosecond,
@@ -511,7 +498,6 @@ var _ = Describe("Server", func() {
 				server := egress.NewServer(
 					receiver,
 					metricClient,
-					newSpyHealthRegistrar(),
 					context.TODO(),
 					1,
 					time.Nanosecond,
@@ -540,7 +526,6 @@ var _ = Describe("Server", func() {
 				server := egress.NewServer(
 					receiver,
 					metricClient,
-					newSpyHealthRegistrar(),
 					context.TODO(),
 					1,
 					time.Nanosecond,
@@ -564,42 +549,6 @@ var _ = Describe("Server", func() {
 
 				Eventually(func() float64 {
 					return metricClient.GetValue("subscriptions")
-				}).Should(Equal(0.0))
-			})
-		})
-
-		Describe("health monitoring", func() {
-			It("increments and decrements subscription count", func() {
-				receiverServer := newSpyReceiverServer(nil)
-				receiver := newSpyReceiver(1000000000)
-
-				health := newSpyHealthRegistrar()
-				server := egress.NewServer(
-					receiver,
-					testhelper.NewMetricClient(),
-					health,
-					context.TODO(),
-					1,
-					time.Nanosecond,
-				)
-				go server.Receiver(&loggregator_v2.EgressRequest{
-					Selectors: []*loggregator_v2.Selector{
-						{
-							Message: &loggregator_v2.Selector_Log{
-								Log: &loggregator_v2.LogSelector{},
-							},
-						},
-					},
-				}, receiverServer)
-
-				Eventually(func() float64 {
-					return health.Get("subscriptionCount")
-				}).Should(Equal(1.0))
-
-				receiver.stop()
-
-				Eventually(func() float64 {
-					return health.Get("subscriptionCount")
 				}).Should(Equal(0.0))
 			})
 		})
@@ -611,7 +560,6 @@ var _ = Describe("Server", func() {
 			server := egress.NewServer(
 				&stubReceiver{},
 				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
 				context.TODO(),
 				1,
 				time.Nanosecond,
@@ -641,7 +589,6 @@ var _ = Describe("Server", func() {
 			server := egress.NewServer(
 				&stubReceiver{},
 				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
 				context.TODO(),
 				1,
 				time.Nanosecond,
@@ -665,7 +612,6 @@ var _ = Describe("Server", func() {
 			server := egress.NewServer(
 				&stubReceiver{},
 				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
 				context.TODO(),
 				1,
 				time.Nanosecond,
@@ -687,7 +633,6 @@ var _ = Describe("Server", func() {
 			server := egress.NewServer(
 				newSpyReceiver(10),
 				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
 				context.TODO(),
 				10,
 				time.Nanosecond,
@@ -713,7 +658,6 @@ var _ = Describe("Server", func() {
 			server := egress.NewServer(
 				receiver,
 				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
 				context.TODO(),
 				1,
 				time.Nanosecond,
@@ -756,7 +700,6 @@ var _ = Describe("Server", func() {
 			server := egress.NewServer(
 				receiver,
 				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
 				context.TODO(),
 				1,
 				time.Nanosecond,
@@ -786,7 +729,6 @@ var _ = Describe("Server", func() {
 			server := egress.NewServer(
 				receiver,
 				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
 				context.TODO(),
 				1,
 				time.Nanosecond,
@@ -818,7 +760,6 @@ var _ = Describe("Server", func() {
 			server := egress.NewServer(
 				receiver,
 				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
 				ctx,
 				1,
 				time.Nanosecond,
@@ -850,7 +791,6 @@ var _ = Describe("Server", func() {
 			server := egress.NewServer(
 				receiver,
 				testhelper.NewMetricClient(),
-				newSpyHealthRegistrar(),
 				context.TODO(),
 				1,
 				time.Nanosecond,
@@ -905,7 +845,6 @@ var _ = Describe("Server", func() {
 				server = egress.NewServer(
 					receiver,
 					testhelper.NewMetricClient(),
-					newSpyHealthRegistrar(),
 					context.TODO(),
 					1,
 					time.Nanosecond,
@@ -970,7 +909,6 @@ var _ = Describe("Server", func() {
 				server := egress.NewServer(
 					receiver,
 					metricClient,
-					newSpyHealthRegistrar(),
 					context.TODO(),
 					10,
 					time.Second,
@@ -1004,7 +942,6 @@ var _ = Describe("Server", func() {
 				server := egress.NewServer(
 					receiver,
 					metricClient,
-					newSpyHealthRegistrar(),
 					context.TODO(),
 					1,
 					time.Nanosecond,
@@ -1034,7 +971,6 @@ var _ = Describe("Server", func() {
 				server := egress.NewServer(
 					receiver,
 					metricClient,
-					newSpyHealthRegistrar(),
 					context.TODO(),
 					1,
 					time.Nanosecond,
@@ -1060,11 +996,9 @@ var _ = Describe("Server", func() {
 			It("emits 'subscriptions' metric for each stream", func() {
 				metricClient := testhelper.NewMetricClient()
 				receiver := newSpyReceiver(1000000000)
-				health := newSpyHealthRegistrar()
 				server := egress.NewServer(
 					receiver,
 					metricClient,
-					health,
 					context.TODO(),
 					1,
 					time.Nanosecond,
@@ -1091,44 +1025,6 @@ var _ = Describe("Server", func() {
 
 				Eventually(func() float64 {
 					return metricClient.GetValue("subscriptions")
-				}).Should(Equal(0.0))
-			})
-		})
-
-		Describe("health monitoring", func() {
-			It("increments and decrements subscription count", func() {
-				receiver := newSpyReceiver(1000000000)
-				health := newSpyHealthRegistrar()
-				server := egress.NewServer(
-					receiver,
-					testhelper.NewMetricClient(),
-					health,
-					context.TODO(),
-					1,
-					time.Nanosecond,
-				)
-
-				go server.BatchedReceiver(
-					&loggregator_v2.EgressBatchRequest{
-						Selectors: []*loggregator_v2.Selector{
-							{
-								Message: &loggregator_v2.Selector_Log{
-									Log: &loggregator_v2.LogSelector{},
-								},
-							},
-						},
-					},
-					newSpyBatchedReceiverServer(nil),
-				)
-
-				Eventually(func() float64 {
-					return health.Get("subscriptionCount")
-				}).Should(Equal(1.0))
-
-				receiver.stop()
-
-				Eventually(func() float64 {
-					return health.Get("subscriptionCount")
 				}).Should(Equal(0.0))
 			})
 		})
@@ -1252,33 +1148,4 @@ func (s *stubReceiver) Subscribe(ctx context.Context, req *loggregator_v2.Egress
 
 func (s *spyReceiver) stop() {
 	close(s.stopCh)
-}
-
-type SpyHealthRegistrar struct {
-	mu     sync.Mutex
-	values map[string]float64
-}
-
-func newSpyHealthRegistrar() *SpyHealthRegistrar {
-	return &SpyHealthRegistrar{
-		values: make(map[string]float64),
-	}
-}
-
-func (s *SpyHealthRegistrar) Inc(name string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.values[name]++
-}
-
-func (s *SpyHealthRegistrar) Dec(name string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.values[name]--
-}
-
-func (s *SpyHealthRegistrar) Get(name string) float64 {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.values[name]
 }

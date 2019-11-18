@@ -12,7 +12,6 @@ import (
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"code.cloudfoundry.org/loggregator/router/internal/server/v1"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
@@ -22,10 +21,9 @@ import (
 
 var _ = Describe("v1 doppler server", func() {
 	var (
-		mockRegistrar   *spyRegistrar
-		mockCleanup     func()
-		cleanupCalled   chan struct{}
-		healthRegistrar *SpyHealthRegistrar
+		mockRegistrar *spyRegistrar
+		mockCleanup   func()
+		cleanupCalled chan struct{}
 
 		metricClient        *testhelper.SpyMetricClient
 		egressDropped       *metricemitter.Counter
@@ -46,7 +44,6 @@ var _ = Describe("v1 doppler server", func() {
 		cleanupCalled = make(chan struct{})
 		mockCleanup = buildCleanup(cleanupCalled)
 		mockRegistrar.cleanup = mockCleanup
-		healthRegistrar = newSpyHealthRegistrar()
 		batchInterval = 50 * time.Millisecond
 
 		metricClient = testhelper.NewMetricClient()
@@ -64,7 +61,6 @@ var _ = Describe("v1 doppler server", func() {
 			dopplerClient, subscribeRequest, listener, connCloser = dopplerSetup(
 				mockRegistrar,
 				batchInterval,
-				healthRegistrar,
 				metricClient,
 				egressDropped,
 				subscriptionsMetric,
@@ -99,7 +95,7 @@ var _ = Describe("v1 doppler server", func() {
 			})
 		})
 
-		Describe("health registrar and metrics", func() {
+		Describe("metrics", func() {
 			It("emits a metric for number of envelopes egressed", func() {
 				_, err := dopplerClient.Subscribe(context.TODO(), subscribeRequest)
 				Expect(err).ToNot(HaveOccurred())
@@ -127,21 +123,6 @@ var _ = Describe("v1 doppler server", func() {
 
 				Eventually(func() float64 {
 					return subscriptionsMetric.GetValue()
-				}).Should(Equal(0.0))
-			})
-
-			It("increments and decrements the subscription count", func() {
-				_, err := dopplerClient.Subscribe(context.TODO(), subscribeRequest)
-				Expect(err).ToNot(HaveOccurred())
-
-				Eventually(func() float64 {
-					return healthRegistrar.Get("subscriptionCount")
-				}).Should(Equal(1.0))
-
-				connCloser.Close()
-
-				Eventually(func() float64 {
-					return healthRegistrar.Get("subscriptionCount")
 				}).Should(Equal(0.0))
 			})
 
@@ -182,7 +163,6 @@ var _ = Describe("v1 doppler server", func() {
 				dopplerClient, subscribeRequest, listener, connCloser = dopplerSetup(
 					mockRegistrar,
 					batchInterval,
-					healthRegistrar,
 					metricClient,
 					egressDropped,
 					subscriptionsMetric,
@@ -217,17 +197,15 @@ var _ = Describe("v1 doppler server", func() {
 			})
 		})
 
-		Describe("health registrar and metrics", func() {
+		Describe("metrics", func() {
 			BeforeEach(func() {
 				dopplerClient, subscribeRequest, listener, connCloser = dopplerSetup(
 					mockRegistrar,
 					batchInterval,
-					healthRegistrar,
 					metricClient,
 					egressDropped,
 					subscriptionsMetric,
 				)
-
 			})
 
 			It("emits a metric for number of envelopes egressed", func() {
@@ -259,21 +237,6 @@ var _ = Describe("v1 doppler server", func() {
 					return subscriptionsMetric.GetValue()
 				}).Should(Equal(0.0))
 			})
-
-			It("increments and decrements the subscription count", func() {
-				_, err := dopplerClient.BatchSubscribe(context.TODO(), subscribeRequest)
-				Expect(err).ToNot(HaveOccurred())
-
-				Eventually(func() float64 {
-					return healthRegistrar.Get("subscriptionCount")
-				}).Should(Equal(1.0))
-
-				connCloser.Close()
-
-				Eventually(func() float64 {
-					return healthRegistrar.Get("subscriptionCount")
-				}).Should(Equal(0.0))
-			})
 		})
 
 		Describe("data transmission", func() {
@@ -282,7 +245,6 @@ var _ = Describe("v1 doppler server", func() {
 					dopplerClient, subscribeRequest, listener, connCloser = dopplerSetup(
 						mockRegistrar,
 						batchInterval,
-						healthRegistrar,
 						metricClient,
 						egressDropped,
 						subscriptionsMetric,
@@ -312,7 +274,6 @@ var _ = Describe("v1 doppler server", func() {
 					dopplerClient, subscribeRequest, listener, connCloser = dopplerSetup(
 						mockRegistrar,
 						time.Hour,
-						healthRegistrar,
 						metricClient,
 						egressDropped,
 						subscriptionsMetric,
@@ -345,7 +306,6 @@ var _ = Describe("v1 doppler server", func() {
 func dopplerSetup(
 	mockRegistrar *spyRegistrar,
 	batchInterval time.Duration,
-	healthRegistrar *SpyHealthRegistrar,
 	metricClient *testhelper.SpyMetricClient,
 	droppedMetric *metricemitter.Counter,
 	subscriptionsMetric *metricemitter.Gauge,
@@ -360,7 +320,6 @@ func dopplerSetup(
 		metricClient,
 		droppedMetric,
 		subscriptionsMetric,
-		healthRegistrar,
 		batchInterval,
 		100,
 	)
@@ -373,23 +332,6 @@ func dopplerSetup(
 	}
 
 	return dopplerClient, subscribeRequest, listener, connCloser
-}
-
-func buildLogMessage() (*events.Envelope, []byte) {
-	envelope := &events.Envelope{
-		Origin:    proto.String("doppler"),
-		EventType: events.Envelope_LogMessage.Enum(),
-		Timestamp: proto.Int64(time.Now().UnixNano()),
-		LogMessage: &events.LogMessage{
-			Message:     []byte("some-log-message"),
-			MessageType: events.LogMessage_OUT.Enum(),
-			Timestamp:   proto.Int64(time.Now().UnixNano()),
-		},
-		Tags: make(map[string]string),
-	}
-	data, err := proto.Marshal(envelope)
-	Expect(err).ToNot(HaveOccurred())
-	return envelope, data
 }
 
 func startGRPCServer(ds plumbing.DopplerServer) net.Listener {

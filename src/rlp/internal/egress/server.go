@@ -20,12 +20,6 @@ const (
 	envelopeBufferSize = 10000
 )
 
-// HealthRegistrar provides an interface to record various counters.
-type HealthRegistrar interface {
-	Inc(name string)
-	Dec(name string)
-}
-
 // Receiver creates a function which will receive envelopes on a stream.
 type Receiver interface {
 	Subscribe(ctx context.Context, req *loggregator_v2.EgressBatchRequest) (rx func() (*loggregator_v2.Envelope, error), err error)
@@ -45,7 +39,6 @@ type Server struct {
 	droppedMetric       *metricemitter.Counter
 	rejectedMetric      *metricemitter.Counter
 	subscriptionsMetric *metricemitter.Gauge
-	health              HealthRegistrar
 	ctx                 context.Context
 	batchSize           int
 	batchInterval       time.Duration
@@ -57,7 +50,6 @@ type Server struct {
 func NewServer(
 	r Receiver,
 	m MetricClient,
-	h HealthRegistrar,
 	c context.Context,
 	batchSize int,
 	batchInterval time.Duration,
@@ -88,7 +80,6 @@ func NewServer(
 		droppedMetric:       droppedMetric,
 		rejectedMetric:      rejectedMetric,
 		subscriptionsMetric: subscriptionsMetric,
-		health:              h,
 		ctx:                 c,
 		batchSize:           batchSize,
 		batchInterval:       batchInterval,
@@ -116,9 +107,6 @@ func WithMaxStreams(conn int64) ServerOption {
 // Receiver implements the loggregator-api V2 gRPC interface for receiving
 // envelopes from upstream connections.
 func (s *Server) Receiver(r *loggregator_v2.EgressRequest, srv loggregator_v2.Egress_ReceiverServer) error {
-	s.health.Inc("subscriptionCount")
-	defer s.health.Dec("subscriptionCount")
-
 	s.subscriptionsMetric.Increment(1)
 	defer s.subscriptionsMetric.Decrement(1)
 
@@ -189,9 +177,6 @@ func (s *Server) Receiver(r *loggregator_v2.EgressRequest, srv loggregator_v2.Eg
 // batched receiver server whenever the configured interval or configured
 // batch size is exceeded.
 func (s *Server) BatchedReceiver(r *loggregator_v2.EgressBatchRequest, srv loggregator_v2.Egress_BatchedReceiverServer) error {
-	s.health.Inc("subscriptionCount")
-	defer s.health.Dec("subscriptionCount")
-
 	s.subscriptionsMetric.Increment(1)
 	defer s.subscriptionsMetric.Decrement(1)
 

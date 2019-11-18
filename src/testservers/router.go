@@ -20,7 +20,6 @@ func BuildRouterConfig(agentUDPPort, agentGRPCPort int) app.Config {
 			KeyFile:  LoggregatorTestCerts.Key("doppler"),
 			CAFile:   LoggregatorTestCerts.CA(),
 		},
-		HealthAddr: "127.0.0.1:0",
 
 		Agent: app.Agent{
 			GRPCAddress: fmt.Sprintf("127.0.0.1:%d", agentGRPCPort),
@@ -33,7 +32,6 @@ func BuildRouterConfig(agentUDPPort, agentGRPCPort int) app.Config {
 type RouterPorts struct {
 	GRPC   int
 	PProf  int
-	Health int
 }
 
 func StartRouter(conf app.Config) (cleanup func(), rp RouterPorts) {
@@ -55,7 +53,6 @@ func StartRouter(conf app.Config) (cleanup func(), rp RouterPorts) {
 	By("waiting for router to listen")
 	rp.GRPC = waitForPortBinding("grpc", routerSession.Err)
 	rp.PProf = waitForPortBinding("pprof", routerSession.Err)
-	rp.Health = waitForPortBinding("health", routerSession.Err)
 
 	cleanup = func() {
 		routerSession.Kill().Wait()

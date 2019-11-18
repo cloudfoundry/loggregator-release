@@ -47,7 +47,6 @@ processes:
       TRAFFIC_CONTROLLER_UAA_CLIENT_SECRET: '<%= p("loggregator.uaa.client_secret") %>'
       TRAFFIC_CONTROLLER_PPROF_PORT: "<%= p("traffic_controller.pprof_port") %>"
       TRAFFIC_CONTROLLER_METRIC_EMITTER_INTERVAL: "<%= p('metric_emitter.interval') %>"
-      TRAFFIC_CONTROLLER_HEALTH_ADDR: "<%= p('traffic_controller.health_addr') %>"
       TRAFFIC_CONTROLLER_DISABLE_ACCESS_CONTROL: "<%= p("traffic_controller.disable_access_control") %>"
 
       <% if !uaa_host.empty? %>

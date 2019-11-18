@@ -17,15 +17,8 @@ import (
 
 var MetricsInterval = 15 * time.Second
 
-type Health interface {
-	Set(name string, value float64)
-	Inc(name string)
-}
-
 type DopplerProxy struct {
 	*mux.Router
-
-	health Health
 
 	firehoseConnMetric  *metricemitter.Gauge
 	appStreamConnMetric *metricemitter.Gauge
@@ -46,13 +39,10 @@ func NewDopplerProxy(
 	adminAuthorizer auth.AdminAccessAuthorizer,
 	grpcConn GrpcConnector,
 	cookieDomain string,
-	timeout time.Duration,
 	slowConsumerTimeout time.Duration,
 	m MetricClient,
-	health Health,
 	recentLogsHandler http.Handler,
 	disableAccessControl bool,
-	logCacheClient LogCacheClient,
 ) *DopplerProxy {
 	// metric-documentation-v2: (doppler_proxy.firehoses) Number of open firehose streams
 	firehoseConnMetric := m.NewGauge("doppler_proxy.firehoses", "connections",
@@ -87,7 +77,7 @@ func NewDopplerProxy(
 		),
 	)
 
-	wsServer := NewWebSocketServer(slowConsumerTimeout, m, health)
+	wsServer := NewWebSocketServer(slowConsumerTimeout, m)
 	streamHandler := NewStreamHandler(grpcConn, wsServer, m)
 	r.Handle(
 		"/apps/{appID}/stream",
@@ -102,7 +92,6 @@ func NewDopplerProxy(
 
 	d := &DopplerProxy{
 		Router:              r,
-		health:              health,
 		firehoseConnMetric:  firehoseConnMetric,
 		appStreamConnMetric: appStreamConnMetric,
 	}
@@ -115,10 +104,7 @@ func NewDopplerProxy(
 func (d *DopplerProxy) emitMetrics(firehose *FirehoseHandler, stream *StreamHandler) {
 	for range time.Tick(MetricsInterval) {
 		d.firehoseConnMetric.Set(float64(firehose.Count()))
-		d.health.Set("firehoseStreamCount", float64(firehose.Count()))
-
 		d.appStreamConnMetric.Set(float64(stream.Count()))
-		d.health.Set("appStreamCount", float64(stream.Count()))
 	}
 }
 

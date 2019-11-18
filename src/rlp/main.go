@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"time"
 
-	envstruct "code.cloudfoundry.org/go-envstruct"
+	"code.cloudfoundry.org/go-envstruct"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 
 	"google.golang.org/grpc"
@@ -100,7 +100,6 @@ func main() {
 			grpc.Creds(rlpCredentials),
 			grpc.KeepaliveEnforcementPolicy(egressKP),
 		),
-		app.WithHealthAddr(conf.HealthAddr),
 		app.WithMaxEgressStreams(conf.MaxEgressStreams),
 	)
 	go rlp.Start()

@@ -13,11 +13,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-type HealthRegistrar interface {
-	Inc(name string)
-	Dec(name string)
-}
-
 // Registrar registers stream and firehose DataSetters to accept reads.
 type Registrar interface {
 	Register(req *plumbing.SubscriptionRequest, setter DataSetter) func()
@@ -28,7 +23,6 @@ type DataSetter interface {
 	Set(data []byte)
 }
 
-
 // DopplerServer is the GRPC server component that accepts requests for firehose
 // streams, application streams, and recent logs.
 type DopplerServer struct {
@@ -36,7 +30,6 @@ type DopplerServer struct {
 	egressMetric        *metricemitter.Counter
 	egressDropped       *metricemitter.Counter
 	subscriptionsMetric *metricemitter.Gauge
-	health              HealthRegistrar
 	batchInterval       time.Duration
 	batchSize           uint
 }
@@ -58,7 +51,6 @@ func NewDopplerServer(
 	metricClient MetricClient,
 	droppedMetric *metricemitter.Counter,
 	subscriptionsMetric *metricemitter.Gauge,
-	health HealthRegistrar,
 	batchInterval time.Duration,
 	batchSize uint,
 ) *DopplerServer {
@@ -73,7 +65,6 @@ func NewDopplerServer(
 		egressMetric:        egressMetric,
 		egressDropped:       droppedMetric,
 		subscriptionsMetric: subscriptionsMetric,
-		health:              health,
 		batchInterval:       batchInterval,
 		batchSize:           batchSize,
 	}
@@ -85,8 +76,6 @@ func NewDopplerServer(
 func (m *DopplerServer) Subscribe(req *plumbing.SubscriptionRequest, sender plumbing.Doppler_SubscribeServer) error {
 	m.subscriptionsMetric.Increment(1.0)
 	defer m.subscriptionsMetric.Decrement(1.0)
-	m.health.Inc("subscriptionCount")
-	defer m.health.Dec("subscriptionCount")
 
 	return m.sendData(req, sender)
 }
@@ -95,8 +84,6 @@ func (m *DopplerServer) Subscribe(req *plumbing.SubscriptionRequest, sender plum
 func (m *DopplerServer) BatchSubscribe(req *plumbing.SubscriptionRequest, sender plumbing.Doppler_BatchSubscribeServer) error {
 	m.subscriptionsMetric.Increment(1.0)
 	defer m.subscriptionsMetric.Decrement(1.0)
-	m.health.Inc("subscriptionCount")
-	defer m.health.Dec("subscriptionCount")
 
 	return m.sendBatchData(req, sender)
 }

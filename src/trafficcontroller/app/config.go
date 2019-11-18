@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	envstruct "code.cloudfoundry.org/go-envstruct"
+	"code.cloudfoundry.org/go-envstruct"
 )
 
 // Agent stores configuration for communication to a logging/metric agent.
@@ -53,7 +53,6 @@ type Config struct {
 	SecurityEventLog      string        `env:"TRAFFIC_CONTROLLER_SECURITY_EVENT_LOG, report"`
 	PProfPort             uint32        `env:"TRAFFIC_CONTROLLER_PPROF_PORT, report"`
 	MetricEmitterInterval time.Duration `env:"TRAFFIC_CONTROLLER_METRIC_EMITTER_INTERVAL, report"`
-	HealthAddr            string        `env:"TRAFFIC_CONTROLLER_HEALTH_ADDR, report"`
 	DisableAccessControl  bool          `env:"TRAFFIC_CONTROLLER_DISABLE_ACCESS_CONTROL, report"`
 	RouterAddrs           []string      `env:"ROUTER_ADDRS, report"`
 	LogCacheAddr          string        `env:"LOG_CACHE_ADDR, report"`
@@ -68,7 +67,6 @@ type Config struct {
 func LoadConfig() (*Config, error) {
 	config := Config{
 		MetricEmitterInterval: time.Minute,
-		HealthAddr:            "localhost:14825",
 		LogCacheTLSConfig: LogCacheTLSConfig{
 			ServerName: "log_cache",
 		},

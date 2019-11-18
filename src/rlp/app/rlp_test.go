@@ -32,7 +32,7 @@ var _ = Describe("Start", func() {
 			Expect(dopplerLis.Close()).To(Succeed())
 		}()
 
-		egressAddr, _ := setupRLP(dopplerLis, "127.0.0.1:0", testservers.LoggregatorTestCerts)
+		egressAddr, _ := setupRLP(dopplerLis, testservers.LoggregatorTestCerts)
 
 		egressStream, cleanup := setupRLPStream(egressAddr, testservers.LoggregatorTestCerts)
 		defer cleanup()
@@ -49,7 +49,7 @@ var _ = Describe("Start", func() {
 			Expect(dopplerLis.Close()).To(Succeed())
 		}()
 
-		egressAddr, _ := setupRLP(dopplerLis, "127.0.0.1:0", testservers.LoggregatorTestCerts)
+		egressAddr, _ := setupRLP(dopplerLis, testservers.LoggregatorTestCerts)
 
 		egressStream, cleanup := setupRLPBatchedStream(egressAddr, testservers.LoggregatorTestCerts)
 		defer cleanup()
@@ -66,7 +66,7 @@ var _ = Describe("Start", func() {
 	It("limits the number of allowed connections", func() {
 		_, _, dopplerLis := setupDoppler(testservers.LoggregatorTestCerts)
 
-		egressAddr, _ := setupRLP(dopplerLis, "127.0.0.1:0", testservers.LoggregatorTestCerts)
+		egressAddr, _ := setupRLP(dopplerLis, testservers.LoggregatorTestCerts)
 		createStream := func() error {
 			egressClient, _ := setupRLPClient(egressAddr, testservers.LoggregatorTestCerts)
 			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -95,7 +95,7 @@ var _ = Describe("Start", func() {
 		_, doppler, dopplerLis := setupDoppler(testservers.LoggregatorTestCerts)
 		defer dopplerLis.Close()
 
-		egressAddr, _ := setupRLP(dopplerLis, "127.0.0.1:0", testservers.LoggregatorTestCerts)
+		egressAddr, _ := setupRLP(dopplerLis, testservers.LoggregatorTestCerts)
 
 		egressClient, cleanup := setupRLPClient(egressAddr, testservers.LoggregatorTestCerts)
 		defer cleanup()
@@ -130,7 +130,7 @@ var _ = Describe("Start", func() {
 				Expect(dopplerLis.Close()).To(Succeed())
 			}()
 
-			egressAddr, rlp := setupRLP(dopplerLis, "127.0.0.1:0", testservers.LoggregatorTestCerts)
+			egressAddr, rlp := setupRLP(dopplerLis, testservers.LoggregatorTestCerts)
 
 			egressClient, cleanup := setupRLPClient(egressAddr, testservers.LoggregatorTestCerts)
 			defer cleanup()
@@ -152,7 +152,7 @@ var _ = Describe("Start", func() {
 			defer func() {
 				Expect(dopplerLis.Close()).To(Succeed())
 			}()
-			egressAddr, rlp := setupRLP(dopplerLis, "127.0.0.1:0", testservers.LoggregatorTestCerts)
+			egressAddr, rlp := setupRLP(dopplerLis, testservers.LoggregatorTestCerts)
 
 			stream, cleanup := setupRLPStream(egressAddr, testservers.LoggregatorTestCerts)
 			defer cleanup()
@@ -225,7 +225,7 @@ func setupDoppler(testCerts *testservers.TestCerts) (*mockDopplerServer, *spyDop
 	return dopplerV1, dopplerV2, lis
 }
 
-func setupRLP(dopplerLis net.Listener, healthAddr string, testCerts *testservers.TestCerts) (addr string, rlp *app.RLP) {
+func setupRLP(dopplerLis net.Listener, testCerts *testservers.TestCerts) (addr string, rlp *app.RLP) {
 	ingressTLSCredentials, err := plumbing.NewClientCredentials(
 		testCerts.Cert("reverselogproxy"),
 		testCerts.Key("reverselogproxy"),
@@ -248,7 +248,6 @@ func setupRLP(dopplerLis net.Listener, healthAddr string, testCerts *testservers
 		app.WithIngressDialOptions(grpc.WithTransportCredentials(ingressTLSCredentials)),
 		app.WithEgressServerOptions(grpc.Creds(egressTLSCredentials)),
 		app.WithMaxEgressConnections(1),
-		app.WithHealthAddr(healthAddr),
 	)
 
 	go rlp.Start()

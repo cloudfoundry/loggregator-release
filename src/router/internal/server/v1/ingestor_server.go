@@ -19,7 +19,6 @@ type IngestorServer struct {
 	v1Buf         *diodes.ManyToOneEnvelope
 	v2Buf         *diodes.ManyToOneEnvelopeV2
 	ingressMetric *metricemitter.Counter
-	health        HealthRegistrar
 }
 
 type IngestorGRPCServer interface {
@@ -30,20 +29,15 @@ func NewIngestorServer(
 	v1Buf *diodes.ManyToOneEnvelope,
 	v2Buf *diodes.ManyToOneEnvelopeV2,
 	ingressMetric *metricemitter.Counter,
-	health HealthRegistrar,
 ) *IngestorServer {
 	return &IngestorServer{
 		v1Buf:         v1Buf,
 		v2Buf:         v2Buf,
 		ingressMetric: ingressMetric,
-		health:        health,
 	}
 }
 
 func (i *IngestorServer) Pusher(pusher plumbing.DopplerIngestor_PusherServer) error {
-	i.health.Inc("ingressStreamCount")
-	defer i.health.Dec("ingressStreamCount")
-
 	var done int64
 	context := pusher.Context()
 	go i.monitorContext(context, &done)

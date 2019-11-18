@@ -27,20 +27,16 @@ var _ = Describe("FirehoseHandler", func() {
 		recorder       *httptest.ResponseRecorder
 		connector      *SpyGRPCConnector
 		mockSender     *testhelper.SpyMetricClient
-		mockHealth     *mockHealth
-		logCacheClient *fakeLogCacheClient
 	)
 
 	BeforeEach(func() {
 		connector = newSpyGRPCConnector(nil)
-		logCacheClient = newFakeLogCacheClient()
 
 		adminAuth = AdminAuthorizer{Result: AuthorizerResult{Status: http.StatusOK}}
 		auth = LogAuthorizer{Result: AuthorizerResult{Status: http.StatusOK}}
 
 		recorder = httptest.NewRecorder()
 		mockSender = testhelper.NewMetricClient()
-		mockHealth = newMockHealth()
 	})
 
 	It("connects to doppler servers with correct parameters", func() {
@@ -49,13 +45,11 @@ var _ = Describe("FirehoseHandler", func() {
 			adminAuth.Authorize,
 			connector,
 			"cookieDomain",
-			50*time.Millisecond,
 			time.Hour,
 			mockSender,
-			mockHealth,
 			newSpyRecentLogsHandler(),
 			false,
-			logCacheClient,
+
 		)
 		req, _ := http.NewRequest("GET", "/firehose/abc-123", nil)
 		req.Header.Add("Authorization", "token")
@@ -75,13 +69,11 @@ var _ = Describe("FirehoseHandler", func() {
 			adminAuth.Authorize,
 			connector,
 			"cookieDomain",
-			50*time.Millisecond,
 			time.Hour,
 			mockSender,
-			mockHealth,
 			newSpyRecentLogsHandler(),
 			false,
-			logCacheClient,
+
 		)
 
 		req, err := http.NewRequest("GET", "/firehose/123?filter-type=logs", nil)
@@ -90,7 +82,6 @@ var _ = Describe("FirehoseHandler", func() {
 		h := proxy.NewFirehoseHandler(connector, proxy.NewWebSocketServer(
 			time.Hour,
 			testhelper.NewMetricClient(),
-			mockHealth,
 		), mockSender)
 		h.ServeHTTP(recorder, req)
 
@@ -107,13 +98,10 @@ var _ = Describe("FirehoseHandler", func() {
 			adminAuth.Authorize,
 			connector,
 			"cookieDomain",
-			50*time.Millisecond,
 			time.Hour,
 			mockSender,
-			mockHealth,
 			newSpyRecentLogsHandler(),
 			false,
-			logCacheClient,
 		)
 
 		req, err := http.NewRequest("GET", "/firehose/123?filter-type=metrics", nil)
@@ -122,7 +110,6 @@ var _ = Describe("FirehoseHandler", func() {
 		h := proxy.NewFirehoseHandler(connector, proxy.NewWebSocketServer(
 			time.Hour,
 			testhelper.NewMetricClient(),
-			mockHealth,
 		), mockSender)
 		h.ServeHTTP(recorder, req)
 
@@ -139,13 +126,10 @@ var _ = Describe("FirehoseHandler", func() {
 			adminAuth.Authorize,
 			connector,
 			"cookieDomain",
-			50*time.Millisecond,
 			time.Hour,
 			mockSender,
-			mockHealth,
 			newSpyRecentLogsHandler(),
 			false,
-			logCacheClient,
 		)
 
 		adminAuth.Result = AuthorizerResult{Status: http.StatusUnauthorized, ErrorMessage: "Error: Invalid authorization"}
@@ -168,13 +152,10 @@ var _ = Describe("FirehoseHandler", func() {
 			adminAuth.Authorize,
 			connector,
 			"cookieDomain",
-			50*time.Millisecond,
 			time.Hour,
 			mockSender,
-			mockHealth,
 			newSpyRecentLogsHandler(),
 			false,
-			logCacheClient,
 		)
 
 		req, _ := http.NewRequest("GET", "/firehose/", nil)
@@ -191,13 +172,10 @@ var _ = Describe("FirehoseHandler", func() {
 			adminAuth.Authorize,
 			connector,
 			"cookieDomain",
-			50*time.Millisecond,
 			time.Hour,
 			mockSender,
-			mockHealth,
 			newSpyRecentLogsHandler(),
 			false,
-			logCacheClient,
 		)
 		server := httptest.NewServer(handler)
 		defer server.CloseClientConnections()
@@ -222,13 +200,10 @@ var _ = Describe("FirehoseHandler", func() {
 			adminAuth.Authorize,
 			connector,
 			"cookieDomain",
-			50*time.Millisecond,
 			time.Hour,
 			mockSender,
-			mockHealth,
 			newSpyRecentLogsHandler(),
 			false,
-			logCacheClient,
 		)
 		server := httptest.NewServer(handler)
 		defer server.CloseClientConnections()

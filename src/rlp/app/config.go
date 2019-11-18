@@ -3,7 +3,7 @@ package app
 import (
 	"time"
 
-	envstruct "code.cloudfoundry.org/go-envstruct"
+	"code.cloudfoundry.org/go-envstruct"
 )
 
 // GRPC stores the configuration for the RLP as a server using a PORT with
@@ -20,7 +20,6 @@ type GRPC struct {
 // Config stores all configurations options for RLP.
 type Config struct {
 	PProfPort             uint32        `env:"RLP_PPROF_PORT"`
-	HealthAddr            string        `env:"RLP_HEALTH_ADDR"`
 	MetricEmitterInterval time.Duration `env:"RLP_METRIC_EMITTER_INTERVAL"`
 	MetricSourceID        string        `env:"RLP_METRIC_SOURCE_ID"`
 	RouterAddrs           []string      `env:"ROUTER_ADDRS, required"`
@@ -33,7 +32,6 @@ type Config struct {
 func LoadConfig() (*Config, error) {
 	conf := Config{
 		PProfPort:             6061,
-		HealthAddr:            "localhost:14825",
 		MetricEmitterInterval: time.Minute,
 		MetricSourceID:        "reverse_log_proxy",
 		AgentAddr:             "localhost:3458",

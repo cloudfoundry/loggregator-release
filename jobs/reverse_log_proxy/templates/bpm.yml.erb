@@ -22,7 +22,6 @@ processes:
       RLP_CA_FILE: "/var/vcap/jobs/reverse_log_proxy/config/certs/mutual_tls_ca.crt"
       RLP_CIPHER_SUITES: "<%= p('loggregator.tls.cipher_suites').gsub(":", ",") %>"
       RLP_PPROF_PORT: "<%= p('reverse_log_proxy.pprof.port') %>"
-      RLP_HEALTH_ADDR: "<%= p('reverse_log_proxy.health_addr') %>"
       RLP_METRIC_EMITTER_INTERVAL: "<%= p('metric_emitter.interval') %>"
 
       ROUTER_ADDRS: "<%= ingress_addrs.join(",") %>"
