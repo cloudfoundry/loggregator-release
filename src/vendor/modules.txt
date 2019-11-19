@@ -128,7 +128,7 @@ github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
 # github.com/square/certstrap v1.2.0
 github.com/square/certstrap/pkix
-# golang.org/x/net v0.0.0-20191118183410-d06c31c94cae
+# golang.org/x/net v0.0.0-20191119073136-fc4aabc6c914
 golang.org/x/net/context
 golang.org/x/net/netutil
 golang.org/x/net/trace
@@ -140,7 +140,7 @@ golang.org/x/net/html
 golang.org/x/net/http/httpguts
 golang.org/x/net/idna
 golang.org/x/net/html/atom
-# golang.org/x/sys v0.0.0-20191118133127-cf1e2d577169
+# golang.org/x/sys v0.0.0-20191119060738-e882bf8e40c2
 golang.org/x/sys/windows
 golang.org/x/sys/unix
 # golang.org/x/text v0.3.2
@@ -209,5 +209,5 @@ google.golang.org/grpc/internal/syscall
 gopkg.in/fsnotify.v1
 # gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 gopkg.in/tomb.v1
-# gopkg.in/yaml.v2 v2.2.5
+# gopkg.in/yaml.v2 v2.2.6
 gopkg.in/yaml.v2

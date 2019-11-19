@@ -29,11 +29,11 @@ require (
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
 	github.com/prometheus/client_golang v1.2.1
 	github.com/prometheus/procfs v0.0.7 // indirect
-	golang.org/x/net v0.0.0-20191118183410-d06c31c94cae
-	golang.org/x/sys v0.0.0-20191118133127-cf1e2d577169 // indirect
+	golang.org/x/net v0.0.0-20191119073136-fc4aabc6c914
+	golang.org/x/sys v0.0.0-20191119060738-e882bf8e40c2 // indirect
 	google.golang.org/genproto v0.0.0-20191115221424-83cc0476cb11 // indirect
 	google.golang.org/grpc v1.25.1
-	gopkg.in/yaml.v2 v2.2.5 // indirect
+	gopkg.in/yaml.v2 v2.2.6 // indirect
 )
 
 replace code.cloudfoundry.org/log-cache => code.cloudfoundry.org/log-cache-release/src v0.0.0-20191002191123-8c97ac62a57b
