@@ -30,7 +30,7 @@ require (
 	github.com/prometheus/client_golang v1.2.1
 	github.com/prometheus/client_model v0.0.0-20191202183732-d1d2010b5bee // indirect
 	github.com/prometheus/procfs v0.0.8 // indirect
-	golang.org/x/net v0.0.0-20191204025024-5ee1b9f4859a
+	golang.org/x/net v0.0.0-20191206103017-1ddd1de85cb0
 	golang.org/x/sys v0.0.0-20191204072324-ce4227a45e2e // indirect
 	google.golang.org/genproto v0.0.0-20191205163323-51378566eb59 // indirect
 	google.golang.org/grpc v1.25.1

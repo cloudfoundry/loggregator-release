@@ -184,6 +184,17 @@ func (p *parser) clearStackToContext(s scope) {
 	}
 }
 
+// parseGenericRawTextElements implements the generic raw text element parsing
+// algorithm defined in 12.2.6.2.
+// https://html.spec.whatwg.org/multipage/parsing.html#parsing-elements-that-contain-only-text
+// TODO: Since both RAWTEXT and RCDATA states are treated as tokenizer's part
+// officially, need to make tokenizer consider both states.
+func (p *parser) parseGenericRawTextElement() {
+	p.addElement()
+	p.originalIM = p.im
+	p.im = textIM
+}
+
 // generateImpliedEndTags pops nodes off the stack of open elements as long as
 // the top node has a tag name of dd, dt, li, optgroup, option, p, rb, rp, rt or rtc.
 // If exceptions are specified, nodes with that name will not be popped off.
@@ -625,24 +636,28 @@ func inHeadIM(p *parser) bool {
 		switch p.tok.DataAtom {
 		case a.Html:
 			return inBodyIM(p)
-		case a.Base, a.Basefont, a.Bgsound, a.Command, a.Link, a.Meta:
+		case a.Base, a.Basefont, a.Bgsound, a.Link, a.Meta:
 			p.addElement()
 			p.oe.pop()
 			p.acknowledgeSelfClosingTag()
 			return true
 		case a.Noscript:
-			p.addElement()
 			if p.scripting {
-				p.setOriginalIM()
-				p.im = textIM
-			} else {
-				p.im = inHeadNoscriptIM
+				p.parseGenericRawTextElement()
+				return true
 			}
+			p.addElement()
+			p.im = inHeadNoscriptIM
+			// Don't let the tokenizer go into raw text mode when scripting is disabled.
+			p.tokenizer.NextIsNotRawText()
 			return true
-		case a.Script, a.Title, a.Noframes, a.Style:
+		case a.Script, a.Title:
 			p.addElement()
 			p.setOriginalIM()
 			p.im = textIM
+			return true
+		case a.Noframes, a.Style:
+			p.parseGenericRawTextElement()
 			return true
 		case a.Head:
 			// Ignore the token.
@@ -855,7 +870,7 @@ func inBodyIM(p *parser) bool {
 				return true
 			}
 			copyAttributes(p.oe[0], p.tok)
-		case a.Base, a.Basefont, a.Bgsound, a.Command, a.Link, a.Meta, a.Noframes, a.Script, a.Style, a.Template, a.Title:
+		case a.Base, a.Basefont, a.Bgsound, a.Link, a.Meta, a.Noframes, a.Script, a.Style, a.Template, a.Title:
 			return inHeadIM(p)
 		case a.Body:
 			if p.oe.contains(a.Template) {
@@ -1014,53 +1029,6 @@ func inBodyIM(p *parser) bool {
 			p.tok.DataAtom = a.Img
 			p.tok.Data = a.Img.String()
 			return false
-		case a.Isindex:
-			if p.form != nil {
-				// Ignore the token.
-				return true
-			}
-			action := ""
-			prompt := "This is a searchable index. Enter search keywords: "
-			attr := []Attribute{{Key: "name", Val: "isindex"}}
-			for _, t := range p.tok.Attr {
-				switch t.Key {
-				case "action":
-					action = t.Val
-				case "name":
-					// Ignore the attribute.
-				case "prompt":
-					prompt = t.Val
-				default:
-					attr = append(attr, t)
-				}
-			}
-			p.acknowledgeSelfClosingTag()
-			p.popUntil(buttonScope, a.P)
-			p.parseImpliedToken(StartTagToken, a.Form, a.Form.String())
-			if p.form == nil {
-				// NOTE: The 'isindex' element has been removed,
-				// and the 'template' element has not been designed to be
-				// collaborative with the index element.
-				//
-				// Ignore the token.
-				return true
-			}
-			if action != "" {
-				p.form.Attr = []Attribute{{Key: "action", Val: action}}
-			}
-			p.parseImpliedToken(StartTagToken, a.Hr, a.Hr.String())
-			p.parseImpliedToken(StartTagToken, a.Label, a.Label.String())
-			p.addText(prompt)
-			p.addChild(&Node{
-				Type:     ElementNode,
-				DataAtom: a.Input,
-				Data:     a.Input.String(),
-				Attr:     attr,
-			})
-			p.oe.pop()
-			p.parseImpliedToken(EndTagToken, a.Label, a.Label.String())
-			p.parseImpliedToken(StartTagToken, a.Hr, a.Hr.String())
-			p.parseImpliedToken(EndTagToken, a.Form, a.Form.String())
 		case a.Textarea:
 			p.addElement()
 			p.setOriginalIM()
@@ -1070,18 +1038,21 @@ func inBodyIM(p *parser) bool {
 			p.popUntil(buttonScope, a.P)
 			p.reconstructActiveFormattingElements()
 			p.framesetOK = false
-			p.addElement()
-			p.setOriginalIM()
-			p.im = textIM
+			p.parseGenericRawTextElement()
 		case a.Iframe:
 			p.framesetOK = false
+			p.parseGenericRawTextElement()
+		case a.Noembed:
+			p.parseGenericRawTextElement()
+		case a.Noscript:
+			if p.scripting {
+				p.parseGenericRawTextElement()
+				return true
+			}
+			p.reconstructActiveFormattingElements()
 			p.addElement()
-			p.setOriginalIM()
-			p.im = textIM
-		case a.Noembed, a.Noscript:
-			p.addElement()
-			p.setOriginalIM()
-			p.im = textIM
+			// Don't let the tokenizer go into raw text mode when scripting is disabled.
+			p.tokenizer.NextIsNotRawText()
 		case a.Select:
 			p.reconstructActiveFormattingElements()
 			p.addElement()
