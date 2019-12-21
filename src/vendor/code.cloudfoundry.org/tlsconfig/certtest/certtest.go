@@ -85,17 +85,19 @@ func WithDomains(domains ...string) SignOption {
 	}
 }
 
-// BuildSignedCertificate creates a new signed certificate with a default expiry date.
-func (a *Authority) BuildSignedCertificate(name string, options ...SignOption) (*Certificate, error) {
-	expiry := time.Now().AddDate(1, 0, 0)
-	return a.BuildSignedCertificateWithExpiry(name, expiry, options...)
+// WithExpiry alters the expiry time of the requested certificate. It must be
+// earlier than the expiry time of the associated CA.
+func WithExpiry(expiry time.Time) SignOption {
+	return func(options *signOptions) {
+		options.expiry = expiry
+	}
 }
 
-// BuildSignedCertificateWithExpiry creates a new signed certificate which is valid for
-// `localhost` and `127.0.0.1` by default. This can be changed by passing in
-// the various options. The certificates it creates should only be used
-// ephemerally in tests.
-func (a *Authority) BuildSignedCertificateWithExpiry(name string, expiry time.Time, options ...SignOption) (*Certificate, error) {
+// BuildSignedCertificateWithExpiry creates a new signed certificate which is
+// valid for `localhost` and `127.0.0.1` by default with the expiry a year from
+// now. This can be changed by passing in the various options. The certificates
+// it creates should only be used ephemerally in tests.
+func (a *Authority) BuildSignedCertificate(name string, options ...SignOption) (*Certificate, error) {
 	key, err := pkix.CreateRSAKey(keySize)
 	if err != nil {
 		return nil, err
@@ -114,7 +116,7 @@ func (a *Authority) BuildSignedCertificateWithExpiry(name string, expiry time.Ti
 	}
 	csrLock.Unlock()
 
-	crt, err := pkix.CreateCertificateHost(a.cert, a.key, csr, expiry)
+	crt, err := pkix.CreateCertificateHost(a.cert, a.key, csr, opts.expiry)
 	if err != nil {
 		return nil, err
 	}
@@ -123,6 +125,17 @@ func (a *Authority) BuildSignedCertificateWithExpiry(name string, expiry time.Ti
 		cert: crt,
 		key:  key,
 	}, nil
+}
+
+// BuildSignedCertificateWithExpiry creates a new signed certificate which is valid for
+// `localhost` and `127.0.0.1` by default. This can be changed by passing in
+// the various options. The certificates it creates should only be used
+// ephemerally in tests.
+//
+// Deprecated: Use BuildSignedCertificate with the WithExpiry(...) option.
+func (a *Authority) BuildSignedCertificateWithExpiry(name string, expiry time.Time, options ...SignOption) (*Certificate, error) {
+	options = append(options, WithExpiry(expiry))
+	return a.BuildSignedCertificate(name, options...)
 }
 
 // CertificatePEM returns the authorities certificate as a PEM encoded bytes.
@@ -185,12 +198,15 @@ func (c *Certificate) CertificatePEMAndPrivateKey() ([]byte, []byte, error) {
 type signOptions struct {
 	domains []string
 	ips     []net.IP
+
+	expiry time.Time
 }
 
 func defaultSignOptions() *signOptions {
 	return &signOptions{
 		domains: []string{"localhost"},
 		ips:     []net.IP{net.ParseIP("127.0.0.1")},
+		expiry:  time.Now().AddDate(1, 0, 0),
 	}
 }
 

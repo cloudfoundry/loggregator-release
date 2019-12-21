@@ -77,6 +77,30 @@ func (c Config) Client(opts ...ClientOption) (*tls.Config, error) {
 	return config, nil
 }
 
+// WithExternalServiceDefaults modifies a *tls.Config that is suitable for use
+// in communication between clients and servers where we do not control one end
+// of the connection. It is less strict than the WithInternalServiceDefaults
+// helper.
+//
+// The standards here are taken from the Mozilla SSL configuration generator
+// set to "Intermediate" on Dec 19, 2019.
+func WithExternalServiceDefaults() TLSOption {
+	return func(c *tls.Config) error {
+		c.MinVersion = tls.VersionTLS12
+		c.MaxVersion = tls.VersionTLS12
+		c.PreferServerCipherSuites = false
+		c.CipherSuites = []uint16{
+			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+		}
+		return nil
+	}
+}
+
 // WithInternalServiceDefaults modifies a *tls.Config that is suitable for use
 // in communication links between internal services. It is not guaranteed to be
 // suitable for communication to other external services as it contains a
