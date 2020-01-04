@@ -133,7 +133,6 @@ func WithIdentity(cert tls.Certificate) TLSOption {
 		fail := func(err error) error {
 			return fmt.Errorf("failed to load keypair: %s", err.Error())
 		}
-		c.Certificates = []tls.Certificate{cert}
 		x509Cert, err := x509.ParseCertificate(cert.Certificate[0])
 		if err != nil {
 			return fail(err)
@@ -142,6 +141,8 @@ func WithIdentity(cert tls.Certificate) TLSOption {
 		if err != nil {
 			return fail(err)
 		}
+		c.Certificates = []tls.Certificate{cert}
+		c.BuildNameToCertificate()
 		return nil
 	}
 }

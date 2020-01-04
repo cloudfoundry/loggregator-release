@@ -7,7 +7,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/square/certstrap/pkix"
@@ -25,14 +24,6 @@ const (
 	//
 	// Do not use these certificates to transport secrets.
 	keySize = 1024
-)
-
-var (
-	// The github.com/square/certstrap/pkix package is not thread-safe for
-	// certain PKI operations. In order to avoid this concern leaking out into
-	// consumers of this package we perform our own locking.
-	caLock  sync.Mutex
-	csrLock sync.Mutex
 )
 
 // Authority represents a Certificate Authority. It should not be used for
@@ -53,13 +44,10 @@ func BuildCA(name string) (*Authority, error) {
 	// XXX: Add a month so CA expires after its certificates.
 	expiry := time.Now().AddDate(1, 1, 0)
 
-	caLock.Lock()
 	crt, err := pkix.CreateCertificateAuthority(key, ou, expiry, o, country, province, city, name)
 	if err != nil {
-		caLock.Unlock()
 		return nil, err
 	}
-	caLock.Unlock()
 
 	return &Authority{
 		cert: crt,
@@ -108,13 +96,10 @@ func (a *Authority) BuildSignedCertificate(name string, options ...SignOption) (
 		opts.apply(o)
 	}
 
-	csrLock.Lock()
 	csr, err := pkix.CreateCertificateSigningRequest(key, ou, opts.ips, opts.domains, nil, o, country, province, city, name)
 	if err != nil {
-		csrLock.Unlock()
 		return nil, err
 	}
-	csrLock.Unlock()
 
 	crt, err := pkix.CreateCertificateHost(a.cert, a.key, csr, opts.expiry)
 	if err != nil {

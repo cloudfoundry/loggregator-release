@@ -10,7 +10,7 @@ require (
 	code.cloudfoundry.org/go-pubsub v0.0.0-20180503211407-becd51dc37cb
 	code.cloudfoundry.org/grpc-throughputlb v0.0.0-20180905204614-e98a1ee09867
 	code.cloudfoundry.org/log-cache v2.3.1+incompatible
-	code.cloudfoundry.org/tlsconfig v0.0.0-20191220232943-2819aba30e10
+	code.cloudfoundry.org/tlsconfig v0.0.0-20200103214402-4ae6f49cdca0
 	github.com/apoydence/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
 	github.com/cloudfoundry/noaa v2.1.0+incompatible
 	github.com/cloudfoundry/sonde-go v0.0.0-20171206171820-b33733203bb4
