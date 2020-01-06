@@ -121,6 +121,8 @@ builds:
     version: "24"
   5b96163c-13d2-4c72-419d-ac4fe5a1e000:
     version: 106.2.1
+  5ed1feed-dc6e-43e4-4519-a18f9f9941e9:
+    version: 106.3.4
   5ee8dcb3-a338-4657-8007-33f1a1b1576a:
     version: "63"
   60497a84-ec50-4b33-4c5a-39e9b2c99cff:
