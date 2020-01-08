@@ -128,6 +128,11 @@ func (a *Authority) CertificatePEM() ([]byte, error) {
 	return a.cert.Export()
 }
 
+// Certificate resunts the authority's certificate.
+func (a *Authority) Certificate() (*x509.Certificate, error) {
+	return a.cert.GetRawCertificate()
+}
+
 // CertPool returns a certificate pool which is pre-populated with the
 // Certificate Authority.
 func (a *Authority) CertPool() (*x509.CertPool, error) {

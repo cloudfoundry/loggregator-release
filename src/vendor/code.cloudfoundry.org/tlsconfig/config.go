@@ -7,7 +7,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 )
 
 // Config represents a half configured TLS configuration. It can be made usable
@@ -169,21 +168,41 @@ func WithClientAuthentication(authority *x509.CertPool) ServerOption {
 	}
 }
 
+// WithClientAuthenticationBuilder uses the passed PoolBuilder to create the certificate
+// pool to use as the authority when verifying client certificates.
+func WithClientAuthenticationBuilder(builder PoolBuilder) ServerOption {
+	return func(c *tls.Config) error {
+		pool, err := builder.Build()
+		if err != nil {
+			return err
+		}
+
+		return WithClientAuthentication(pool)(c)
+	}
+}
+
 // WithClientAuthenticationFromFile makes the server verify that all clients present an
 // identity that can be validated by the CA file provided.
 func WithClientAuthenticationFromFile(caPath string) ServerOption {
 	return func(c *tls.Config) error {
-		caBytes, err := ioutil.ReadFile(caPath)
+		return WithClientAuthenticationBuilder(
+			FromEmptyPool(
+				WithCertsFromFile(caPath),
+			),
+		)(c)
+	}
+}
+
+// WithAuthorityBuilder uses the passed PoolBuilder to create the certificate
+// pool to use as the authority.
+func WithAuthorityBuilder(builder PoolBuilder) ClientOption {
+	return func(c *tls.Config) error {
+		pool, err := builder.Build()
 		if err != nil {
-			return fmt.Errorf("failed to read file %s: %s", caPath, err.Error())
+			return err
 		}
 
-		caCertPool := x509.NewCertPool()
-		if ok := caCertPool.AppendCertsFromPEM(caBytes); !ok {
-			return fmt.Errorf("unable to load CA certificate at %s", caPath)
-		}
-
-		return WithClientAuthentication(caCertPool)(c)
+		return WithAuthority(pool)(c)
 	}
 }
 
@@ -200,18 +219,11 @@ func WithAuthority(authority *x509.CertPool) ClientOption {
 // that can be validated by the CA file provided.
 func WithAuthorityFromFile(caPath string) ClientOption {
 	return func(c *tls.Config) error {
-		caBytes, err := ioutil.ReadFile(caPath)
-		if err != nil {
-			return fmt.Errorf("failed to read file %s: %s", caPath, err.Error())
-		}
-
-		caCertPool := x509.NewCertPool()
-		if ok := caCertPool.AppendCertsFromPEM(caBytes); !ok {
-			return fmt.Errorf("unable to load CA certificate at %s", caPath)
-		}
-
-		c.RootCAs = caCertPool
-		return nil
+		return WithAuthorityBuilder(
+			FromEmptyPool(
+				WithCertsFromFile(caPath),
+			),
+		)(c)
 	}
 }
 
