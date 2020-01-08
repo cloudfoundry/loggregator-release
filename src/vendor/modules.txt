@@ -175,7 +175,6 @@ google.golang.org/grpc/codes
 google.golang.org/grpc/credentials
 google.golang.org/grpc/status
 google.golang.org/grpc/grpclog
-google.golang.org/grpc/resolver
 google.golang.org/grpc/keepalive
 google.golang.org/grpc/balancer/roundrobin
 google.golang.org/grpc/backoff
@@ -199,12 +198,14 @@ google.golang.org/grpc/internal/transport
 google.golang.org/grpc/metadata
 google.golang.org/grpc/naming
 google.golang.org/grpc/peer
+google.golang.org/grpc/resolver
 google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/tap
 google.golang.org/grpc/credentials/internal
 google.golang.org/grpc/binarylog/grpc_binarylog_v1
 google.golang.org/grpc/internal/syscall
+google.golang.org/grpc/attributes
 # gopkg.in/fsnotify.v1 v1.4.7
 gopkg.in/fsnotify.v1
 # gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7

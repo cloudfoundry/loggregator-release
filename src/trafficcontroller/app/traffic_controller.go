@@ -14,7 +14,6 @@ import (
 	logcache "code.cloudfoundry.org/log-cache/pkg/client"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
-	_ "code.cloudfoundry.org/loggregator/plumbing/dns"
 	"code.cloudfoundry.org/loggregator/profiler"
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/auth"
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
@@ -107,13 +106,12 @@ func (t *TrafficController) Start() {
 			log.Fatalf("Could not use LogCache creds for server: %s", err)
 		}
 
-		// fast-dns is the same DNS resolver provided by gRPC but with a
-		// faster refresh frequency.
 		logCacheClient = logcache.NewClient(
-			"fast-dns:///"+t.conf.LogCacheAddr,
+			t.conf.LogCacheAddr,
 			logcache.WithViaGRPC(
 				grpc.WithTransportCredentials(logCacheCreds),
 				grpc.WithBalancerName(roundrobin.Name),
+				grpc.WithBlock(),
 			),
 		)
 		recentLogsEnabled = true
