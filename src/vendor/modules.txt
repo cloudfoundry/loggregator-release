@@ -20,7 +20,7 @@ code.cloudfoundry.org/log-cache/pkg/rpc/logcache_v1
 code.cloudfoundry.org/log-cache/pkg/marshaler
 # code.cloudfoundry.org/rfc5424 v0.0.0-20180905210152-236a6d29298a
 code.cloudfoundry.org/rfc5424
-# code.cloudfoundry.org/tlsconfig v0.0.0-20200108215323-551ec42d1f74
+# code.cloudfoundry.org/tlsconfig v0.0.0-20200121234528-fcd72f4608b7
 code.cloudfoundry.org/tlsconfig
 code.cloudfoundry.org/tlsconfig/certtest
 # github.com/beorn7/perks v1.0.1
@@ -60,7 +60,7 @@ github.com/gorilla/handlers
 github.com/gorilla/mux
 # github.com/gorilla/websocket v1.4.1
 github.com/gorilla/websocket
-# github.com/grpc-ecosystem/grpc-gateway v1.12.1
+# github.com/grpc-ecosystem/grpc-gateway v1.12.2
 github.com/grpc-ecosystem/grpc-gateway/runtime
 github.com/grpc-ecosystem/grpc-gateway/utilities
 github.com/grpc-ecosystem/grpc-gateway/internal
@@ -140,7 +140,7 @@ golang.org/x/net/html
 golang.org/x/net/http/httpguts
 golang.org/x/net/idna
 golang.org/x/net/html/atom
-# golang.org/x/sys v0.0.0-20200121082415-34d275377bf9
+# golang.org/x/sys v0.0.0-20200122134326-e047566fdf82
 golang.org/x/sys/windows
 golang.org/x/sys/unix
 # golang.org/x/text v0.3.2
