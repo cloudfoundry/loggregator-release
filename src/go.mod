@@ -32,9 +32,9 @@ require (
 	github.com/prometheus/common v0.9.1 // indirect
 	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa
 	golang.org/x/sys v0.0.0-20200122134326-e047566fdf82 // indirect
-	google.golang.org/genproto v0.0.0-20200117163144-32f20d992d24 // indirect
+	google.golang.org/genproto v0.0.0-20200122232147-0452cf42e150 // indirect
 	google.golang.org/grpc v1.26.0
-	gopkg.in/yaml.v2 v2.2.7 // indirect
+	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
 
 replace code.cloudfoundry.org/log-cache => code.cloudfoundry.org/log-cache-release/src v0.0.0-20191002191123-8c97ac62a57b
