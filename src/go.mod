@@ -17,7 +17,7 @@ require (
 	github.com/elazarl/goproxy v0.0.0-20191011121108-aa519ddbe484 // indirect
 	github.com/elazarl/goproxy/ext v0.0.0-20191011121108-aa519ddbe484 // indirect
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.3.3
 	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/websocket v1.4.1
@@ -31,7 +31,7 @@ require (
 	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa
 	golang.org/x/sys v0.0.0-20200124204421-9fbb57f87de9 // indirect
 	google.golang.org/genproto v0.0.0-20200128133413-58ce757ed39b // indirect
-	google.golang.org/grpc v1.26.0
+	google.golang.org/grpc v1.27.0
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
 

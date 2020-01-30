@@ -43,7 +43,7 @@ github.com/gogo/protobuf/jsonpb
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
 github.com/gogo/protobuf/types
 github.com/gogo/protobuf/sortkeys
-# github.com/golang/protobuf v1.3.2
+# github.com/golang/protobuf v1.3.3
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/jsonpb
 github.com/golang/protobuf/ptypes
@@ -172,7 +172,7 @@ google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/api/httpbody
 google.golang.org/genproto/protobuf/field_mask
-# google.golang.org/grpc v1.26.0
+# google.golang.org/grpc v1.27.0
 google.golang.org/grpc
 google.golang.org/grpc/codes
 google.golang.org/grpc/credentials
