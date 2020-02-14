@@ -19,7 +19,6 @@ provides:
   type: doppler
   properties:
   - doppler.grpc_port
-  - doppler.enabled
 - name: loggregator
   type: loggregator
   properties:
