@@ -14,8 +14,8 @@ require (
 	github.com/apoydence/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
 	github.com/cloudfoundry/noaa v2.1.0+incompatible
 	github.com/cloudfoundry/sonde-go v0.0.0-20171206171820-b33733203bb4
-	github.com/elazarl/goproxy v0.0.0-20191011121108-aa519ddbe484 // indirect
-	github.com/elazarl/goproxy/ext v0.0.0-20191011121108-aa519ddbe484 // indirect
+	github.com/elazarl/goproxy v0.0.0-20200220113713-29f9e0ba54ea // indirect
+	github.com/elazarl/goproxy/ext v0.0.0-20200220113713-29f9e0ba54ea // indirect
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/protobuf v1.3.3
 	github.com/gorilla/handlers v1.4.2
@@ -29,7 +29,7 @@ require (
 	github.com/onsi/gomega v1.9.0
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
 	github.com/prometheus/client_golang v1.4.1
-	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
+	golang.org/x/net v0.0.0-20200219183655-46282727080f
 	golang.org/x/sys v0.0.0-20200219091948-cb0a6d8edb6c // indirect
 	google.golang.org/genproto v0.0.0-20200218151345-dad8c97a84f5 // indirect
 	google.golang.org/grpc v1.27.1
