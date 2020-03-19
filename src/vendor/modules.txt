@@ -58,7 +58,7 @@ github.com/golang/protobuf/ptypes/wrappers
 github.com/gorilla/handlers
 # github.com/gorilla/mux v1.7.4
 github.com/gorilla/mux
-# github.com/gorilla/websocket v1.4.1
+# github.com/gorilla/websocket v1.4.2
 github.com/gorilla/websocket
 # github.com/grpc-ecosystem/grpc-gateway v1.14.3
 github.com/grpc-ecosystem/grpc-gateway/internal
@@ -167,7 +167,7 @@ golang.org/x/text/unicode/norm
 # golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# google.golang.org/genproto v0.0.0-20200318110522-7735f76e9fa5
+# google.golang.org/genproto v0.0.0-20200319113533-08878b785e9c
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/api/httpbody
 google.golang.org/genproto/googleapis/rpc/status
