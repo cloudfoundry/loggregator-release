@@ -31,7 +31,7 @@ require (
 	github.com/prometheus/client_golang v1.5.1
 	golang.org/x/net v0.0.0-20200320220750-118fecf932d8
 	golang.org/x/sys v0.0.0-20200321134203-328b4cd54aae // indirect
-	google.golang.org/genproto v0.0.0-20200319113533-08878b785e9c // indirect
+	google.golang.org/genproto v0.0.0-20200323114720-3f67cca34472 // indirect
 	google.golang.org/grpc v1.28.0
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
