@@ -1,7 +1,6 @@
 package app
 
 import (
-	"code.cloudfoundry.org/tlsconfig"
 	"crypto/tls"
 	"fmt"
 	"log"
@@ -10,6 +9,8 @@ import (
 	"os"
 	"os/signal"
 	"time"
+
+	"code.cloudfoundry.org/tlsconfig"
 
 	logcache "code.cloudfoundry.org/log-cache/pkg/client"
 	"code.cloudfoundry.org/loggregator/metricemitter"
@@ -89,7 +90,13 @@ func (t *TrafficController) Start() {
 		Timeout:             20 * time.Second,
 		PermitWithoutStream: true,
 	}
-	pool := plumbing.NewPool(20, grpc.WithTransportCredentials(creds), grpc.WithKeepaliveParams(kp))
+
+	pool := plumbing.NewPool(
+		20,
+		grpc.WithTransportCredentials(creds),
+		grpc.WithKeepaliveParams(kp),
+		grpc.WithDisableServiceConfig(),
+	)
 	grpcConnector := plumbing.NewGRPCConnector(1000, pool, f, t.metricClient)
 
 	var logCacheClient proxy.LogCacheClient
