@@ -11,7 +11,7 @@ require (
 	code.cloudfoundry.org/grpc-throughputlb v0.0.0-20180905204614-e98a1ee09867
 	code.cloudfoundry.org/log-cache v2.3.1+incompatible
 	code.cloudfoundry.org/tlsconfig v0.0.0-20200131000646-bbe0f8da39b3
-	github.com/apoydence/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
+	github.com/apoydence/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect; pinned
 	github.com/cloudfoundry/noaa v2.1.0+incompatible
 	github.com/cloudfoundry/sonde-go v0.0.0-20171206171820-b33733203bb4
 	github.com/elazarl/goproxy v0.0.0-20200315184450-1f3cb6622dad // indirect
@@ -27,7 +27,7 @@ require (
 	github.com/mailru/easyjson v0.7.1 // indirect
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
-	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
+	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect; pinned
 	github.com/prometheus/client_golang v1.5.1
 	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e
 	golang.org/x/sys v0.0.0-20200406155108-e3b113bbe6a4 // indirect
