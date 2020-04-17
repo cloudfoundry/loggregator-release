@@ -12,7 +12,7 @@ require (
 	code.cloudfoundry.org/log-cache v2.3.1+incompatible
 	code.cloudfoundry.org/tlsconfig v0.0.0-20200131000646-bbe0f8da39b3
 	github.com/apoydence/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect; pinned
-	github.com/cloudfoundry/noaa v2.1.0+incompatible
+	github.com/cloudfoundry/noaa v2.1.0+incompatible // pinned
 	github.com/cloudfoundry/sonde-go v0.0.0-20171206171820-b33733203bb4 // pinned
 	github.com/elazarl/goproxy v0.0.0-20200315184450-1f3cb6622dad // indirect
 	github.com/elazarl/goproxy/ext v0.0.0-20200315184450-1f3cb6622dad // indirect
