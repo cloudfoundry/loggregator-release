@@ -14,8 +14,8 @@ require (
 	github.com/apoydence/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect; pinned
 	github.com/cloudfoundry/noaa v2.1.0+incompatible // pinned
 	github.com/cloudfoundry/sonde-go v0.0.0-20171206171820-b33733203bb4 // pinned
-	github.com/elazarl/goproxy v0.0.0-20200315184450-1f3cb6622dad // indirect
-	github.com/elazarl/goproxy/ext v0.0.0-20200315184450-1f3cb6622dad // indirect
+	github.com/elazarl/goproxy v0.0.0-20200421181703-e76ad31c14f6 // indirect
+	github.com/elazarl/goproxy/ext v0.0.0-20200421181703-e76ad31c14f6 // indirect
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/protobuf v1.4.0
 	github.com/gorilla/handlers v1.4.2
