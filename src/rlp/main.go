@@ -103,7 +103,17 @@ func main() {
 		app.WithMaxEgressStreams(conf.MaxEgressStreams),
 	)
 	go rlp.Start()
-	defer rlp.Stop()
+
+	defer func() {
+		go func() {
+			// Limit the shutdown to 30 seconds
+			<-time.Tick(30 * time.Second)
+			os.Exit(0)
+		}()
+
+		rlp.Stop()
+	}()
+
 	go profiler.New(conf.PProfPort).Start()
 
 	killSignal := make(chan os.Signal, 1)
