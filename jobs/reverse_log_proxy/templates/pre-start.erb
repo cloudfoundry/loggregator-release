@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Added to alliviate a bug which caused rlp to not exit
+killall -9 rlp || true
+rm -f /var/vcap/sys/run/bpm/reverse_log_proxy/reverse_log_proxy.pid
