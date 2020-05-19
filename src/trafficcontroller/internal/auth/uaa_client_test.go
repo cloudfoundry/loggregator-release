@@ -102,7 +102,8 @@ var _ = Describe("UaaClient", func() {
 			uaaClient := auth.NewUaaClient(client, "%%m*+broken", "bob", "yourUncle")
 
 			_, err := uaaClient.GetAuthData("iAmAnAdmin")
-			Expect(err).To(MatchError(`parse %%m*+broken/check_token: invalid URL escape "%%m"`))
+			Expect(err.Error()).To(ContainSubstring(`parse`))
+			Expect(err.Error()).To(ContainSubstring(`%%m*+broken/check_token`))
 		})
 	})
 

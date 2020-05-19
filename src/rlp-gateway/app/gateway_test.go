@@ -3,7 +3,6 @@ package app_test
 import (
 	"bufio"
 	"bytes"
-	"code.cloudfoundry.org/loggregator/internal/testhelper"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -13,6 +12,8 @@ import (
 	"net/http/httptest"
 	"sync"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/internal/testhelper"
 
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator/plumbing" // TODO: Resolve duplicate proto error
