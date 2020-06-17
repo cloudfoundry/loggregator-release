@@ -28,11 +28,10 @@ require (
 	github.com/onsi/ginkgo v1.13.0
 	github.com/onsi/gomega v1.10.1
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect; pinned
-	github.com/prometheus/client_golang v1.6.0
+	github.com/prometheus/client_golang v1.7.0
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
-	golang.org/x/sys v0.0.0-20200615200032-f1bc736245b1 // indirect
 	golang.org/x/text v0.3.3 // indirect
-	google.golang.org/genproto v0.0.0-20200616192300-fc83d8c00726 // indirect
+	google.golang.org/genproto v0.0.0-20200617032506-f1bdc9086088 // indirect
 	google.golang.org/grpc v1.29.1
 )
 
