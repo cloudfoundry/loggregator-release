@@ -1,6 +1,8 @@
 package client
 
 import (
+	marshaler "code.cloudfoundry.org/go-log-cache/internal"
+	"code.cloudfoundry.org/go-log-cache/rpc/logcache_v1"
 	"context"
 	"encoding/json"
 	"errors"
@@ -11,9 +13,7 @@ import (
 	"strconv"
 	"time"
 
-	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
-	"code.cloudfoundry.org/log-cache/pkg/marshaler"
-	"code.cloudfoundry.org/log-cache/pkg/rpc/logcache_v1"
+	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
 	"github.com/blang/semver"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
@@ -298,11 +298,13 @@ func (c *Client) getBaseApiPath(ctx context.Context) (string, error) {
 		return "", err
 	}
 
+	apiPath := "/v1"
 	if logCacheVersion.GTE(FIRST_LOG_CACHE_VERSION_AFTER_API_MOVE) {
-		return "/api/v1", nil
+		apiPath = "/api/v1"
 	}
 
-	return "/v1", nil
+	c.baseApiPath = apiPath
+	return apiPath, nil
 }
 
 func (c *Client) LogCacheVersion(ctx context.Context) (semver.Version, error) {

@@ -1,11 +1,12 @@
 package testhelper
 
 import (
-	"code.cloudfoundry.org/go-loggregator/metrics"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
 	"sort"
 	"sync"
+
+	metrics "code.cloudfoundry.org/go-metric-registry"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type SpyMetricClient struct {
@@ -19,7 +20,7 @@ func NewMetricClient() *SpyMetricClient {
 	}
 }
 
-func (s *SpyMetricClient) NewCounter(name string, opts ...metrics.MetricOption) metrics.Counter {
+func (s *SpyMetricClient) NewCounter(name, helpText string, opts ...metrics.MetricOption) metrics.Counter {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -29,7 +30,7 @@ func (s *SpyMetricClient) NewCounter(name string, opts ...metrics.MetricOption) 
 	return m
 }
 
-func (s *SpyMetricClient) NewGauge(name string, opts ...metrics.MetricOption) metrics.Gauge {
+func (s *SpyMetricClient) NewGauge(name, helpText string, opts ...metrics.MetricOption) metrics.Gauge {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

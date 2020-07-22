@@ -1,25 +1,26 @@
 package metrics
 
 import (
-	"code.cloudfoundry.org/tlsconfig"
 	"crypto/tls"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
 	"net"
 	"net/http"
 	"strings"
 	"time"
+
+	"code.cloudfoundry.org/tlsconfig"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // The Registry keeps track of registered counters and gauges. Optionally, it can
 // provide a server on a Prometheus-formatted endpoint.
 type Registry struct {
-	port        string
-	defaultTags map[string]string
-	loggr       *log.Logger
-	registerer  prometheus.Registerer
+	port       string
+	loggr      *log.Logger
+	registerer prometheus.Registerer
+	mux        *http.ServeMux
 }
 
 // A cumulative metric that represents a single monotonically increasing counter
@@ -34,14 +35,19 @@ type Gauge interface {
 	Set(float64)
 }
 
+// A histogram counts observations into buckets.
+type Histogram interface {
+	Observe(float64)
+}
+
 // Registry will register the metrics route with the default http mux but will not
 // start an http server. This is intentional so that we can combine metrics with
 // other things like pprof into one server. To start a server
 // just for metrics, use the WithServer RegistryOption
 func NewRegistry(logger *log.Logger, opts ...RegistryOption) *Registry {
 	pr := &Registry{
-		loggr:       logger,
-		defaultTags: make(map[string]string),
+		loggr: logger,
+		mux:   http.NewServeMux(),
 	}
 
 	for _, o := range opts {
@@ -49,32 +55,38 @@ func NewRegistry(logger *log.Logger, opts ...RegistryOption) *Registry {
 	}
 
 	registry := prometheus.NewRegistry()
-	registerer := prometheus.WrapRegistererWith(pr.defaultTags, registry)
-	pr.registerer = registerer
+	pr.registerer = registry
 
-	registerer.MustRegister(prometheus.NewGoCollector())
-	registerer.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+	pr.registerer.MustRegister(prometheus.NewGoCollector())
+	pr.registerer.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 
-	http.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{
-		Registry: registerer,
+	pr.mux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{
+		Registry: pr.registerer,
 	}))
 	return pr
 }
 
 // Creates new counter. When a duplicate is registered, the Registry will return
 // the previously created metric.
-func (p *Registry) NewCounter(name string, opts ...MetricOption) Counter {
-	opt := p.toPromOpt(name, "counter metric", opts...)
+func (p *Registry) NewCounter(name, helpText string, opts ...MetricOption) Counter {
+	opt := toPromOpt(name, helpText, opts...)
 	c := prometheus.NewCounter(prometheus.CounterOpts(opt))
 	return p.registerCollector(name, c).(Counter)
 }
 
 // Creates new gauge. When a duplicate is registered, the Registry will return
 // the previously created metric.
-func (p *Registry) NewGauge(name string, opts ...MetricOption) Gauge {
-	opt := p.toPromOpt(name, "gauge metric", opts...)
+func (p *Registry) NewGauge(name, helpText string, opts ...MetricOption) Gauge {
+	opt := toPromOpt(name, helpText, opts...)
 	g := prometheus.NewGauge(prometheus.GaugeOpts(opt))
 	return p.registerCollector(name, g).(Gauge)
+}
+
+// Creates new histogram. When a duplicate is registered, the Registry will return
+// the previously created metric.
+func (p *Registry) NewHistogram(name, helpText string, buckets []float64, opts ...MetricOption) Histogram {
+	h := prometheus.NewHistogram(toHistogramOpts(name, helpText, buckets, opts...))
+	return p.registerCollector(name, h).(Histogram)
 }
 
 func (p *Registry) registerCollector(name string, c prometheus.Collector) prometheus.Collector {
@@ -96,7 +108,7 @@ func (p *Registry) Port() string {
 	return fmt.Sprint(p.port)
 }
 
-func (p *Registry) toPromOpt(name, helpText string, mOpts ...MetricOption) prometheus.Opts {
+func toPromOpt(name, helpText string, mOpts ...MetricOption) prometheus.Opts {
 	opt := prometheus.Opts{
 		Name:        name,
 		Help:        helpText,
@@ -110,36 +122,48 @@ func (p *Registry) toPromOpt(name, helpText string, mOpts ...MetricOption) prome
 	return opt
 }
 
+func toHistogramOpts(name, helpText string, buckets []float64, mOpts ...MetricOption) prometheus.HistogramOpts {
+	promOpt := toPromOpt(name, helpText, mOpts...)
+
+	return prometheus.HistogramOpts{
+		Namespace:   promOpt.Namespace,
+		Subsystem:   promOpt.Subsystem,
+		Name:        promOpt.Name,
+		Help:        promOpt.Help,
+		ConstLabels: promOpt.ConstLabels,
+		Buckets:     buckets,
+	}
+}
+
 // Options for registry initialization
 type RegistryOption func(r *Registry)
 
-// Add Default tags to all gauges and counters created from this registry
-func WithDefaultTags(tags map[string]string) RegistryOption {
-	return func(r *Registry) {
-		for k, v := range tags {
-			r.defaultTags[k] = v
-		}
-	}
-}
-
-// Starts an http server on the given port to host metrics.
+// Starts an http server on localhost at the given port to host metrics.
 func WithServer(port int) RegistryOption {
 	return func(r *Registry) {
-		r.start(port)
+		r.start("127.0.0.1", port)
 	}
 }
 
-// Starts an https server on the given port to host metrics.
+// Starts an https server on localhost at the given port to host metrics.
 func WithTLSServer(port int, certFile, keyFile, caFile string) RegistryOption {
 	return func(r *Registry) {
 		r.startTLS(port, certFile, keyFile, caFile)
 	}
 }
 
-func (p *Registry) start(port int) {
-	addr := fmt.Sprintf("127.0.0.1:%d", port)
+// Starts an http server on the given port to host metrics.
+func WithPublicServer(port int) RegistryOption {
+	return func(r *Registry) {
+		r.start("0.0.0.0", port)
+	}
+}
+
+func (p *Registry) start(ipAddr string, port int) {
+	addr := fmt.Sprintf("%s:%d", ipAddr, port)
 	s := http.Server{
 		Addr:         addr,
+		Handler:      p.mux,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
 	}
@@ -148,7 +172,7 @@ func (p *Registry) start(port int) {
 	if err != nil {
 		p.loggr.Fatalf("Unable to setup metrics endpoint (%s): %s", addr, err)
 	}
-	p.loggr.Printf("Metrics endpoint is listening on %s", lis.Addr().String())
+	p.loggr.Printf("Metrics endpoint is listening on %s/metrics", lis.Addr().String())
 
 	parts := strings.Split(lis.Addr().String(), ":")
 	p.port = parts[len(parts)-1]
@@ -167,9 +191,10 @@ func (p *Registry) startTLS(port int, certFile, keyFile, caFile string) {
 		p.loggr.Fatalf("unable to generate server TLS Config: %s", err)
 	}
 
-	addr := fmt.Sprintf(":%d", port)
+	addr := fmt.Sprintf("127.0.0.1:%d", port)
 	s := http.Server{
 		Addr:         addr,
+		Handler:      p.mux,
 		TLSConfig:    tlsConfig,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
@@ -191,17 +216,10 @@ func (p *Registry) startTLS(port int, certFile, keyFile, caFile string) {
 type MetricOption func(o *prometheus.Opts)
 
 // Add these tags to the metrics
-func WithMetricTags(tags map[string]string) MetricOption {
+func WithMetricLabels(labels map[string]string) MetricOption {
 	return func(o *prometheus.Opts) {
-		for k, v := range tags {
+		for k, v := range labels {
 			o.ConstLabels[k] = v
 		}
-	}
-}
-
-// Add the passed help text to the created metric
-func WithHelpText(helpText string) MetricOption {
-	return func(o *prometheus.Opts) {
-		o.Help = helpText
 	}
 }

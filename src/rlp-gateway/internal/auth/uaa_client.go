@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"code.cloudfoundry.org/go-loggregator/metrics"
 	"encoding/json"
 	"errors"
 	"io"
@@ -11,11 +10,13 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	metrics "code.cloudfoundry.org/go-metric-registry"
 )
 
 // Metrics defines the interface for creating metrics
 type Metrics interface {
-	NewGauge(name string, opts ...metrics.MetricOption) metrics.Gauge
+	NewGauge(name, helpText string, opts ...metrics.MetricOption) metrics.Gauge
 }
 
 // HTTClient defines the interface for communication over HTTP
@@ -60,7 +61,7 @@ func NewUAAClient(
 		client:       client,
 		clientSecret: clientSecret,
 		httpClient:   httpClient,
-		latency:      m.NewGauge("LastUAALatency", metrics.WithHelpText("Last request latency to UAA in nanoseconds.")),
+		latency:      m.NewGauge("LastUAALatency", "Last request latency to UAA in nanoseconds."),
 	}
 }
 

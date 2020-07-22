@@ -3,7 +3,7 @@ package web_test
 import (
 	"net/url"
 
-	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
+	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator/rlp-gateway/internal/web"
 
 	. "github.com/onsi/ginkgo"

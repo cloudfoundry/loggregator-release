@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
-	logcache "code.cloudfoundry.org/log-cache/pkg/client"
+	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
+	logcache "code.cloudfoundry.org/go-log-cache"
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"

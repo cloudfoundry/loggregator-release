@@ -23,7 +23,7 @@ cp $GOPATH/src/code.cloudfoundry.org/log-cache/api/v1/*proto $tmp_dir/log-cache
 
 protoc \
     $tmp_dir/log-cache/*.proto \
-    --go_out=plugins=grpc,Mv2/envelope.proto=code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2:. \
+    --go_out=plugins=grpc,Mv2/envelope.proto=code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2:. \
     --proto_path=$tmp_dir/log-cache \
     --grpc-gateway_out=logtostderr=true:. \
     -I$GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \

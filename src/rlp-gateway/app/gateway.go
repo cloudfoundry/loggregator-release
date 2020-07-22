@@ -1,14 +1,15 @@
 package app
 
 import (
-	"code.cloudfoundry.org/go-loggregator/metrics"
-	"code.cloudfoundry.org/tlsconfig"
 	"crypto/tls"
 	"io"
 	"log"
 	"net"
 	"net/http"
 	"time"
+
+	metrics "code.cloudfoundry.org/go-metric-registry"
+	"code.cloudfoundry.org/tlsconfig"
 
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"code.cloudfoundry.org/loggregator/rlp-gateway/internal/auth"
@@ -18,8 +19,8 @@ import (
 )
 
 type Metrics interface {
-	NewGauge(name string, opts ...metrics.MetricOption) metrics.Gauge
-	NewCounter(name string, opts ...metrics.MetricOption) metrics.Counter
+	NewGauge(name, helpText string, opts ...metrics.MetricOption) metrics.Gauge
+	NewCounter(name, helpText string, opts ...metrics.MetricOption) metrics.Counter
 }
 
 // Gateway provides a high level for running the RLP gateway

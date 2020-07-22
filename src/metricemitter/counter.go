@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
+	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
 )
 
 // Counter stores data about a counter metric to be used by the metric emitter

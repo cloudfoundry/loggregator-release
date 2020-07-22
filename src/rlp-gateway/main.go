@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"code.cloudfoundry.org/go-loggregator/metrics"
+	metrics "code.cloudfoundry.org/go-metric-registry"
 	"code.cloudfoundry.org/loggregator/profiler"
 	"code.cloudfoundry.org/loggregator/rlp-gateway/app"
 )

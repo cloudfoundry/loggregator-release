@@ -6,7 +6,7 @@ package logcache_v1
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import loggregator_v2 "code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
+import loggregator_v2 "code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
 
 import (
 	context "golang.org/x/net/context"

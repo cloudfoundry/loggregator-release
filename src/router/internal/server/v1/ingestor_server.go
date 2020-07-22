@@ -10,7 +10,7 @@ import (
 	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
-	"code.cloudfoundry.org/go-loggregator/conversion"
+	"code.cloudfoundry.org/go-loggregator/v8/conversion"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )

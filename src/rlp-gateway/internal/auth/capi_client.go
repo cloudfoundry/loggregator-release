@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"code.cloudfoundry.org/go-loggregator/metrics"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +9,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	metrics "code.cloudfoundry.org/go-metric-registry"
 )
 
 // CAPIClient defines a client for accessing the CC API
@@ -46,13 +47,13 @@ func NewCAPIClient(
 		capi:         capiAddr,
 		externalCapi: externalCapiAddr,
 		storeAppsLatency: m.NewGauge("LastCAPIV3AppsLatency",
-			metrics.WithHelpText("Last request latency to CAPI v3 apps endpoint in nanoseconds")),
+			"Last request latency to CAPI v3 apps endpoint in nanoseconds"),
 		storeListServiceInstancesLatency: m.NewGauge("LastCAPIV2ListServiceInstancesLatency",
-			metrics.WithHelpText("Last request latency to CAPI v2 list service instances endpoint in nanoseconds")),
+			"Last request latency to CAPI v2 list service instances endpoint in nanoseconds"),
 		storeLogAccessLatency: m.NewGauge("LastCAPIV4LogAccessLatency",
-			metrics.WithHelpText("Last request latency to CAPI v4 logs access endpoint in nanoseconds")),
+			"Last request latency to CAPI v4 logs access endpoint in nanoseconds"),
 		storeServiceInstancesLatency: m.NewGauge("LastCAPIV2ServiceInstancesLatency",
-			metrics.WithHelpText("Last request latency to CAPI v2 service instances endpoint in nanoseconds")),
+			"Last request latency to CAPI v2 service instances endpoint in nanoseconds"),
 	}
 }
 

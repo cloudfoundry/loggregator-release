@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/go-batching"
-	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
+	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
 )
 
 // V2EnvelopeBatcher batches slices of bytes.
