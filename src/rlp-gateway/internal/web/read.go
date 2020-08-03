@@ -45,7 +45,6 @@ func ReadHandler(
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
 		flusher, ok := w.(http.Flusher)
 		if !ok {
 			errStreamingUnsupported.Write(w)
@@ -69,14 +68,10 @@ func ReadHandler(
 		)
 
 		data := make(chan *loggregator_v2.EnvelopeBatch)
-		errs := make(chan error)
+		errs := make(chan error, 1)
 
 		go func() {
 			for {
-				if isDone(ctx) {
-					return
-				}
-
 				batch, err := recv()
 				if err != nil {
 					errs <- err
@@ -87,7 +82,11 @@ func ReadHandler(
 					continue
 				}
 
-				data <- batch
+				select {
+				case data <- batch:
+				case <-ctx.Done():
+					return
+				}
 			}
 		}()
 
