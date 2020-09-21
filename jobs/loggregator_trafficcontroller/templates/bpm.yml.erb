@@ -64,5 +64,6 @@ processes:
       LOG_CACHE_KEY_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/logcache_trafficcontroller.key"
       LOG_CACHE_SERVER_NAME: "<%= p('logcache.tls.server_name') %>"
       <% end %>
+      GODEBUG: "x509ignoreCN=0"
     limits:
       open_files: 65536
