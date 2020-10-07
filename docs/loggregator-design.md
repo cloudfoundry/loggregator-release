@@ -7,9 +7,7 @@ covered later in the document.
 For a walk-through of message delivery and monitoring approaches see this
 [video](https://www.youtube.com/watch?v=vR2wl22sU6Q)
 
-![Loggregator System Design](./loggregatornew.png) **note** this diagram
-assumes the use of cf-deployment, cf-release is still using the following
-[design](./loggregator.png).
+![Loggregator System Design](./loggregator.png)
 
 ## Ring Buffer Circuit Breaker
 In order to prevent disrupting application
