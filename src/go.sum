@@ -15,8 +15,6 @@ code.cloudfoundry.org/go-metric-registry v0.0.0-20200413202920-40d97c8804ec h1:s
 code.cloudfoundry.org/go-metric-registry v0.0.0-20200413202920-40d97c8804ec/go.mod h1:cjL7/hjRgOnMy/FbPsGZG9qmR6oSPKG/FwKLLlh2j2U=
 code.cloudfoundry.org/go-pubsub v0.0.0-20180503211407-becd51dc37cb h1:N9iWwP+UaQWj0GB53fIEZTD/qK/0EoJjfIS+YUiRU5I=
 code.cloudfoundry.org/go-pubsub v0.0.0-20180503211407-becd51dc37cb/go.mod h1:2mohpzdn59JWHT85lXjjglNpGLF51tk6hHqfxpc0utk=
-code.cloudfoundry.org/grpc-throughputlb v0.0.0-20180905204614-e98a1ee09867 h1:JGYM5nyRqS0o8OpK73XP1iRj8aNx4eKXKIoS2LwEytc=
-code.cloudfoundry.org/grpc-throughputlb v0.0.0-20180905204614-e98a1ee09867/go.mod h1:t7nLC4YuJA2Zu4yu0TDkS4dOqBIWMbzPTorcmV64giI=
 code.cloudfoundry.org/rfc5424 v0.0.0-20180905210152-236a6d29298a h1:8rqv2w8xEceNwckcF5ONeRt0qBHlh5bnNfFnYTrZbxs=
 code.cloudfoundry.org/rfc5424 v0.0.0-20180905210152-236a6d29298a/go.mod h1:tkZo8GtzBjySJ7USvxm4E36lNQw1D3xM6oKHGqdaAJ4=
 code.cloudfoundry.org/tlsconfig v0.0.0-20190710180242-462f72de1106/go.mod h1:VxNwgI63VxUGfSR/F3VzjOpnWLbeH+AB1pQugK1i1bA=

@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
-	throughputlb "code.cloudfoundry.org/grpc-throughputlb"
+	throughputlb "code.cloudfoundry.org/loggregator/grpc-throughputlb"
 	"code.cloudfoundry.org/loggregator/rlp-gateway/internal/web"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"

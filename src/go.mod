@@ -10,7 +10,6 @@ require (
 	code.cloudfoundry.org/go-loggregator/v8 v8.0.2-0.20200722201844-b5130958b65d
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20200413202920-40d97c8804ec
 	code.cloudfoundry.org/go-pubsub v0.0.0-20180503211407-becd51dc37cb
-	code.cloudfoundry.org/grpc-throughputlb v0.0.0-20180905204614-e98a1ee09867
 	code.cloudfoundry.org/tlsconfig v0.0.0-20200131000646-bbe0f8da39b3
 	github.com/apoydence/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect; pinned
 	github.com/cloudfoundry/noaa v2.1.0+incompatible // pinned

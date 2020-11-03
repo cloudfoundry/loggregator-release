@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	throughputlb "code.cloudfoundry.org/grpc-throughputlb"
+	throughputlb "code.cloudfoundry.org/loggregator/grpc-throughputlb"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
