@@ -104,7 +104,7 @@ func marshalEnvelopes(envelopes []*events.Envelope) [][]byte {
 
 func (m *DopplerServer) sendData(req *plumbing.SubscriptionRequest, sender sender) error {
 	d := diodes.NewOneToOne(1000, gendiode.AlertFunc(func(missed int) {
-		log.Printf("Dropped %d envelopes (v1 buffer) Subscription ID: %s", missed, req.ShardID)
+		log.Printf("Dropped %d envelopes (v1 buffer) ShardID: %s", missed, req.ShardID)
 		m.Alert(1000)
 	}))
 	cleanup := m.registrar.Register(req, d)
@@ -152,7 +152,7 @@ func (b *batchWriter) Write(batch [][]byte) {
 
 func (m *DopplerServer) sendBatchData(req *plumbing.SubscriptionRequest, sender plumbing.Doppler_BatchSubscribeServer) error {
 	d := diodes.NewOneToOne(1000, gendiode.AlertFunc(func(missed int) {
-		log.Printf("Dropped %d envelopes (v1 buffer) Subscription ID: %s", missed, req.ShardID)
+		log.Printf("Dropped %d envelopes (v1 buffer) ShardID: %s", missed, req.ShardID)
 		m.Alert(1000)
 	}))
 	cleanup := m.registrar.Register(req, d)
