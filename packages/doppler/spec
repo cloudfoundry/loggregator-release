@@ -6,6 +6,7 @@ dependencies:
 
 files:
 - diodes/**/*.go
+- grpc-throughputlb/*.go
 - metricemitter/**/*.go
 - plumbing/**/*.go
 - profiler/**/*.go
