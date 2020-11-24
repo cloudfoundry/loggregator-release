@@ -1,9 +1,11 @@
 package v1
 
 import (
+	"log"
 	"sync/atomic"
 	"time"
 
+	gendiode "code.cloudfoundry.org/go-diodes"
 	"code.cloudfoundry.org/go-batching"
 	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/metricemitter"
@@ -101,7 +103,10 @@ func marshalEnvelopes(envelopes []*events.Envelope) [][]byte {
 }
 
 func (m *DopplerServer) sendData(req *plumbing.SubscriptionRequest, sender sender) error {
-	d := diodes.NewOneToOne(1000, m)
+	d := diodes.NewOneToOne(1000, gendiode.AlertFunc(func(missed int) {
+		log.Printf("Dropped %d envelopes (v1 buffer) Subscription ID: %s", missed, req.ShardID)
+		m.Alert(1000)
+	}))
 	cleanup := m.registrar.Register(req, d)
 	defer cleanup()
 
@@ -146,7 +151,10 @@ func (b *batchWriter) Write(batch [][]byte) {
 }
 
 func (m *DopplerServer) sendBatchData(req *plumbing.SubscriptionRequest, sender plumbing.Doppler_BatchSubscribeServer) error {
-	d := diodes.NewOneToOne(1000, m)
+	d := diodes.NewOneToOne(1000, gendiode.AlertFunc(func(missed int) {
+		log.Printf("Dropped %d envelopes (v1 buffer) Subscription ID: %s", missed, req.ShardID)
+		m.Alert(1000)
+	}))
 	cleanup := m.registrar.Register(req, d)
 	defer cleanup()
 
