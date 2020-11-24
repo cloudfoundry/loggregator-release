@@ -81,7 +81,7 @@ func (s *EgressServer) BatchedReceiver(
 	defer s.subscriptionsMetric.Decrement(1.0)
 
 	d := diodes.NewOneToOneWaiterEnvelopeV2(1000, gendiode.AlertFunc(func(missed int) {
-		log.Printf("Dropped %d envelopes (v2 buffer) Subscription ID: %s", missed, req.ShardId)
+		log.Printf("Dropped %d envelopes (v2 buffer) ShardID: %s", missed, req.ShardId)
 		s.Alert(1000)}),
 		gendiode.WithWaiterContext(sender.Context()),
 	)
