@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"log"
 	"time"
 
 	gendiode "code.cloudfoundry.org/go-diodes"
@@ -79,7 +80,9 @@ func (s *EgressServer) BatchedReceiver(
 	s.subscriptionsMetric.Increment(1.0)
 	defer s.subscriptionsMetric.Decrement(1.0)
 
-	d := diodes.NewOneToOneWaiterEnvelopeV2(1000, s,
+	d := diodes.NewOneToOneWaiterEnvelopeV2(1000, gendiode.AlertFunc(func(missed int) {
+		log.Printf("Dropped %d envelopes (v2 buffer) ShardID: %s", missed, req.ShardId)
+		s.Alert(missed)}),
 		gendiode.WithWaiterContext(sender.Context()),
 	)
 	cancel := s.subscriber.Subscribe(req, d)
