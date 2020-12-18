@@ -25,6 +25,7 @@ type GRPC struct {
 type Config struct {
 	GRPC GRPC
 
+	UseRFC339                       bool   `env:"USE_RFC339"`
 	PProfPort                       uint32 `env:"ROUTER_PPROF_PORT"`
 	Agent                           Agent
 	MetricBatchIntervalMilliseconds uint   `env:"ROUTER_METRIC_BATCH_INTERVAL_MILLISECONDS"`

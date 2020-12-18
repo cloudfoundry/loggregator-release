@@ -42,6 +42,7 @@ type MetricsServer struct {
 
 // Config holds the configuration for the RLP Gateway
 type Config struct {
+	UseRFC339                  bool   `env:"USE_RFC339"`
 	LogsProviderAddr           string `env:"LOGS_PROVIDER_ADDR,             required, report"`
 	LogsProviderCAPath         string `env:"LOGS_PROVIDER_CA_PATH,          required, report"`
 	LogsProviderClientCertPath string `env:"LOGS_PROVIDER_CLIENT_CERT_PATH, required, report"`
@@ -56,7 +57,7 @@ type Config struct {
 
 	StreamTimeout time.Duration `env:"STREAM_TIMEOUT, report"`
 
-	HTTP HTTP
+	HTTP          HTTP
 	MetricsServer MetricsServer
 }
 

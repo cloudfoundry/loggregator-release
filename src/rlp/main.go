@@ -22,13 +22,16 @@ import (
 )
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
-
 	grpclog.SetLogger(log.New(ioutil.Discard, "", 0))
 
 	conf, err := app.LoadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load config: %s", err)
+	}
+	if conf.UseRFC339 {
+		log.SetOutput(new(plumbing.LogWriter))
+	} else {
+		log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	}
 
 	envstruct.WriteReport(conf)
