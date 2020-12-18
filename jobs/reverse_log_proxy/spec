@@ -69,3 +69,6 @@ properties:
   metric_emitter.interval:
     description: "The interval that metrics are emitted to the metron."
     default: "1m"
+  logging.format.timestamp:
+    description: "Format for timestamp in component logs. Valid values are 'deprecated' and 'rfc3339'."
+    default: "deprecated"

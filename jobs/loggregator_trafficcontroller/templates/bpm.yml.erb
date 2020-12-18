@@ -65,5 +65,6 @@ processes:
       LOG_CACHE_SERVER_NAME: "<%= p('logcache.tls.server_name') %>"
       <% end %>
       GODEBUG: "x509ignoreCN=0"
+      USE_RFC339: "<%= p("logging.format.timestamp") == "rfc3339" %>"
     limits:
       open_files: 65536

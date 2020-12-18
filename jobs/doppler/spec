@@ -57,3 +57,7 @@ properties:
   metron_endpoint.grpc_port:
     description: "The port used to emit grpc messages to the Metron agent"
     default: 3458
+
+  logging.format.timestamp:
+    description: "Format for timestamp in component logs. Valid values are 'deprecated' and 'rfc3339'."
+    default: "deprecated"

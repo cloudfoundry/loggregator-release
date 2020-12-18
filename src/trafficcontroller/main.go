@@ -1,11 +1,12 @@
 package main
 
 import (
-	"code.cloudfoundry.org/tlsconfig"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
+
+	"code.cloudfoundry.org/tlsconfig"
 
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
@@ -17,13 +18,16 @@ import (
 )
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
-
 	grpclog.SetLogger(log.New(ioutil.Discard, "", 0))
 
 	conf, err := app.LoadConfig()
 	if err != nil {
 		log.Panicf("Unable to load config: %s", err)
+	}
+	if conf.UseRFC339 {
+		log.SetOutput(new(plumbing.LogWriter))
+	} else {
+		log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	}
 
 	credentials, err := plumbing.NewClientCredentials(
@@ -55,6 +59,7 @@ func main() {
 		uaaHTTPClient(conf),
 		ccHTTPClient(conf),
 	)
+
 	tc.Start()
 }
 

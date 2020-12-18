@@ -89,3 +89,6 @@ properties:
     description: "TLS private key for metrics server signed by the metrics CA"
   metrics.server_name:
     description: "The server name used in the scrape configuration for the metrics endpoint"
+  logging.format.timestamp:
+    description: "Format for timestamp in component logs. Valid values are 'deprecated' and 'rfc3339'."
+    default: "deprecated"

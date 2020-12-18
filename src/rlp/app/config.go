@@ -19,6 +19,7 @@ type GRPC struct {
 
 // Config stores all configurations options for RLP.
 type Config struct {
+	UseRFC339             bool          `env:"USE_RFC339"`
 	PProfPort             uint32        `env:"RLP_PPROF_PORT"`
 	MetricEmitterInterval time.Duration `env:"RLP_METRIC_EMITTER_INTERVAL"`
 	MetricSourceID        string        `env:"RLP_METRIC_SOURCE_ID"`

@@ -45,3 +45,4 @@ processes:
       METRICS_CERT_FILE_PATH: "<%= certs_dir %>/metrics.crt"
       METRICS_KEY_FILE_PATH: "<%= certs_dir %>/metrics.key"
       GODEBUG: "x509ignoreCN=0"
+      USE_RFC339: "<%= p("logging.format.timestamp") == "rfc3339" %>"

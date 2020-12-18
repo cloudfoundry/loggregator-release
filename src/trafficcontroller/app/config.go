@@ -39,6 +39,7 @@ type CCTLSClientConfig struct {
 
 // Config stores all Configuration options for trafficcontroller.
 type Config struct {
+	UseRFC339             bool          `env:"USE_RFC339"`
 	IP                    string        `env:"TRAFFIC_CONTROLLER_IP, report"`
 	ApiHost               string        `env:"TRAFFIC_CONTROLLER_API_HOST, report"`
 	OutgoingDropsondePort uint32        `env:"TRAFFIC_CONTROLLER_OUTGOING_DROPSONDE_PORT, report"`

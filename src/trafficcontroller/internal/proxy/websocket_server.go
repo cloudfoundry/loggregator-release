@@ -34,7 +34,6 @@ func NewWebSocketServer(slowConsumerTimeout time.Duration, m MetricClient) *WebS
 	slowConsumerMetric := m.NewCounter("doppler_proxy.slow_consumer",
 		metricemitter.WithVersion(2, 0),
 	)
-
 	return &WebSocketServer{
 		slowConsumerMetric:  slowConsumerMetric,
 		slowConsumerTimeout: slowConsumerTimeout,
