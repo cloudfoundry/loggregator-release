@@ -16,6 +16,7 @@ func main() {
 	if cfg.UseRFC339 {
 		loggr = log.New(new(plumbing.LogWriter), "", 0)
 		log.SetOutput(new(plumbing.LogWriter))
+		log.SetFlags(0)
 	}
 	loggr.Println("starting RLP gateway")
 	defer loggr.Println("stopping RLP gateway")

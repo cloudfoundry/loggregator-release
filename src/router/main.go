@@ -23,6 +23,7 @@ func main() {
 	}
 	if conf.UseRFC339 {
 		log.SetOutput(new(plumbing.LogWriter))
+		log.SetFlags(0)
 	} else {
 		log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	}
