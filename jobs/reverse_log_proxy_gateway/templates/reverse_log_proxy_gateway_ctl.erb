@@ -6,10 +6,10 @@ case $1 in
 
   start)
     set +e
-      killall -15 rlp-gateway
-      killall -9 rlp-gateway
-      killall -2 rlp-gateway
-      killall -3 rlp-gateway
+      pkill -f /var/vcap/packages/reverse_log_proxy_gateway/rlp-gateway -15
+      pkill -f /var/vcap/packages/reverse_log_proxy_gateway/rlp-gateway -9
+      pkill -f /var/vcap/packages/reverse_log_proxy_gateway/rlp-gateway -2
+      pkill -f /var/vcap/packages/reverse_log_proxy_gateway/rlp-gateway -3
     set -e
 
     mkdir -p $RUN_DIR $LOG_DIR
@@ -26,10 +26,10 @@ case $1 in
 
   stop)
     set +e
-      killall -15 rlp-gateway
-      killall -9 rlp-gateway
-      killall -2 rlp-gateway
-      killall -3 rlp-gateway
+      pkill -f /var/vcap/packages/reverse_log_proxy_gateway/rlp-gateway -15
+      pkill -f /var/vcap/packages/reverse_log_proxy_gateway/rlp-gateway -9
+      pkill -f /var/vcap/packages/reverse_log_proxy_gateway/rlp-gateway -2
+      pkill -f /var/vcap/packages/reverse_log_proxy_gateway/rlp-gateway -3
     set -e
 
     rm -f $PIDFILE

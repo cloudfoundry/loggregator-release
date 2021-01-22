@@ -6,10 +6,10 @@ case $1 in
 
   start)
     set +e
-      killall -15 $PACKAGE_EXECUTABLE
-      killall -9 $PACKAGE_EXECUTABLE
-      killall -2 $PACKAGE_EXECUTABLE
-      killall -3 $PACKAGE_EXECUTABLE
+      pkill -f /var/vcap/packages/reverse_log_proxy/rlp -15
+      pkill -f /var/vcap/packages/reverse_log_proxy/rlp -9
+      pkill -f /var/vcap/packages/reverse_log_proxy/rlp -2
+      pkill -f /var/vcap/packages/reverse_log_proxy/rlp -3
     set -e
 
     mkdir -p $RUN_DIR $LOG_DIR
@@ -26,10 +26,10 @@ case $1 in
 
   stop)
     set +e
-      killall -15 $PACKAGE_EXECUTABLE
-      killall -9 $PACKAGE_EXECUTABLE
-      killall -2 $PACKAGE_EXECUTABLE
-      killall -3 $PACKAGE_EXECUTABLE
+      pkill -f /var/vcap/packages/reverse_log_proxy/rlp -15
+      pkill -f /var/vcap/packages/reverse_log_proxy/rlp -9
+      pkill -f /var/vcap/packages/reverse_log_proxy/rlp -2
+      pkill -f /var/vcap/packages/reverse_log_proxy/rlp -3
     set -e
 
     rm -f $PIDFILE
