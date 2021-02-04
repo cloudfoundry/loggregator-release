@@ -107,12 +107,6 @@ By default, the RLP communicates with clients via gRPC over mutual TLS. To enabl
 Proxy, deploy the RLP Gateway. The RLP Gateway API is documented
 [in the Loggregatgor repository][loggregator]
 
-The RLP Gateway is deployed via [this
-ops-file](./manifests/operations/add-rlp-gateway-to-cf.yml):
-
-```
-bosh -d cf deploy cf-deployment.yml -o manifests/operations/add-rlp-gateway-to-cf.yml
-```
 
 ## Standalone Loggregator
 
