@@ -12,10 +12,10 @@ case $1 in
 
   start)
     set +e
-      killall -15 trafficcontroller
-      killall -9 trafficcontroller
-      killall -2 trafficcontroller
-      killall -3 trafficcontroller
+      pkill -f /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller -15
+      pkill -f /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller -9
+      pkill -f /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller -2
+      pkill -f /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller -3
     set -e
 
     ulimit -n 65536
@@ -32,10 +32,10 @@ case $1 in
 
   stop)
     set +e
-      killall -15 trafficcontroller
-      killall -9 trafficcontroller
-      killall -2 trafficcontroller
-      killall -3 trafficcontroller
+      pkill -f /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller -15
+      pkill -f /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller -9
+      pkill -f /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller -2
+      pkill -f /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller -3
     set -e
 
     rm -f $PIDFILE
