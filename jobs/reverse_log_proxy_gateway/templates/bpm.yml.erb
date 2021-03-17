@@ -1,11 +1,5 @@
 <%
-  cc_address = ""
-  if_p("cc.address") { |addr|
-    cc_address = addr
-  }.else_if_link('cloud_controller') { |cc|
-    cc = link('cloud_controller')
-    cc_address = cc.addr
-  }
+  cc = link('cloud_controller')
 
   certs_dir="/var/vcap/jobs/reverse_log_proxy_gateway/config/certs"
 %>
@@ -32,8 +26,8 @@ processes:
 
       # External ADDR is plaintext because it assumes go-router is doing SSL
       # termination.
-      LOG_ACCESS_ADDR_EXTERNAL: "<%= "http://#{cc_address}:9022" %>"
-      LOG_ACCESS_ADDR: "<%= "https://#{cc_address}:9023" %>"
+      LOG_ACCESS_ADDR_EXTERNAL: "<%= "http://#{cc.address}:9022" %>"
+      LOG_ACCESS_ADDR: "<%= "https://#{cc.address}:9023" %>"
       LOG_ACCESS_CERT_PATH: "<%= certs_dir %>/cc.crt"
       LOG_ACCESS_KEY_PATH: "<%= certs_dir %>/cc.key"
       LOG_ACCESS_CA_PATH: "<%= certs_dir %>/cc_ca.crt"

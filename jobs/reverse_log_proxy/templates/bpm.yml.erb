@@ -1,12 +1,12 @@
 <%
   ingress_addrs = []
-  if_p("loggregator.doppler.addrs") { |daddrs|
-      ingress_addrs = p('loggregator.doppler.addrs').map do |addr|
-          "#{addr}:#{p('loggregator.doppler.grpc_port')}"
-      end
-  }.else_if_link("doppler") { |ds|
+  if_link("doppler") { |ds|
       ingress_addrs = ds.instances.map do |instance|
           "#{instance.address}:#{ds.p('doppler.grpc_port')}"
+      end
+  }.else {
+      ingress_addrs = p('loggregator.doppler.addrs').map do |addr|
+          "#{addr}:#{p('loggregator.doppler.grpc_port')}"
       end
   }
 %>

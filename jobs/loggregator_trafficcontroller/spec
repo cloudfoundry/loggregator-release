@@ -76,8 +76,6 @@ properties:
   logcache.tls.server_name:
     description: "The common name of the Log Cache server"
     default: "log-cache"
-  logcache.override_addr:
-    description: "Address for log-cache to override from the default from the bosh link"
 
   loggregator.doppler.addrs:
     description: "The addresses of Dopplers (alternative to doppler link)"
