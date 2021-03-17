@@ -64,6 +64,8 @@ properties:
     description: "The client private key used to authenticate against the internal CC api"
   cc.common_name:
     description: "The CN for the CA cert"
+  cc.address:
+    description: "Override as alternative to using CC link"
 
   uaa.client_id:
     description: "The client id to authenticate to UAA"
