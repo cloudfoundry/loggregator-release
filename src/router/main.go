@@ -31,6 +31,10 @@ func main() {
 
 	r := app.NewRouter(
 		conf.GRPC,
+		app.WithBufferSizes(
+			conf.IngressBufferSize,
+			conf.EgressBufferSize,
+		),
 		app.WithMetricReporting(
 			conf.Agent,
 			conf.MetricBatchIntervalMilliseconds,

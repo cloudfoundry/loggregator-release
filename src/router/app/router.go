@@ -62,6 +62,18 @@ func WithMetricReporting(
 	}
 }
 
+// WithBufferSizes returns a routerOption that enables configurable
+// buffer sizes
+func WithBufferSizes(
+	ingressBufferSize int,
+	egressBufferSize int,
+) RouterOption {
+	return func(r *Router) {
+		r.c.IngressBufferSize = ingressBufferSize
+		r.c.EgressBufferSize = egressBufferSize
+	}
+}
+
 // Start enables the Router to start receiving envelope, accepting
 // subscriptions and routing data.
 func (d *Router) Start() {
@@ -97,13 +109,13 @@ func (d *Router) Start() {
 		metricemitter.WithVersion(2, 0),
 	)
 
-	v1Buf := diodes.NewManyToOneEnvelope(10000, gendiodes.AlertFunc(func(missed int) {
+	v1Buf := diodes.NewManyToOneEnvelope(d.c.IngressBufferSize, gendiodes.AlertFunc(func(missed int) {
 		log.Printf("Dropped %d envelopes (v1 buffer)", missed)
 
 		ingressDropped.Increment(uint64(missed))
 	}))
 
-	v2Buf := diodes.NewManyToOneEnvelopeV2(10000, gendiodes.AlertFunc(func(missed int) {
+	v2Buf := diodes.NewManyToOneEnvelopeV2(d.c.IngressBufferSize, gendiodes.AlertFunc(func(missed int) {
 		log.Printf("Dropped %d envelopes (v2 buffer)", missed)
 
 		ingressDropped.Increment(uint64(missed))
@@ -128,6 +140,7 @@ func (d *Router) Start() {
 		subscriptionsMetric,
 		100*time.Millisecond,
 		100,
+		d.c.EgressBufferSize,
 	)
 	v2Ingress := v2.NewIngressServer(
 		v1Buf,

@@ -25,6 +25,8 @@ type GRPC struct {
 type Config struct {
 	GRPC GRPC
 
+	IngressBufferSize               int    `env:"INGRESS_BUFFER_SIZE"`
+	EgressBufferSize                int    `env:"EGRESS_BUFFER_SIZE"`
 	UseRFC339                       bool   `env:"USE_RFC339"`
 	PProfPort                       uint32 `env:"ROUTER_PPROF_PORT"`
 	Agent                           Agent

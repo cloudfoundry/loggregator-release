@@ -34,6 +34,7 @@ type DopplerServer struct {
 	subscriptionsMetric *metricemitter.Gauge
 	batchInterval       time.Duration
 	batchSize           uint
+	bufferSize          int
 }
 
 type sender interface {
@@ -55,6 +56,7 @@ func NewDopplerServer(
 	subscriptionsMetric *metricemitter.Gauge,
 	batchInterval time.Duration,
 	batchSize uint,
+	bufferSize int,
 ) *DopplerServer {
 	// metric-documentation-v2: (loggregator.doppler.egress) Number of
 	// envelopes read from a diode to be sent to subscriptions.
@@ -69,6 +71,7 @@ func NewDopplerServer(
 		subscriptionsMetric: subscriptionsMetric,
 		batchInterval:       batchInterval,
 		batchSize:           batchSize,
+		bufferSize:          bufferSize,
 	}
 
 	return m
@@ -103,7 +106,7 @@ func marshalEnvelopes(envelopes []*events.Envelope) [][]byte {
 }
 
 func (m *DopplerServer) sendData(req *plumbing.SubscriptionRequest, sender sender) error {
-	d := diodes.NewOneToOne(1000, gendiode.AlertFunc(func(missed int) {
+	d := diodes.NewOneToOne(m.bufferSize, gendiode.AlertFunc(func(missed int) {
 		log.Printf("Dropped %d envelopes (v1 buffer) ShardID: %s", missed, req.ShardID)
 		m.Alert(missed)
 	}))
@@ -151,7 +154,7 @@ func (b *batchWriter) Write(batch [][]byte) {
 }
 
 func (m *DopplerServer) sendBatchData(req *plumbing.SubscriptionRequest, sender plumbing.Doppler_BatchSubscribeServer) error {
-	d := diodes.NewOneToOne(1000, gendiode.AlertFunc(func(missed int) {
+	d := diodes.NewOneToOne(m.bufferSize, gendiode.AlertFunc(func(missed int) {
 		log.Printf("Dropped %d envelopes (v1 buffer) ShardID: %s", missed, req.ShardID)
 		m.Alert(missed)
 	}))

@@ -12,5 +12,7 @@ processes:
       GODEBUG: "x509ignoreCN=0"
       USE_RFC339: "<%= p("logging.format.timestamp") == "rfc3339" %>"
       ROUTER_PPROF_PORT: "<%=  p("doppler.pprof_port") %>"
+      INGRESS_BUFFER_SIZE: "<%=  p("doppler.ingress_buffer_size") %>"
+      EGRESS_BUFFER_SIZE: "<%=  p("doppler.egress_buffer_size") %>"
     limits:
       open_files: 65536
