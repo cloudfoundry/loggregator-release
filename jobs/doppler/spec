@@ -53,7 +53,7 @@ properties:
 
   doppler.ingress_buffer_size:
     description: "The buffer size for ingress traffic for the v1 loggregator"
-    default: 1000
+    default: 10000
 
   doppler.egress_buffer_size:
     description: "The buffer size for egress traffic for the v1 loggregator"
