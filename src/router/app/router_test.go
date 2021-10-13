@@ -31,6 +31,10 @@ var _ = Describe("Router", func() {
 		spyAgent = newSpyAgent("localhost:0")
 		router = app.NewRouter(
 			grpcConfig,
+			app.WithBufferSizes(
+				10000,
+				1000,
+			),
 			app.WithMetricReporting(
 				app.Agent{
 					GRPCAddress: spyAgent.addr,
