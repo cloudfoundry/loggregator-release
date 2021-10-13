@@ -322,6 +322,7 @@ func dopplerSetup(
 		subscriptionsMetric,
 		batchInterval,
 		100,
+		1000,
 	)
 
 	listener := startGRPCServer(manager)

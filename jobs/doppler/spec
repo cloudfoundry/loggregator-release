@@ -51,6 +51,14 @@ properties:
     description: "The pprof port for runtime profiling data"
     default: 0
 
+  doppler.ingress_buffer_size:
+    description: "The buffer size for ingress traffic for the v1 loggregator"
+    default: 10000
+
+  doppler.egress_buffer_size:
+    description: "The buffer size for egress traffic for the v1 loggregator"
+    default: 1000
+
   metron_endpoint.host:
     description: "The host used to emit messages to the Metron agent"
     default: "127.0.0.1"
