@@ -24,14 +24,15 @@ func BuildRouterConfig(agentUDPPort, agentGRPCPort int) app.Config {
 		Agent: app.Agent{
 			GRPCAddress: fmt.Sprintf("127.0.0.1:%d", agentGRPCPort),
 		},
-
+		IngressBufferSize:               10000,
+		EgressBufferSize:                1000,
 		MetricBatchIntervalMilliseconds: 10,
 	}
 }
 
 type RouterPorts struct {
-	GRPC   int
-	PProf  int
+	GRPC  int
+	PProf int
 }
 
 func StartRouter(conf app.Config) (cleanup func(), rp RouterPorts) {
