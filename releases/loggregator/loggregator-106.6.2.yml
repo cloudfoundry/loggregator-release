@@ -1,0 +1,72 @@
+name: loggregator
+version: 106.6.2
+commit_hash: 02ecbd51
+uncommitted_changes: false
+jobs:
+- name: doppler
+  version: b940295d59aa194bb921e41d4f9c0a2c382117baf7e080a74270e93d6b9c67fe
+  fingerprint: b940295d59aa194bb921e41d4f9c0a2c382117baf7e080a74270e93d6b9c67fe
+  sha1: sha256:b1834ec5f999e95b45a88ba174e35d993f83136c67517ecdf03306775a6f4061
+  packages:
+  - doppler
+  - profiler
+- name: loggregator_trafficcontroller
+  version: 356743da09ce8692ef4dd8398841665f511b67a64a63c8cd6d6f13c71cf0d52c
+  fingerprint: 356743da09ce8692ef4dd8398841665f511b67a64a63c8cd6d6f13c71cf0d52c
+  sha1: sha256:535133974c23dbcd5464536594fef285e4b93b0840a389aadfd441b191f9e8a9
+  packages:
+  - loggregator_trafficcontroller
+  - profiler
+- name: reverse_log_proxy
+  version: ecc85b5201ce9961d73c4e46c23900148f0f26da9f9441fc7f9bfe2930a2917b
+  fingerprint: ecc85b5201ce9961d73c4e46c23900148f0f26da9f9441fc7f9bfe2930a2917b
+  sha1: sha256:83803e79cd9267abf63b452bf807358082dc4ad3e0e2f53880ba318dd32f7f07
+  packages:
+  - reverse_log_proxy
+  - profiler
+- name: reverse_log_proxy_gateway
+  version: a60ace6040fef22dde27a3e24d5e9092aeaeba866dec61af40d04cfb850b71bd
+  fingerprint: a60ace6040fef22dde27a3e24d5e9092aeaeba866dec61af40d04cfb850b71bd
+  sha1: sha256:8abea7db92260c526dcc4e82a8345fc794a1997857b0c1e491f2f8091d03ffd8
+  packages:
+  - reverse_log_proxy_gateway
+  - profiler
+packages:
+- name: doppler
+  version: 27c517eaceb4679ed27f75b72b438242af74c639bf28f77112ee14580d221d57
+  fingerprint: 27c517eaceb4679ed27f75b72b438242af74c639bf28f77112ee14580d221d57
+  sha1: sha256:eb2b3dec4729000538734423fefd71445130183f5369be61a0fe1b67c29fee77
+  dependencies:
+  - golang-1-linux
+- name: golang-1-linux
+  version: 1a6489b2b33f55547b95cc524b932a0cfffb11a8f6c24479fe102d3494a4f030
+  fingerprint: 1a6489b2b33f55547b95cc524b932a0cfffb11a8f6c24479fe102d3494a4f030
+  sha1: sha256:71564abd4cc3f51bb236f063de4b7e36a2e52c1922c454331dd2f64939ea0e93
+  dependencies: []
+- name: loggregator_trafficcontroller
+  version: c2a51675867c3ef65b58d943c13296138d432ce09bf6c177de6ae63765d6e252
+  fingerprint: c2a51675867c3ef65b58d943c13296138d432ce09bf6c177de6ae63765d6e252
+  sha1: sha256:a5a8b301f85e3290e4f6a5af33dd66c6f6d953ec530bcac462051c4c238f4988
+  dependencies:
+  - golang-1-linux
+- name: profiler
+  version: 9a759dd6cf6f5675d942bc275df73fecfe4f426162aeaaa102164b276da8aac9
+  fingerprint: 9a759dd6cf6f5675d942bc275df73fecfe4f426162aeaaa102164b276da8aac9
+  sha1: sha256:5a186c97b75a37c72e76b127b39363eaaf8f2d3095cecb3b4738860d57eeabb3
+  dependencies: []
+- name: reverse_log_proxy
+  version: 7c8ec86cee25a3c0842b37a13e68b80ba2e33bc0e86ff2fe7266a6d410665488
+  fingerprint: 7c8ec86cee25a3c0842b37a13e68b80ba2e33bc0e86ff2fe7266a6d410665488
+  sha1: sha256:76d4021048845f9358a94f170759fc391092b84e93c8ab35013b8b70fc40d2f3
+  dependencies:
+  - golang-1-linux
+- name: reverse_log_proxy_gateway
+  version: b67b12f5a8adabbeaea9e19e1ec4b48e389a8a3e41f075faa8baaf3f3ffb2e1f
+  fingerprint: b67b12f5a8adabbeaea9e19e1ec4b48e389a8a3e41f075faa8baaf3f3ffb2e1f
+  sha1: sha256:290d534848224f50fcfb9ed40685ab1f444751502b62faba1afe9fb8252a5e02
+  dependencies:
+  - golang-1-linux
+license:
+  version: 0fcb1c4b68b314bd22e85081118f99015fb4eeb55d56c642785f32197cbc7c14
+  fingerprint: 0fcb1c4b68b314bd22e85081118f99015fb4eeb55d56c642785f32197cbc7c14
+  sha1: sha256:ace9e683654015ae3434094b9925c54afe40e571583eddd1f27668f3910eab8b
