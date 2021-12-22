@@ -23,7 +23,6 @@ processes:
       RLP_CIPHER_SUITES: "<%= p('loggregator.tls.cipher_suites').gsub(":", ",") %>"
       RLP_PPROF_PORT: "<%= p('reverse_log_proxy.pprof.port') %>"
       RLP_METRIC_EMITTER_INTERVAL: "<%= p('metric_emitter.interval') %>"
-      GODEBUG: "x509ignoreCN=0"
       USE_RFC339: "<%= p("logging.format.timestamp") == "rfc3339" %>"
 
       ROUTER_ADDRS: "<%= ingress_addrs.join(",") %>"

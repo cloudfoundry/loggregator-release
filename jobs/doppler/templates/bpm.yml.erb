@@ -9,7 +9,6 @@ processes:
       ROUTER_KEY_FILE: "/var/vcap/jobs/doppler/config/certs/doppler.key"
       ROUTER_CA_FILE: "/var/vcap/jobs/doppler/config/certs/loggregator_ca.crt"
       ROUTER_CIPHER_SUITES: "<%=  p("loggregator.tls.cipher_suites").split(":").join(',') %>"
-      GODEBUG: "x509ignoreCN=0"
       USE_RFC339: "<%= p("logging.format.timestamp") == "rfc3339" %>"
       ROUTER_PPROF_PORT: "<%=  p("doppler.pprof_port") %>"
       INGRESS_BUFFER_SIZE: "<%=  p("doppler.ingress_buffer_size") %>"
