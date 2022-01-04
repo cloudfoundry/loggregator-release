@@ -1,0 +1,7 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    open-pull-requests-limit: 100
+    directory: "src"
+    schedule:
+      interval: "daily"
