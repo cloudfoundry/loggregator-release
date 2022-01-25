@@ -1,7 +1,7 @@
-# Cloud Native Logging [![slack.cloudfoundry.org][slack-badge]][loggregator-slack] [![CI Badge][ci-badge]][ci-pipeline]
+# Loggregator Release [![slack.cloudfoundry.org][slack-badge]][loggregator-slack]
 
 Loggregator is a [BOSH][bosh] release deployed as a part of
-[cf-release][cf-release]. Loggregator provides
+[cf-deployment][cf-deployment]. Loggregator provides
 a highly-available (HA) and secure stream of logs and metrics for all
 applications and components on Cloud Foundry. It does so while not disrupting
 the behavior of the the applications and components on the platform (i.e.
@@ -9,6 +9,8 @@ the behavior of the the applications and components on the platform (i.e.
 
 The [Loggregator Design Notes](docs/loggregator-design.md) presents an
 overview of Loggregator components and architecture.
+
+## Table of Contents
 
 * [Generating TLS Certificates](#generating-tls-certificates)
 * [Streaming Application Logs](#streaming-application-logs)
@@ -21,16 +23,13 @@ overview of Loggregator components and architecture.
   * [Metrics](#metrics)
 * [Emitting Logs and Metrics into Loggregator](#emitting-logs-and-metrics-into-loggregator)
   * [Loggregator API](#loggregator-api)
-  * [Including Metron](#including-metron)
+  * [Loggregator Agents](#loggregator-agents)
   * [Statsd-injector](#statsd-injector)
   * [Syslog-release](#syslog-release)
 * [Tools for Testing and Monitoring Loggregator](#tools-for-testing-and-monitoring-loggregator)
-  * [Tools](#tools)
-  * [Operator Guidebook](#operator-guidebook)
 * [Troubleshooting Reliability](#troubleshooting-reliability)
   * [Scaling](#scaling)
   * [Noise](#noise)
-* [More Resources and Documentation](#more-resources-and-documentation)
 
 ## Generating TLS Certificates
 
@@ -59,13 +58,10 @@ the [Cloud Foundry docs][cf-docs] for more details.
 
 ### Log Ordering
 
-Loggregator does not provide any guaruntees around the order of delivery
+Loggregator does not provide any guarantees around the order of delivery
 of logs in streams. That said, there is enough precision in the timestamp provided
 by diego that streaming clients can batch and order streams as they receive them.
 This is done by the cf cli and most other streaming clients.
-
-For syslog ingestion it also possible to ensure log order. See the details in [cf-syslog-drain-release](https://github.com/cloudfoundry/cf-syslog-drain-release/blob/develop/README.md#log-ordering)
-
 
 ## Consuming the Firehose
 
@@ -99,14 +95,15 @@ For components of Cloud Foundry or standalone BOSH deployments, Loggregator
 provides a set of tools for emitting Logs and Metrics.
 
 ## Reverse Log Proxy (RLP)
+
 The RLP is the v2 implementation of the [Loggregator API][api-readme]. This
 component is intended to be a replacement for traffic controller.
 
 ### RLP Gateway
+
 By default, the RLP communicates with clients via gRPC over mutual TLS. To enable HTTP access to the Reverse Log
 Proxy, deploy the RLP Gateway. The RLP Gateway API is documented
-[in the Loggregatgor repository][loggregator]
-
+[in the Loggregator repository][loggregator].
 
 ## Standalone Loggregator
 
@@ -133,43 +130,34 @@ Protocol][dropsonde-protocol]. Loggregator API defines an envelope structure
 which packages logs and metrics in a common format for distribution throughout
 Loggregator. See the [Loggregator API README][api-readme] for more details.
 
-### Including Metron
+### Loggregator Agents
 
-The Metron Agent listens on both UDP and gRPC endpoints for multiple versions
-of Loggregator API which it forwards onto the Firehose. To include Metron in
-your component or deployment see the [Setting up up Metron
-README](docs/metron.md).
+Loggregator Agents receive logs and metrics on VMs, and forward them onto the
+Firehose. For more info see the [loggregator-agent release][loggregator-agent-release].
 
 ### Statsd-injector
 
-The statsd-injector is a companion component to Metron and allows use of the
-[statsd metric aggregator format][statsd-format]. For more see the
+The statsd-injector receives metrics from components in the
+[statsd metric aggregator format][statsd-format]. For more info see the
 [statsd-injector README][statsd-injector-readme].
 
 ### Syslog Release
 
 For some components (such as UAA) it makes sense to route logs separate from
-the Firehose. The syslog release using rsyslog to accomplish this. For more
-information see the [syslog-release README][syslog-release-readme] (note this
-release is maintianed by the bosh team).
+the Firehose. The syslog release uses rsyslog to accomplish this. For more
+information see the [syslog-release README][syslog-release-readme].
 
 ## Tools for Testing and Monitoring Loggregator
-
-### Tools
 
 Loggregator provides a set of tools for testing the
 performance and reliability of your loggregator installation.
 See the [loggregator tools](http://code.cloudfoundry.org/loggregator-tools)
 repo for more details.
 
-### Operator Guidebook
-The [Loggregator Operator Guidebook](./docs/Loggregator%20Operator%20Guide.pdf) provides details for scaling
-and managing Loggregator along with detailed results of capacity
-planning tests.
-
 ## Troubleshooting Reliability
 
 ### Scaling
+
 In addition to the scaling recommendations above, it is important that
 the resources for Loggregator are dedicate VM’s with similar footprints
 to those used in our capacity tests. Even if you are within the bounds of
@@ -177,6 +165,7 @@ the scaling recommendations it may be useful to scale Loggregator and
 Nozzle components aggressively to rule out scaling as a major cause log loss.
 
 ### Noise
+
 Another common reason for log loss is due to an application producing a
 large amount of logs that drown out the logs from other application on
 the cell it is running on. To identify and monitor for this behavior the
@@ -185,36 +174,18 @@ tool will help operators quickly identify and take action on noise
 producing applications.  Instruction for deploying and using this nozzle
 are in the repo.
 
-## More Resources and Documentation
-
-### Roadmap
-
-We communicate our long term planning using a [Product Road Map](https://github.com/cloudfoundry/loggregator-release/projects/1),
-and are always looking to gather feedback and input from Loggregator
-operators. Get in touch or file an issue if you have feature suggestions you'd
-like to see added.
-
-### Pivotal Tracker
-
-Items marked as "In Flight" on the Roadmap are tracked as new Features in
-[Pivotal Tracker][loggregator-tracker].
-
-[slack-badge]:              https://slack.cloudfoundry.org/badge.svg
-[loggregator-slack]:        https://cloudfoundry.slack.com/archives/loggregator
-[bosh]:                     https://bosh.io/
-[cf-release]:               https://github.com/cloudfoundry/cf-release
-[uaa]:                      https://github.com/cloudfoundry/uaa
-[cli]:                      https://github.com/cloudfoundry/cli
-[loggregator]:              https://code.cloudfoundry.org/loggregator
-[cli-docs]:                 https://cli.cloudfoundry.org/en-US/cf/logs.html
-[cf-docs]:                  https://docs.cloudfoundry.org/devguide/services/log-management.html
-[dropsonde-protocol]:       https://github.com/cloudfoundry/dropsonde-protocol
-[api-readme]:               https://github.com/cloudfoundry/loggregator-api/blob/master/README.md
-[statsd-format]:            https://codeascraft.com/2011/02/15/measure-anything-measure-everything/
-[statsd-inejctor-readme]:   https://github.com/cloudfoundry/statsd-injector/blob/master/README.md
-[syslog-release-readme]:    https://github.com/cloudfoundry/syslog-release/blob/master/README.md
-[health-nozzle-proposal]:   https://docs.google.com/document/d/1rqlSDssaNk7B9TUmHhjUsn1-FeUNX8odslc-T_3ixck/edit
-[road-map]:                 https://docs.google.com/spreadsheets/d/1bM1bInPQeC2xLayLsFb0aBuD3_HFNfJj9mEJZygnuWo/edit#gid=0
-[loggregator-tracker]:      https://www.pivotaltracker.com/n/projects/993188
-[ci-badge]:                 https://loggregator.ci.cf-app.com/api/v1/pipelines/loggregator/jobs/loggregator-tests/badge
-[ci-pipeline]:              https://loggregator.ci.cf-app.com/teams/main/pipelines/loggregator
+[slack-badge]:               https://slack.cloudfoundry.org/badge.svg
+[loggregator-slack]:         https://cloudfoundry.slack.com/archives/CUW93AF3M
+[bosh]:                      https://bosh.io/
+[cf-deployment]:             https://github.com/cloudfoundry/cf-deployment
+[uaa]:                       https://github.com/cloudfoundry/uaa
+[cli]:                       https://github.com/cloudfoundry/cli
+[loggregator]:               https://code.cloudfoundry.org/loggregator
+[cli-docs]:                  https://cli.cloudfoundry.org/en-US/cf/logs.html
+[cf-docs]:                   https://docs.cloudfoundry.org/devguide/services/log-management.html
+[dropsonde-protocol]:        https://github.com/cloudfoundry/dropsonde-protocol
+[api-readme]:                https://github.com/cloudfoundry/loggregator-api/blob/master/README.md
+[statsd-format]:             https://codeascraft.com/2011/02/15/measure-anything-measure-everything/
+[statsd-injector-readme]:    https://github.com/cloudfoundry/statsd-injector/blob/master/README.md
+[syslog-release-readme]:     https://github.com/cloudfoundry/syslog-release/blob/master/README.md
+[loggregator-agent-release]: https://github.com/cloudfoundry/loggregator-agent-release
