@@ -11,7 +11,16 @@ on:
     - v105.6.x
     - v106.3.x
 jobs:
-  lint-and-test:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+      - run: go test -v -race ./...
+        working-directory: src
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -19,6 +28,4 @@ jobs:
         with:
           go-version: 1.17
       - run: go vet ./...
-        working-directory: src
-      - run: go test -v -race ./...
         working-directory: src
