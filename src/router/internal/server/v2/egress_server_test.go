@@ -236,7 +236,7 @@ var _ = Describe("EgressServer", func() {
 
 			Eventually(
 				egressDropped.GetDelta,
-				20).Should(BeNumerically(">", 1))
+				40).Should(BeNumerically(">", 1))
 		})
 	})
 })
