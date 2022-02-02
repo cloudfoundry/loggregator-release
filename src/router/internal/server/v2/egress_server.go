@@ -28,7 +28,7 @@ type DataSetter interface {
 type EgressServer struct {
 	subscriber          Subscriber
 	egressMetric        *metricemitter.Counter
-	droppedMetric		*metricemitter.Counter
+	droppedMetric       *metricemitter.Counter
 	subscriptionsMetric *metricemitter.Gauge
 	batchInterval       time.Duration
 	batchSize           uint
@@ -52,7 +52,7 @@ func NewEgressServer(
 	return &EgressServer{
 		subscriber:          s,
 		egressMetric:        egressMetric,
-		droppedMetric: 		 droppedMetric,
+		droppedMetric:       droppedMetric,
 		subscriptionsMetric: subscriptionsMetric,
 		batchInterval:       batchInterval,
 		batchSize:           batchSize,
@@ -80,9 +80,12 @@ func (s *EgressServer) BatchedReceiver(
 	s.subscriptionsMetric.Increment(1.0)
 	defer s.subscriptionsMetric.Decrement(1.0)
 
-	d := diodes.NewOneToOneWaiterEnvelopeV2(1000, gendiode.AlertFunc(func(missed int) {
-		log.Printf("Dropped %d envelopes (v2 buffer) ShardID: %s", missed, req.ShardId)
-		s.Alert(missed)}),
+	d := diodes.NewOneToOneWaiterEnvelopeV2(
+		1000,
+		gendiode.AlertFunc(func(missed int) {
+			log.Printf("Dropped %d envelopes (v2 buffer) ShardID: %s", missed, req.ShardId)
+			s.Alert(missed)
+		}),
 		gendiode.WithWaiterContext(sender.Context()),
 	)
 	cancel := s.subscriber.Subscribe(req, d)
