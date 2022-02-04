@@ -261,8 +261,6 @@ func (s *Server) BatchedReceiver(r *loggregator_v2.EgressBatchRequest, srv loggr
 			timer.Reset(resetDuration)
 		}
 	}
-
-	return nil
 }
 
 // convergeSelectors takes in any LegacySelector on the request as well as

@@ -75,7 +75,7 @@ var _ = Describe("IngestorServer", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		someEnvelope, data := buildContainerMetric()
-		err = pusherClient.Send(&plumbing.EnvelopeData{data})
+		err = pusherClient.Send(&plumbing.EnvelopeData{Payload: data})
 		Expect(err).ToNot(HaveOccurred())
 
 		f := func() *events.Envelope {
@@ -95,7 +95,7 @@ var _ = Describe("IngestorServer", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		someEnvelope, data := buildContainerMetric()
-		pusherClient.Send(&plumbing.EnvelopeData{data})
+		pusherClient.Send(&plumbing.EnvelopeData{Payload: data})
 
 		v2e := conversion.ToV2(someEnvelope, true)
 		Eventually(v2Buf.Next).Should(Equal(v2e))
@@ -106,14 +106,14 @@ var _ = Describe("IngestorServer", func() {
 			pusherClient, err := dopplerClient.Pusher(context.TODO())
 			Expect(err).ToNot(HaveOccurred())
 
-			err = pusherClient.Send(&plumbing.EnvelopeData{[]byte("unsupported envelope")})
+			err = pusherClient.Send(&plumbing.EnvelopeData{Payload: []byte("unsupported envelope")})
 			Expect(err).ToNot(HaveOccurred())
 			Consistently(func() bool {
 				_, ok := v1Buf.TryNext()
 				return ok
 			}).Should(BeFalse())
 
-			err = pusherClient.Send(&plumbing.EnvelopeData{nil})
+			err = pusherClient.Send(&plumbing.EnvelopeData{})
 			Expect(err).ToNot(HaveOccurred())
 			Consistently(func() bool {
 				_, ok := v1Buf.TryNext()

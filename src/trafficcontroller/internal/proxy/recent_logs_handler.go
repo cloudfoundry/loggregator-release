@@ -91,8 +91,7 @@ func (h *RecentLogsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	appID := mux.Vars(r)["appID"]
 
-	ctx, cancel := context.WithCancel(context.Background())
-	ctx, _ = context.WithDeadline(ctx, time.Now().Add(h.timeout))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(h.timeout))
 	defer cancel()
 
 	limit, ok := limitFrom(r)

@@ -29,7 +29,7 @@ func TestMain(m *testing.M) {
 	for i := 0; i < numOfSubs; i++ {
 		r.Register(&plumbing.SubscriptionRequest{Filter: &plumbing.Filter{
 			AppID:   fmt.Sprintf("%d", i%20000),
-			Message: &plumbing.Filter_Log{&plumbing.LogFilter{}},
+			Message: &plumbing.Filter_Log{Log: &plumbing.LogFilter{}},
 		}}, setter)
 	}
 
