@@ -160,7 +160,7 @@ func (t *TrafficController) Start() {
 	go t.startServer(dopplerHandler)
 	go profiler.New(t.conf.PProfPort).Start()
 
-	killChan := make(chan os.Signal)
+	killChan := make(chan os.Signal, 1)
 	signal.Notify(killChan, os.Interrupt)
 	<-killChan
 	log.Print("Shutting down")
