@@ -28,7 +28,7 @@ func easyjson692db02bDecodeGithubComCloudfoundrySondeGoEvents(in *jlexer.Lexer, 
 	}
 	in.Delim('{')
 	for !in.IsDelim('}') {
-		key := in.UnsafeString()
+		key := in.UnsafeFieldName(false)
 		in.WantColon()
 		if in.IsNull() {
 			in.Skip()
@@ -81,40 +81,30 @@ func easyjson692db02bEncodeGithubComCloudfoundrySondeGoEvents(out *jwriter.Write
 	first := true
 	_ = first
 	if in.Name != nil {
-		if !first {
-			out.RawByte(',')
-		}
+		const prefix string = ",\"name\":"
 		first = false
-		out.RawString("\"name\":")
-		if in.Name == nil {
-			out.RawString("null")
-		} else {
-			out.String(string(*in.Name))
-		}
+		out.RawString(prefix[1:])
+		out.String(string(*in.Name))
 	}
 	if in.Value != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"value\":")
-		if in.Value == nil {
-			out.RawString("null")
+		const prefix string = ",\"value\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Float64(float64(*in.Value))
+			out.RawString(prefix)
 		}
+		out.Float64(float64(*in.Value))
 	}
 	if in.Unit != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"unit\":")
-		if in.Unit == nil {
-			out.RawString("null")
+		const prefix string = ",\"unit\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.String(string(*in.Unit))
+			out.RawString(prefix)
 		}
+		out.String(string(*in.Unit))
 	}
 	out.RawByte('}')
 }
@@ -139,7 +129,7 @@ func easyjson692db02bDecodeGithubComCloudfoundrySondeGoEvents1(in *jlexer.Lexer,
 	}
 	in.Delim('{')
 	for !in.IsDelim('}') {
-		key := in.UnsafeString()
+		key := in.UnsafeFieldName(false)
 		in.WantColon()
 		if in.IsNull() {
 			in.Skip()
@@ -182,28 +172,20 @@ func easyjson692db02bEncodeGithubComCloudfoundrySondeGoEvents1(out *jwriter.Writ
 	first := true
 	_ = first
 	if in.Low != nil {
-		if !first {
-			out.RawByte(',')
-		}
+		const prefix string = ",\"low\":"
 		first = false
-		out.RawString("\"low\":")
-		if in.Low == nil {
-			out.RawString("null")
-		} else {
-			out.Uint64(uint64(*in.Low))
-		}
+		out.RawString(prefix[1:])
+		out.Uint64(uint64(*in.Low))
 	}
 	if in.High != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"high\":")
-		if in.High == nil {
-			out.RawString("null")
+		const prefix string = ",\"high\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Uint64(uint64(*in.High))
+			out.RawString(prefix)
 		}
+		out.Uint64(uint64(*in.High))
 	}
 	out.RawByte('}')
 }
@@ -228,7 +210,7 @@ func easyjson692db02bDecodeGithubComCloudfoundrySondeGoEvents2(in *jlexer.Lexer,
 	}
 	in.Delim('{')
 	for !in.IsDelim('}') {
-		key := in.UnsafeString()
+		key := in.UnsafeFieldName(false)
 		in.WantColon()
 		if in.IsNull() {
 			in.Skip()
@@ -310,72 +292,60 @@ func easyjson692db02bEncodeGithubComCloudfoundrySondeGoEvents2(out *jwriter.Writ
 	first := true
 	_ = first
 	if len(in.Message) != 0 {
-		if !first {
-			out.RawByte(',')
-		}
+		const prefix string = ",\"message\":"
 		first = false
-		out.RawString("\"message\":")
+		out.RawString(prefix[1:])
 		out.Base64Bytes(in.Message)
 	}
 	if in.MessageType != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"message_type\":")
-		if in.MessageType == nil {
-			out.RawString("null")
+		const prefix string = ",\"message_type\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Int32(int32(*in.MessageType))
+			out.RawString(prefix)
 		}
+		out.Int32(int32(*in.MessageType))
 	}
 	if in.Timestamp != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"timestamp\":")
-		if in.Timestamp == nil {
-			out.RawString("null")
+		const prefix string = ",\"timestamp\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Int64(int64(*in.Timestamp))
+			out.RawString(prefix)
 		}
+		out.Int64(int64(*in.Timestamp))
 	}
 	if in.AppId != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"app_id\":")
-		if in.AppId == nil {
-			out.RawString("null")
+		const prefix string = ",\"app_id\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.String(string(*in.AppId))
+			out.RawString(prefix)
 		}
+		out.String(string(*in.AppId))
 	}
 	if in.SourceType != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"source_type\":")
-		if in.SourceType == nil {
-			out.RawString("null")
+		const prefix string = ",\"source_type\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.String(string(*in.SourceType))
+			out.RawString(prefix)
 		}
+		out.String(string(*in.SourceType))
 	}
 	if in.SourceInstance != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"source_instance\":")
-		if in.SourceInstance == nil {
-			out.RawString("null")
+		const prefix string = ",\"source_instance\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.String(string(*in.SourceInstance))
+			out.RawString(prefix)
 		}
+		out.String(string(*in.SourceInstance))
 	}
 	out.RawByte('}')
 }
@@ -400,7 +370,7 @@ func easyjson692db02bDecodeGithubComCloudfoundrySondeGoEvents3(in *jlexer.Lexer,
 	}
 	in.Delim('{')
 	for !in.IsDelim('}') {
-		key := in.UnsafeString()
+		key := in.UnsafeFieldName(false)
 		in.WantColon()
 		if in.IsNull() {
 			in.Skip()
@@ -580,170 +550,140 @@ func easyjson692db02bEncodeGithubComCloudfoundrySondeGoEvents3(out *jwriter.Writ
 	first := true
 	_ = first
 	if in.StartTimestamp != nil {
-		if !first {
-			out.RawByte(',')
-		}
+		const prefix string = ",\"startTimestamp\":"
 		first = false
-		out.RawString("\"startTimestamp\":")
-		if in.StartTimestamp == nil {
-			out.RawString("null")
-		} else {
-			out.Int64(int64(*in.StartTimestamp))
-		}
+		out.RawString(prefix[1:])
+		out.Int64(int64(*in.StartTimestamp))
 	}
 	if in.StopTimestamp != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"stopTimestamp\":")
-		if in.StopTimestamp == nil {
-			out.RawString("null")
+		const prefix string = ",\"stopTimestamp\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Int64(int64(*in.StopTimestamp))
+			out.RawString(prefix)
 		}
+		out.Int64(int64(*in.StopTimestamp))
 	}
 	if in.RequestId != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"requestId\":")
-		if in.RequestId == nil {
-			out.RawString("null")
+		const prefix string = ",\"requestId\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			(*in.RequestId).MarshalEasyJSON(out)
+			out.RawString(prefix)
 		}
+		(*in.RequestId).MarshalEasyJSON(out)
 	}
 	if in.PeerType != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"peerType\":")
-		if in.PeerType == nil {
-			out.RawString("null")
+		const prefix string = ",\"peerType\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Int32(int32(*in.PeerType))
+			out.RawString(prefix)
 		}
+		out.Int32(int32(*in.PeerType))
 	}
 	if in.Method != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"method\":")
-		if in.Method == nil {
-			out.RawString("null")
+		const prefix string = ",\"method\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Int32(int32(*in.Method))
+			out.RawString(prefix)
 		}
+		out.Int32(int32(*in.Method))
 	}
 	if in.Uri != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"uri\":")
-		if in.Uri == nil {
-			out.RawString("null")
+		const prefix string = ",\"uri\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.String(string(*in.Uri))
+			out.RawString(prefix)
 		}
+		out.String(string(*in.Uri))
 	}
 	if in.RemoteAddress != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"remoteAddress\":")
-		if in.RemoteAddress == nil {
-			out.RawString("null")
+		const prefix string = ",\"remoteAddress\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.String(string(*in.RemoteAddress))
+			out.RawString(prefix)
 		}
+		out.String(string(*in.RemoteAddress))
 	}
 	if in.UserAgent != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"userAgent\":")
-		if in.UserAgent == nil {
-			out.RawString("null")
+		const prefix string = ",\"userAgent\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.String(string(*in.UserAgent))
+			out.RawString(prefix)
 		}
+		out.String(string(*in.UserAgent))
 	}
 	if in.StatusCode != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"statusCode\":")
-		if in.StatusCode == nil {
-			out.RawString("null")
+		const prefix string = ",\"statusCode\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Int32(int32(*in.StatusCode))
+			out.RawString(prefix)
 		}
+		out.Int32(int32(*in.StatusCode))
 	}
 	if in.ContentLength != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"contentLength\":")
-		if in.ContentLength == nil {
-			out.RawString("null")
+		const prefix string = ",\"contentLength\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Int64(int64(*in.ContentLength))
+			out.RawString(prefix)
 		}
+		out.Int64(int64(*in.ContentLength))
 	}
 	if in.ApplicationId != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"applicationId\":")
-		if in.ApplicationId == nil {
-			out.RawString("null")
+		const prefix string = ",\"applicationId\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			(*in.ApplicationId).MarshalEasyJSON(out)
+			out.RawString(prefix)
 		}
+		(*in.ApplicationId).MarshalEasyJSON(out)
 	}
 	if in.InstanceIndex != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"instanceIndex\":")
-		if in.InstanceIndex == nil {
-			out.RawString("null")
+		const prefix string = ",\"instanceIndex\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Int32(int32(*in.InstanceIndex))
+			out.RawString(prefix)
 		}
+		out.Int32(int32(*in.InstanceIndex))
 	}
 	if in.InstanceId != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"instanceId\":")
-		if in.InstanceId == nil {
-			out.RawString("null")
+		const prefix string = ",\"instanceId\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.String(string(*in.InstanceId))
+			out.RawString(prefix)
 		}
+		out.String(string(*in.InstanceId))
 	}
 	if len(in.Forwarded) != 0 {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"forwarded\":")
-		if in.Forwarded == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
-			out.RawString("null")
+		const prefix string = ",\"forwarded\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
+			out.RawString(prefix)
+		}
+		{
 			out.RawByte('[')
 			for v5, v6 := range in.Forwarded {
 				if v5 > 0 {
@@ -777,7 +717,7 @@ func easyjson692db02bDecodeGithubComCloudfoundrySondeGoEvents4(in *jlexer.Lexer,
 	}
 	in.Delim('{')
 	for !in.IsDelim('}') {
-		key := in.UnsafeString()
+		key := in.UnsafeFieldName(false)
 		in.WantColon()
 		if in.IsNull() {
 			in.Skip()
@@ -830,40 +770,30 @@ func easyjson692db02bEncodeGithubComCloudfoundrySondeGoEvents4(out *jwriter.Writ
 	first := true
 	_ = first
 	if in.Source != nil {
-		if !first {
-			out.RawByte(',')
-		}
+		const prefix string = ",\"source\":"
 		first = false
-		out.RawString("\"source\":")
-		if in.Source == nil {
-			out.RawString("null")
-		} else {
-			out.String(string(*in.Source))
-		}
+		out.RawString(prefix[1:])
+		out.String(string(*in.Source))
 	}
 	if in.Code != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"code\":")
-		if in.Code == nil {
-			out.RawString("null")
+		const prefix string = ",\"code\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Int32(int32(*in.Code))
+			out.RawString(prefix)
 		}
+		out.Int32(int32(*in.Code))
 	}
 	if in.Message != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"message\":")
-		if in.Message == nil {
-			out.RawString("null")
+		const prefix string = ",\"message\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.String(string(*in.Message))
+			out.RawString(prefix)
 		}
+		out.String(string(*in.Message))
 	}
 	out.RawByte('}')
 }
@@ -888,7 +818,7 @@ func easyjson692db02bDecodeGithubComCloudfoundrySondeGoEvents5(in *jlexer.Lexer,
 	}
 	in.Delim('{')
 	for !in.IsDelim('}') {
-		key := in.UnsafeString()
+		key := in.UnsafeFieldName(false)
 		in.WantColon()
 		if in.IsNull() {
 			in.Skip()
@@ -1063,105 +993,88 @@ func easyjson692db02bEncodeGithubComCloudfoundrySondeGoEvents5(out *jwriter.Writ
 	first := true
 	_ = first
 	if in.Origin != nil {
-		if !first {
-			out.RawByte(',')
-		}
+		const prefix string = ",\"origin\":"
 		first = false
-		out.RawString("\"origin\":")
-		if in.Origin == nil {
-			out.RawString("null")
-		} else {
-			out.String(string(*in.Origin))
-		}
+		out.RawString(prefix[1:])
+		out.String(string(*in.Origin))
 	}
 	if in.EventType != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"eventType\":")
-		if in.EventType == nil {
-			out.RawString("null")
+		const prefix string = ",\"eventType\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Int32(int32(*in.EventType))
+			out.RawString(prefix)
 		}
+		out.Int32(int32(*in.EventType))
 	}
 	if in.Timestamp != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"timestamp\":")
-		if in.Timestamp == nil {
-			out.RawString("null")
+		const prefix string = ",\"timestamp\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Int64(int64(*in.Timestamp))
+			out.RawString(prefix)
 		}
+		out.Int64(int64(*in.Timestamp))
 	}
 	if in.Deployment != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"deployment\":")
-		if in.Deployment == nil {
-			out.RawString("null")
+		const prefix string = ",\"deployment\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.String(string(*in.Deployment))
+			out.RawString(prefix)
 		}
+		out.String(string(*in.Deployment))
 	}
 	if in.Job != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"job\":")
-		if in.Job == nil {
-			out.RawString("null")
+		const prefix string = ",\"job\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.String(string(*in.Job))
+			out.RawString(prefix)
 		}
+		out.String(string(*in.Job))
 	}
 	if in.Index != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"index\":")
-		if in.Index == nil {
-			out.RawString("null")
+		const prefix string = ",\"index\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.String(string(*in.Index))
+			out.RawString(prefix)
 		}
+		out.String(string(*in.Index))
 	}
 	if in.Ip != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"ip\":")
-		if in.Ip == nil {
-			out.RawString("null")
+		const prefix string = ",\"ip\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.String(string(*in.Ip))
+			out.RawString(prefix)
 		}
+		out.String(string(*in.Ip))
 	}
 	if len(in.Tags) != 0 {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"tags\":")
-		if in.Tags == nil && (out.Flags&jwriter.NilMapAsEmpty) == 0 {
-			out.RawString(`null`)
+		const prefix string = ",\"tags\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
+			out.RawString(prefix)
+		}
+		{
 			out.RawByte('{')
 			v8First := true
 			for v8Name, v8Value := range in.Tags {
-				if !v8First {
+				if v8First {
+					v8First = false
+				} else {
 					out.RawByte(',')
 				}
-				v8First = false
 				out.String(string(v8Name))
 				out.RawByte(':')
 				out.String(string(v8Value))
@@ -1170,76 +1083,64 @@ func easyjson692db02bEncodeGithubComCloudfoundrySondeGoEvents5(out *jwriter.Writ
 		}
 	}
 	if in.HttpStartStop != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"httpStartStop\":")
-		if in.HttpStartStop == nil {
-			out.RawString("null")
+		const prefix string = ",\"httpStartStop\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			(*in.HttpStartStop).MarshalEasyJSON(out)
+			out.RawString(prefix)
 		}
+		(*in.HttpStartStop).MarshalEasyJSON(out)
 	}
 	if in.LogMessage != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"logMessage\":")
-		if in.LogMessage == nil {
-			out.RawString("null")
+		const prefix string = ",\"logMessage\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			(*in.LogMessage).MarshalEasyJSON(out)
+			out.RawString(prefix)
 		}
+		(*in.LogMessage).MarshalEasyJSON(out)
 	}
 	if in.ValueMetric != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"valueMetric\":")
-		if in.ValueMetric == nil {
-			out.RawString("null")
+		const prefix string = ",\"valueMetric\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			(*in.ValueMetric).MarshalEasyJSON(out)
+			out.RawString(prefix)
 		}
+		(*in.ValueMetric).MarshalEasyJSON(out)
 	}
 	if in.CounterEvent != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"counterEvent\":")
-		if in.CounterEvent == nil {
-			out.RawString("null")
+		const prefix string = ",\"counterEvent\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			(*in.CounterEvent).MarshalEasyJSON(out)
+			out.RawString(prefix)
 		}
+		(*in.CounterEvent).MarshalEasyJSON(out)
 	}
 	if in.Error != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"error\":")
-		if in.Error == nil {
-			out.RawString("null")
+		const prefix string = ",\"error\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			(*in.Error).MarshalEasyJSON(out)
+			out.RawString(prefix)
 		}
+		(*in.Error).MarshalEasyJSON(out)
 	}
 	if in.ContainerMetric != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"containerMetric\":")
-		if in.ContainerMetric == nil {
-			out.RawString("null")
+		const prefix string = ",\"containerMetric\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			(*in.ContainerMetric).MarshalEasyJSON(out)
+			out.RawString(prefix)
 		}
+		(*in.ContainerMetric).MarshalEasyJSON(out)
 	}
 	out.RawByte('}')
 }
@@ -1264,7 +1165,7 @@ func easyjson692db02bDecodeGithubComCloudfoundrySondeGoEvents6(in *jlexer.Lexer,
 	}
 	in.Delim('{')
 	for !in.IsDelim('}') {
-		key := in.UnsafeString()
+		key := in.UnsafeFieldName(false)
 		in.WantColon()
 		if in.IsNull() {
 			in.Skip()
@@ -1317,40 +1218,30 @@ func easyjson692db02bEncodeGithubComCloudfoundrySondeGoEvents6(out *jwriter.Writ
 	first := true
 	_ = first
 	if in.Name != nil {
-		if !first {
-			out.RawByte(',')
-		}
+		const prefix string = ",\"name\":"
 		first = false
-		out.RawString("\"name\":")
-		if in.Name == nil {
-			out.RawString("null")
-		} else {
-			out.String(string(*in.Name))
-		}
+		out.RawString(prefix[1:])
+		out.String(string(*in.Name))
 	}
 	if in.Delta != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"delta\":")
-		if in.Delta == nil {
-			out.RawString("null")
+		const prefix string = ",\"delta\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Uint64(uint64(*in.Delta))
+			out.RawString(prefix)
 		}
+		out.Uint64(uint64(*in.Delta))
 	}
 	if in.Total != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"total\":")
-		if in.Total == nil {
-			out.RawString("null")
+		const prefix string = ",\"total\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Uint64(uint64(*in.Total))
+			out.RawString(prefix)
 		}
+		out.Uint64(uint64(*in.Total))
 	}
 	out.RawByte('}')
 }
@@ -1375,7 +1266,7 @@ func easyjson692db02bDecodeGithubComCloudfoundrySondeGoEvents7(in *jlexer.Lexer,
 	}
 	in.Delim('{')
 	for !in.IsDelim('}') {
-		key := in.UnsafeString()
+		key := in.UnsafeFieldName(false)
 		in.WantColon()
 		if in.IsNull() {
 			in.Skip()
@@ -1468,88 +1359,70 @@ func easyjson692db02bEncodeGithubComCloudfoundrySondeGoEvents7(out *jwriter.Writ
 	first := true
 	_ = first
 	if in.ApplicationId != nil {
-		if !first {
-			out.RawByte(',')
-		}
+		const prefix string = ",\"applicationId\":"
 		first = false
-		out.RawString("\"applicationId\":")
-		if in.ApplicationId == nil {
-			out.RawString("null")
-		} else {
-			out.String(string(*in.ApplicationId))
-		}
+		out.RawString(prefix[1:])
+		out.String(string(*in.ApplicationId))
 	}
 	if in.InstanceIndex != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"instanceIndex\":")
-		if in.InstanceIndex == nil {
-			out.RawString("null")
+		const prefix string = ",\"instanceIndex\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Int32(int32(*in.InstanceIndex))
+			out.RawString(prefix)
 		}
+		out.Int32(int32(*in.InstanceIndex))
 	}
 	if in.CpuPercentage != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"cpuPercentage\":")
-		if in.CpuPercentage == nil {
-			out.RawString("null")
+		const prefix string = ",\"cpuPercentage\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Float64(float64(*in.CpuPercentage))
+			out.RawString(prefix)
 		}
+		out.Float64(float64(*in.CpuPercentage))
 	}
 	if in.MemoryBytes != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"memoryBytes\":")
-		if in.MemoryBytes == nil {
-			out.RawString("null")
+		const prefix string = ",\"memoryBytes\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Uint64(uint64(*in.MemoryBytes))
+			out.RawString(prefix)
 		}
+		out.Uint64(uint64(*in.MemoryBytes))
 	}
 	if in.DiskBytes != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"diskBytes\":")
-		if in.DiskBytes == nil {
-			out.RawString("null")
+		const prefix string = ",\"diskBytes\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Uint64(uint64(*in.DiskBytes))
+			out.RawString(prefix)
 		}
+		out.Uint64(uint64(*in.DiskBytes))
 	}
 	if in.MemoryBytesQuota != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"memoryBytesQuota\":")
-		if in.MemoryBytesQuota == nil {
-			out.RawString("null")
+		const prefix string = ",\"memoryBytesQuota\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Uint64(uint64(*in.MemoryBytesQuota))
+			out.RawString(prefix)
 		}
+		out.Uint64(uint64(*in.MemoryBytesQuota))
 	}
 	if in.DiskBytesQuota != nil {
-		if !first {
-			out.RawByte(',')
-		}
-		first = false
-		out.RawString("\"diskBytesQuota\":")
-		if in.DiskBytesQuota == nil {
-			out.RawString("null")
+		const prefix string = ",\"diskBytesQuota\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
 		} else {
-			out.Uint64(uint64(*in.DiskBytesQuota))
+			out.RawString(prefix)
 		}
+		out.Uint64(uint64(*in.DiskBytesQuota))
 	}
 	out.RawByte('}')
 }
