@@ -14,10 +14,10 @@ require (
 	code.cloudfoundry.org/tlsconfig v0.0.0-20200131000646-bbe0f8da39b3
 	github.com/apoydence/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect; pinned
 	github.com/cloudfoundry/noaa v2.1.0+incompatible // pinned
-	github.com/cloudfoundry/sonde-go v0.0.0-20171206171820-b33733203bb4 // pinned
+	github.com/cloudfoundry/sonde-go v0.0.0-20220324234026-9851b3a0dce2 // pinned
 	github.com/elazarl/goproxy v0.0.0-20200426045556-49ad98f6dac1 // indirect
 	github.com/elazarl/goproxy/ext v0.0.0-20200426045556-49ad98f6dac1 // indirect
-	github.com/gogo/protobuf v1.3.1 // pinned
+	github.com/gogo/protobuf v1.3.2 // pinned
 	github.com/golang/protobuf v1.4.2 // pinned
 	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.4
@@ -25,14 +25,11 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway v1.14.6 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/mailru/easyjson v0.7.1 // indirect
 	github.com/onsi/ginkgo v1.13.0
 	github.com/onsi/gomega v1.10.1
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect; pinned
 	github.com/prometheus/client_golang v1.7.0
-	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
-	golang.org/x/sys v0.0.0-20200620081246-981b61492c35 // indirect
-	golang.org/x/text v0.3.3 // indirect
+	golang.org/x/net v0.0.0-20201021035429-f5854403a974
 	google.golang.org/genproto v0.0.0-20200620020550-bd6e04640131 // indirect
 	google.golang.org/grpc v1.29.1
 )
