@@ -21,6 +21,7 @@ func NewLogClient(creds credentials.TransportCredentials, logsProviderAddr strin
 	conn, err := grpc.Dial(logsProviderAddr,
 		grpc.WithTransportCredentials(creds),
 		grpc.WithBalancer(throughputlb.NewThroughputLoadBalancer(100, 20)),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(10*1024*1024)),
 		grpc.WithBlock(),
 	)
 	if err != nil {

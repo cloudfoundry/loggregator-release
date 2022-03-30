@@ -1,9 +1,10 @@
 package app
 
 import (
-	"code.cloudfoundry.org/tlsconfig"
 	"log"
 	"time"
+
+	"code.cloudfoundry.org/tlsconfig"
 
 	gendiodes "code.cloudfoundry.org/go-diodes"
 	"code.cloudfoundry.org/loggregator/diodes"
@@ -20,9 +21,9 @@ import (
 
 // Router routes envelopes from producers to any subscribers.
 type Router struct {
-	c              *Config
-	server         *server.Server
-	addrs          Addrs
+	c      *Config
+	server *server.Server
+	addrs  Addrs
 }
 
 // NewRouter creates a new Router with the given options. Each provided
@@ -30,7 +31,7 @@ type Router struct {
 func NewRouter(grpc GRPC, opts ...RouterOption) *Router {
 	r := &Router{
 		c: &Config{
-			GRPC:                         grpc,
+			GRPC: grpc,
 			Agent: Agent{
 				GRPCAddress: "127.0.0.1:3458",
 			},
@@ -184,6 +185,7 @@ func (d *Router) Start() {
 			MinTime:             10 * time.Second,
 			PermitWithoutStream: true,
 		}),
+		grpc.MaxRecvMsgSize(10*1024*1024),
 	)
 	if err != nil {
 		log.Panicf("Failed to create router server: %s", err)
@@ -208,7 +210,7 @@ func (d *Router) Start() {
 
 // Addrs stores listener addresses of the router process.
 type Addrs struct {
-	GRPC   string
+	GRPC string
 }
 
 // Addrs returns a copy of the listeners' addresses.

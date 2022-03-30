@@ -99,6 +99,7 @@ func main() {
 		app.WithIngressDialOptions(
 			grpc.WithTransportCredentials(dopplerCredentials),
 			grpc.WithKeepaliveParams(ingressKP),
+			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(10*1024*1024)),
 		),
 		app.WithEgressServerOptions(
 			grpc.Creds(rlpCredentials),

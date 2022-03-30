@@ -96,6 +96,7 @@ func (t *TrafficController) Start() {
 		grpc.WithTransportCredentials(creds),
 		grpc.WithKeepaliveParams(kp),
 		grpc.WithDisableServiceConfig(),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(10*1024*1024)),
 	)
 	grpcConnector := plumbing.NewGRPCConnector(1000, pool, f, t.metricClient)
 
