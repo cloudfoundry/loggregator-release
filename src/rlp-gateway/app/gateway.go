@@ -29,6 +29,7 @@ type Gateway struct {
 	server        *http.Server
 	log           *log.Logger
 	metrics       Metrics
+	logClient     *ingress.LogClient
 	httpLogOutput io.Writer
 }
 
@@ -82,12 +83,12 @@ func (g *Gateway) Start(blocking bool) {
 		capiClient,
 	)
 
-	lc := ingress.NewLogClient(creds, g.cfg.LogsProviderAddr)
+	g.logClient = ingress.NewLogClient(creds, g.cfg.LogsProviderAddr)
 	stack := handlers.RecoveryHandler(handlers.PrintRecoveryStack(true))(
 		handlers.LoggingHandler(
 			g.httpLogOutput,
 			middlewareProvider.Middleware(web.NewHandler(
-				lc,
+				g.logClient,
 				g.cfg.StreamTimeout,
 			)),
 		),
@@ -129,6 +130,7 @@ func (g *Gateway) buildTlsConfig() *tls.Config {
 // Stop closes the server connection
 func (g *Gateway) Stop() {
 	_ = g.server.Close()
+	_ = g.logClient.Close()
 }
 
 // Addr returns the address the gateway HTTP listener is bound to

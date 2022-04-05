@@ -13,7 +13,8 @@ import (
 
 // LogClient handles dialing and opening streams to the logs provider.
 type LogClient struct {
-	c loggregator_v2.EgressClient
+	c          loggregator_v2.EgressClient
+	connection *grpc.ClientConn
 }
 
 // NewClient dials the logs provider and returns a new log client.
@@ -28,7 +29,8 @@ func NewLogClient(creds credentials.TransportCredentials, logsProviderAddr strin
 	}
 	client := loggregator_v2.NewEgressClient(conn)
 	return &LogClient{
-		c: client,
+		c:          client,
+		connection: conn,
 	}
 }
 
@@ -40,4 +42,8 @@ func (c *LogClient) Stream(ctx context.Context, req *loggregator_v2.EgressBatchR
 	}
 
 	return receiver.Recv
+}
+
+func (c *LogClient) Close() error {
+	return c.connection.Close()
 }
