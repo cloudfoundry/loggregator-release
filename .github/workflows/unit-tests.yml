@@ -2,14 +2,14 @@ name: unit-tests
 on:
   pull_request:
     branches:
-    - main
-    - v105.6.x
-    - v106.3.x
+    - 'main'
+    - 'v105.6.x'
+    - 'v106.3.x'
   push:
     branches:
-    - main
-    - v105.6.x
-    - v106.3.x
+    - 'main'
+    - 'v105.6.x'
+    - 'v106.3.x'
 jobs:
   test:
     runs-on: ubuntu-latest
