@@ -1,8 +1,9 @@
 package trafficcontroller_test
 
 import (
-	"code.cloudfoundry.org/tlsconfig"
 	"net"
+
+	"code.cloudfoundry.org/tlsconfig"
 
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"code.cloudfoundry.org/loggregator/testservers"

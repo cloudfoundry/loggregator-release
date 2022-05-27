@@ -1,10 +1,11 @@
 package plumbing
 
 import (
-	"code.cloudfoundry.org/tlsconfig"
 	"crypto/tls"
-	"google.golang.org/grpc/credentials"
 	"log"
+
+	"code.cloudfoundry.org/tlsconfig"
+	"google.golang.org/grpc/credentials"
 )
 
 var cipherMap = map[string]uint16{

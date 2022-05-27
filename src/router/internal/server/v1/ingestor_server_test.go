@@ -9,10 +9,10 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
+	"code.cloudfoundry.org/go-loggregator/v8/conversion"
 	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
-	"code.cloudfoundry.org/go-loggregator/v8/conversion"
 	v1 "code.cloudfoundry.org/loggregator/router/internal/server/v1"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -41,13 +41,13 @@ var _ = Describe("IngestorServer", func() {
 	}
 
 	var (
-		v1Buf           *diodes.ManyToOneEnvelope
-		v2Buf           *diodes.ManyToOneEnvelopeV2
-		manager         *v1.IngestorServer
-		server          *grpc.Server
-		connCloser      io.Closer
-		dopplerClient   plumbing.DopplerIngestorClient
-		ingressMetric   *metricemitter.Counter
+		v1Buf         *diodes.ManyToOneEnvelope
+		v2Buf         *diodes.ManyToOneEnvelopeV2
+		manager       *v1.IngestorServer
+		server        *grpc.Server
+		connCloser    io.Closer
+		dopplerClient plumbing.DopplerIngestorClient
+		ingressMetric *metricemitter.Counter
 	)
 
 	BeforeEach(func() {

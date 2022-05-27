@@ -1,12 +1,13 @@
 package trafficcontroller_test
 
 import (
-	"code.cloudfoundry.org/tlsconfig/certtest"
 	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/url"
 	"time"
+
+	"code.cloudfoundry.org/tlsconfig/certtest"
 
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"code.cloudfoundry.org/loggregator/testservers"

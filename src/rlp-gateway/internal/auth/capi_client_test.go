@@ -1,11 +1,12 @@
 package auth_test
 
 import (
-	"code.cloudfoundry.org/loggregator/internal/testhelper"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"sync"
+
+	"code.cloudfoundry.org/loggregator/internal/testhelper"
 
 	"errors"
 	"net/http"
