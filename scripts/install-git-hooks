@@ -1,6 +1,0 @@
-#!/bin/bash
-
-RELEASE=$(cd $(dirname $0)/.. && pwd)
-
-rm -r "${RELEASE}/.git/hooks"
-ln -fs "${RELEASE}/git-hooks" "${RELEASE}/.git/hooks"
