@@ -1,4 +1,4 @@
-# Loggregator Release [![slack.cloudfoundry.org][slack-badge]][loggregator-slack]
+# Loggregator Release
 
 Loggregator is a [BOSH][bosh] release deployed as a part of
 [cf-deployment][cf-deployment]. Loggregator provides
@@ -9,6 +9,8 @@ the behavior of the the applications and components on the platform (i.e.
 
 The [Loggregator Design Notes](docs/loggregator-design.md) presents an
 overview of Loggregator components and architecture.
+
+If you have any questions, or want to get attention for a PR or issue please reach out on the [#logging-and-metrics channel in the cloudfoundry slack](https://cloudfoundry.slack.com/archives/CUW93AF3M)
 
 ## Table of Contents
 
@@ -102,8 +104,7 @@ component is intended to be a replacement for traffic controller.
 ### RLP Gateway
 
 By default, the RLP communicates with clients via gRPC over mutual TLS. To enable HTTP access to the Reverse Log
-Proxy, deploy the RLP Gateway. The RLP Gateway API is documented
-[in the Loggregator repository][loggregator].
+Proxy, deploy the RLP Gateway.
 
 ## Standalone Loggregator
 
@@ -174,13 +175,10 @@ tool will help operators quickly identify and take action on noise
 producing applications.  Instruction for deploying and using this nozzle
 are in the repo.
 
-[slack-badge]:               https://slack.cloudfoundry.org/badge.svg
-[loggregator-slack]:         https://cloudfoundry.slack.com/archives/CUW93AF3M
 [bosh]:                      https://bosh.io/
 [cf-deployment]:             https://github.com/cloudfoundry/cf-deployment
 [uaa]:                       https://github.com/cloudfoundry/uaa
 [cli]:                       https://github.com/cloudfoundry/cli
-[loggregator]:               https://code.cloudfoundry.org/loggregator
 [cli-docs]:                  https://cli.cloudfoundry.org/en-US/cf/logs.html
 [cf-docs]:                   https://docs.cloudfoundry.org/devguide/services/log-management.html
 [dropsonde-protocol]:        https://github.com/cloudfoundry/dropsonde-protocol

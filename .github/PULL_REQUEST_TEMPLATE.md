@@ -21,3 +21,4 @@ Please include a summary of the change.
 - [ ] I have made corresponding changes to the documentation
 - [ ] I have added testing for my changes
 
+If you have any questions, or want to get attention for a PR or issue please reach out on the [#logging-and-metrics channel in the cloudfoundry slack](https://cloudfoundry.slack.com/archives/CUW93AF3M)
