@@ -1,13 +1,14 @@
 package trafficcontroller_test
 
 import (
-	"code.cloudfoundry.org/loggregator/testservers"
 	"net"
 	"sync"
 	"time"
 
-	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
+	"code.cloudfoundry.org/loggregator/testservers"
+
 	"code.cloudfoundry.org/go-log-cache/rpc/logcache_v1"
+	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"

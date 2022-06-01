@@ -1,0 +1,46 @@
+name: Go
+
+on:
+  push:
+    branches:
+    - main
+    - 'v105.6.x'
+    - 'v106.3.x'
+  pull_request:
+    branches:
+    - main
+    - 'v105.6.x'
+    - 'v106.3.x'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - run: go run github.com/onsi/ginkgo/ginkgo -r -p -race -randomizeAllSpecs -randomizeSuites
+        working-directory: src
+
+  vet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - run: go vet ./...
+        working-directory: src
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+      - uses: golangci/golangci-lint-action@v3.2.0
+        with:
+          args: --config .golangci.yml
+          working-directory: src

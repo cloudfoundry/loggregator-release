@@ -1,9 +1,10 @@
 package auth_test
 
 import (
-	"code.cloudfoundry.org/loggregator/internal/testhelper"
 	"log"
 	"sync"
+
+	"code.cloudfoundry.org/loggregator/internal/testhelper"
 
 	"bytes"
 	"encoding/json"
@@ -103,7 +104,7 @@ var _ = Describe("UAAClient", func() {
 	It("sets the last request latency metric", func() {
 		client.Read("my-token")
 
-		Expect(metrics.GetMetric("LastUAALatency",nil).Value()).ToNot(BeZero())
+		Expect(metrics.GetMetric("LastUAALatency", nil).Value()).ToNot(BeZero())
 	})
 
 	It("returns error when token is blank", func() {

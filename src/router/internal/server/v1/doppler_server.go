@@ -5,8 +5,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	gendiode "code.cloudfoundry.org/go-diodes"
 	"code.cloudfoundry.org/go-batching"
+	gendiode "code.cloudfoundry.org/go-diodes"
 	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"

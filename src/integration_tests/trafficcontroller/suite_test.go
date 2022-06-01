@@ -22,8 +22,8 @@ const (
 )
 
 var (
-	localIPAddress                    string
-	tcCleanupFunc                     func()
+	localIPAddress string
+	tcCleanupFunc  func()
 )
 
 func TestIntegrationTest(t *testing.T) {

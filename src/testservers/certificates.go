@@ -1,10 +1,11 @@
 package testservers
 
 import (
-	"code.cloudfoundry.org/tlsconfig/certtest"
 	"io/ioutil"
 	"log"
 	"sync"
+
+	"code.cloudfoundry.org/tlsconfig/certtest"
 )
 
 var LoggregatorTestCerts = GenerateCerts("loggregatorCA")

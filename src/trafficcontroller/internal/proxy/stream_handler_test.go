@@ -21,8 +21,8 @@ var _ = Describe("StreamHandler", func() {
 		dopplerProxy *proxy.DopplerProxy
 		recorder     *httptest.ResponseRecorder
 
-		connector      *SpyGRPCConnector
-		mockSender     *testhelper.SpyMetricClient
+		connector  *SpyGRPCConnector
+		mockSender *testhelper.SpyMetricClient
 	)
 
 	BeforeEach(func() {

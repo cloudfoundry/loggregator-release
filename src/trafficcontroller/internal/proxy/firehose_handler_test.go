@@ -22,11 +22,11 @@ import (
 
 var _ = Describe("FirehoseHandler", func() {
 	var (
-		auth           LogAuthorizer
-		adminAuth      AdminAuthorizer
-		recorder       *httptest.ResponseRecorder
-		connector      *SpyGRPCConnector
-		mockSender     *testhelper.SpyMetricClient
+		auth       LogAuthorizer
+		adminAuth  AdminAuthorizer
+		recorder   *httptest.ResponseRecorder
+		connector  *SpyGRPCConnector
+		mockSender *testhelper.SpyMetricClient
 	)
 
 	BeforeEach(func() {
@@ -49,7 +49,6 @@ var _ = Describe("FirehoseHandler", func() {
 			mockSender,
 			newSpyRecentLogsHandler(),
 			false,
-
 		)
 		req, _ := http.NewRequest("GET", "/firehose/abc-123", nil)
 		req.Header.Add("Authorization", "token")
@@ -73,7 +72,6 @@ var _ = Describe("FirehoseHandler", func() {
 			mockSender,
 			newSpyRecentLogsHandler(),
 			false,
-
 		)
 
 		req, err := http.NewRequest("GET", "/firehose/123?filter-type=logs", nil)

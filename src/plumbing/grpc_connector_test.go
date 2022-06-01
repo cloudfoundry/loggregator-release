@@ -1,11 +1,12 @@
 package plumbing_test
 
 import (
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"log"
 	"net"
 	"time"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 

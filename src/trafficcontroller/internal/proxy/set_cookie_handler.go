@@ -21,10 +21,10 @@ func (h SetCookieHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	cookieName := r.FormValue("CookieName")
 	cookieValue := r.FormValue("CookieValue")
 	http.SetCookie(w, &http.Cookie{
-		Name:   cookieName,
-		Value:  cookieValue,
-		Domain: h.domain,
-		Secure: true,
+		Name:     cookieName,
+		Value:    cookieValue,
+		Domain:   h.domain,
+		Secure:   true,
 		HttpOnly: true,
 	})
 }

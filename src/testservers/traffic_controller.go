@@ -27,8 +27,8 @@ func BuildTrafficControllerConf(routerAddr string, agentPort int, logCacheAddr s
 		UaaClientSecret:       "yourUncle",
 		DisableAccessControl:  true,
 		OutgoingDropsondePort: 0,
-		OutgoingCertFile: LoggregatorTestCerts.Cert("trafficcontroller"),
-		OutgoingKeyFile: LoggregatorTestCerts.Key("trafficcontroller"),
+		OutgoingCertFile:      LoggregatorTestCerts.Cert("trafficcontroller"),
+		OutgoingKeyFile:       LoggregatorTestCerts.Key("trafficcontroller"),
 
 		CCTLSClientConfig: tcConf.CCTLSClientConfig{
 			CertFile:   LoggregatorTestCerts.Cert("trafficcontroller"),
@@ -60,8 +60,8 @@ func BuildTrafficControllerConfWithoutLogCache(routerAddr string, agentPort int)
 }
 
 type TrafficControllerPorts struct {
-	WS     int
-	PProf  int
+	WS    int
+	PProf int
 }
 
 func StartTrafficController(conf tcConf.Config) (cleanup func(), tp TrafficControllerPorts) {
