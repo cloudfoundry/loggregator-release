@@ -80,7 +80,7 @@ github.com/golang/protobuf/ptypes/wrappers
 # github.com/gorilla/handlers v1.4.2
 ## explicit
 github.com/gorilla/handlers
-# github.com/gorilla/mux v1.7.4
+# github.com/gorilla/mux v1.8.0
 ## explicit; go 1.12
 github.com/gorilla/mux
 # github.com/gorilla/websocket v1.4.2
