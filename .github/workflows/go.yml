@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: 1.18
-      - run: go run github.com/onsi/ginkgo/ginkgo -r -p -race -randomizeAllSpecs -randomizeSuites
+      - run: go run github.com/onsi/ginkgo/ginkgo -r -race -randomizeAllSpecs -randomizeSuites
         working-directory: src
 
   vet:
