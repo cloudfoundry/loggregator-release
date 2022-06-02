@@ -15,7 +15,7 @@ require (
 	github.com/cloudfoundry/sonde-go v0.0.0-20220324234026-9851b3a0dce2 // pinned
 	github.com/gogo/protobuf v1.3.2 // pinned
 	github.com/golang/protobuf v1.4.2 // pinned
-	github.com/gorilla/handlers v1.4.2
+	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/onsi/ginkgo v1.13.0
@@ -54,3 +54,5 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
+
+require github.com/felixge/httpsnoop v1.0.1 // indirect

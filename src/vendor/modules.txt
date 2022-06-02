@@ -55,6 +55,9 @@ github.com/cloudfoundry/sonde-go/events
 ## explicit
 # github.com/elazarl/goproxy/ext v0.0.0-20200426045556-49ad98f6dac1
 ## explicit
+# github.com/felixge/httpsnoop v1.0.1
+## explicit; go 1.13
+github.com/felixge/httpsnoop
 # github.com/fsnotify/fsnotify v1.4.9
 ## explicit; go 1.13
 github.com/fsnotify/fsnotify
@@ -77,8 +80,8 @@ github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
 github.com/golang/protobuf/ptypes/wrappers
-# github.com/gorilla/handlers v1.4.2
-## explicit
+# github.com/gorilla/handlers v1.5.1
+## explicit; go 1.14
 github.com/gorilla/handlers
 # github.com/gorilla/mux v1.8.0
 ## explicit; go 1.12
