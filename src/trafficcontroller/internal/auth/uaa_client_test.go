@@ -24,7 +24,7 @@ var _ = Describe("UaaClient", func() {
 	BeforeEach(func() {
 		transport = &http.Transport{
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
+				InsecureSkipVerify: true, //nolint:gosec
 			},
 		}
 		client = &http.Client{

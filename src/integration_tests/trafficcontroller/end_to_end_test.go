@@ -28,7 +28,7 @@ var _ = Describe("TrafficController for v1 messages", func() {
 		wsPort       int
 		httpClient   = &http.Client{
 			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
 			},
 		}
 	)
@@ -68,7 +68,7 @@ var _ = Describe("TrafficController for v1 messages", func() {
 			Context("Recent", func() {
 				It("returns a helpful error message", func() {
 					client := consumer.New(tcWSEndpoint, &tls.Config{
-						InsecureSkipVerify: true,
+						InsecureSkipVerify: true, //nolint:gosec
 					}, nil)
 
 					logMessages, err := client.RecentLogs("efe5c422-e8a7-42c2-a52b-98bffd8d6a07", "bearer iAmAnAdmin")
@@ -124,7 +124,7 @@ var _ = Describe("TrafficController for v1 messages", func() {
 
 				BeforeEach(func() {
 					client = consumer.New(tcWSEndpoint, &tls.Config{
-						InsecureSkipVerify: true,
+						InsecureSkipVerify: true, //nolint:gosec
 					}, nil)
 					messages, errors = client.StreamWithoutReconnect(APP_ID, AUTH_TOKEN)
 				})
@@ -169,7 +169,7 @@ var _ = Describe("TrafficController for v1 messages", func() {
 
 				It("passes messages through for every app for uaa admins", func() {
 					client := consumer.New(tcWSEndpoint, &tls.Config{
-						InsecureSkipVerify: true,
+						InsecureSkipVerify: true, //nolint:gosec
 					}, nil)
 					defer client.Close()
 					messages, errors = client.FirehoseWithoutReconnect(SUBSCRIPTION_ID, AUTH_TOKEN)
@@ -200,7 +200,7 @@ var _ = Describe("TrafficController for v1 messages", func() {
 			Context("Recent", func() {
 				It("returns a multi-part HTTP response with all recent messages", func() {
 					client := consumer.New(tcWSEndpoint, &tls.Config{
-						InsecureSkipVerify: true,
+						InsecureSkipVerify: true, //nolint:gosec
 					}, nil)
 
 					Eventually(func() int {
@@ -255,7 +255,7 @@ var _ = Describe("TrafficController for v1 messages", func() {
 					Eventually(errors).Should(Receive())
 				}
 			},
-				Entry("unsupported SSL 3.0", tls.VersionSSL30, false),
+				Entry("unsupported SSL 3.0", tls.VersionSSL30, false), //nolint:staticcheck
 				Entry("unsupported TLS 1.0", tls.VersionTLS10, false),
 				Entry("unsupported TLS 1.1", tls.VersionTLS11, false),
 				Entry("supported TLS 1.2", tls.VersionTLS12, true),
@@ -321,6 +321,6 @@ func buildTLSConfig(maxVersion, cipherSuite uint16) *tls.Config {
 		ServerName:         "",
 		MaxVersion:         uint16(maxVersion),
 		CipherSuites:       []uint16{cipherSuite},
-		InsecureSkipVerify: true,
+		InsecureSkipVerify: true, //nolint:gosec
 	}
 }
