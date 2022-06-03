@@ -11,7 +11,6 @@ import (
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	v1 "code.cloudfoundry.org/loggregator/router/internal/server/v1"
-	"github.com/cloudfoundry/sonde-go/events"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
@@ -428,19 +427,4 @@ func (s *spyRegistrar) registerSetter() v1.DataSetter {
 	defer s.mu.Unlock()
 
 	return s.registerSetter_
-}
-
-func newSpyDataDumper() *spyDataDumper {
-	return &spyDataDumper{}
-}
-
-type spyDataDumper struct {
-	recentLogsForAppID     string
-	recentLogsForEnvelopes []*events.Envelope
-}
-
-func (s *spyDataDumper) RecentLogsFor(appID string) []*events.Envelope {
-	s.recentLogsForAppID = appID
-
-	return s.recentLogsForEnvelopes
 }

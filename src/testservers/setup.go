@@ -16,7 +16,7 @@ const (
 	green
 	_ // yellow
 	blue
-	magenta
+	_ // magenta
 	cyan
 	colorFmt = "\x1b[%dm[%s]\x1b[%dm[%s]\x1b[0m "
 )
