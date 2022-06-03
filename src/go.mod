@@ -14,7 +14,7 @@ require (
 	github.com/cloudfoundry/noaa v2.1.0+incompatible // pinned
 	github.com/cloudfoundry/sonde-go v0.0.0-20220324234026-9851b3a0dce2 // pinned
 	github.com/gogo/protobuf v1.3.2 // pinned
-	github.com/golang/protobuf v1.4.2 // pinned
+	github.com/golang/protobuf v1.5.2 // pinned
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
@@ -22,7 +22,7 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/prometheus/client_golang v1.7.0
 	golang.org/x/net v0.0.0-20201021035429-f5854403a974
-	google.golang.org/grpc v1.29.1
+	google.golang.org/grpc v1.47.0
 )
 
 require (
@@ -34,7 +34,7 @@ require (
 	github.com/elazarl/goproxy v0.0.0-20200426045556-49ad98f6dac1 // indirect
 	github.com/elazarl/goproxy/ext v0.0.0-20200426045556-49ad98f6dac1 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
-	github.com/grpc-ecosystem/grpc-gateway v1.14.6 // indirect
+	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
@@ -46,11 +46,11 @@ require (
 	github.com/prometheus/common v0.10.0 // indirect
 	github.com/prometheus/procfs v0.1.3 // indirect
 	github.com/square/certstrap v1.2.0 // indirect
-	golang.org/x/sys v0.0.0-20210112080510-489259a85091 // indirect
+	golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4 // indirect
 	golang.org/x/text v0.3.3 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/genproto v0.0.0-20200620020550-bd6e04640131 // indirect
-	google.golang.org/protobuf v1.24.0 // indirect
+	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
