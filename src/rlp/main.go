@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -22,7 +22,8 @@ import (
 )
 
 func main() {
-	grpclog.SetLogger(log.New(ioutil.Discard, "", 0))
+	l := grpclog.NewLoggerV2(io.Discard, io.Discard, io.Discard)
+	grpclog.SetLoggerV2(l)
 
 	conf, err := app.LoadConfig()
 	if err != nil {

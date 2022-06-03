@@ -12,8 +12,11 @@ import (
 )
 
 func TestEgress(t *testing.T) {
+	l := grpclog.NewLoggerV2(GinkgoWriter, GinkgoWriter, GinkgoWriter)
+	grpclog.SetLoggerV2(l)
+
 	log.SetOutput(GinkgoWriter)
-	grpclog.SetLogger(log.New(GinkgoWriter, "", 0))
+
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Egress Suite")
 }
