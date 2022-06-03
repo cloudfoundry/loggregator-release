@@ -318,7 +318,7 @@ func (cs *consumerState) tryAddDoppler(doppler string) bool {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
-	ok, _ := cs.dopplers[doppler]
+	ok := cs.dopplers[doppler]
 	if ok {
 		return false
 	}

@@ -80,7 +80,7 @@ func newSpyMetric(name string, opts []metrics.MetricOption) *SpyMetric {
 		o(sm.Opts)
 	}
 
-	for k, _ := range sm.Opts.ConstLabels {
+	for k := range sm.Opts.ConstLabels {
 		sm.keys = append(sm.keys, k)
 	}
 	sort.Strings(sm.keys)
