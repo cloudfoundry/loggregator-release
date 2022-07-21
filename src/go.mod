@@ -14,14 +14,14 @@ require (
 	github.com/cloudfoundry/noaa v2.1.0+incompatible // pinned
 	github.com/cloudfoundry/sonde-go v0.0.0-20220324234026-9851b3a0dce2 // pinned
 	github.com/gogo/protobuf v1.3.2 // pinned
-	github.com/golang/protobuf v1.4.2 // pinned
+	github.com/golang/protobuf v1.5.2 // pinned
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.10.1
+	github.com/onsi/gomega v1.20.0
 	github.com/prometheus/client_golang v1.7.0
-	golang.org/x/net v0.0.0-20201021035429-f5854403a974
+	golang.org/x/net v0.0.0-20220425223048-2871e0cb64e4
 	google.golang.org/grpc v1.29.1
 )
 
@@ -46,17 +46,17 @@ require (
 	github.com/prometheus/common v0.10.0 // indirect
 	github.com/prometheus/procfs v0.1.3 // indirect
 	github.com/square/certstrap v1.2.0 // indirect
-	golang.org/x/sys v0.0.0-20210112080510-489259a85091 // indirect
-	golang.org/x/text v0.3.3 // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
+	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150 // indirect
+	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/genproto v0.0.0-20200620020550-bd6e04640131 // indirect
-	google.golang.org/protobuf v1.24.0 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
-	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
 
 require (
 	github.com/felixge/httpsnoop v1.0.1 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
+	github.com/google/go-cmp v0.5.8 // indirect
 	golang.org/x/tools v0.0.0-20210106214847-113979e3529a // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
