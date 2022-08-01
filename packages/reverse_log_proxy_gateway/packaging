@@ -3,4 +3,4 @@ set -ex
 source /var/vcap/packages/golang-1-linux/bosh/compile.env
 export GOPATH=/var/vcap
 
-go build -mod=vendor -o ${BOSH_INSTALL_TARGET}/rlp-gateway ./rlp-gateway/
+go build -o ${BOSH_INSTALL_TARGET}/rlp-gateway ./rlp-gateway/
