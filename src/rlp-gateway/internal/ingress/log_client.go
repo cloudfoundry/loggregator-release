@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
-	throughputlb "code.cloudfoundry.org/loggregator/grpc-throughputlb"
 	"code.cloudfoundry.org/loggregator/rlp-gateway/internal/web"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -21,7 +20,6 @@ type LogClient struct {
 func NewLogClient(creds credentials.TransportCredentials, logsProviderAddr string) *LogClient {
 	conn, err := grpc.Dial(logsProviderAddr,
 		grpc.WithTransportCredentials(creds),
-		grpc.WithBalancer(throughputlb.NewThroughputLoadBalancer(100, 20)),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(10*1024*1024)),
 		grpc.WithBlock(),
 	)

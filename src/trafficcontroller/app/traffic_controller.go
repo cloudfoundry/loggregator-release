@@ -92,7 +92,6 @@ func (t *TrafficController) Start() {
 	}
 
 	pool := plumbing.NewPool(
-		20,
 		grpc.WithTransportCredentials(creds),
 		grpc.WithKeepaliveParams(kp),
 		grpc.WithDisableServiceConfig(),

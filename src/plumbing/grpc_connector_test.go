@@ -37,7 +37,7 @@ var _ = Describe("GRPCConnector", func() {
 		mockDopplerServerB = startMockDopplerServer()
 		mockFinder = newMockFinder()
 
-		pool := plumbing.NewPool(2, grpc.WithInsecure())
+		pool := plumbing.NewPool(grpc.WithInsecure())
 
 		req = &plumbing.SubscriptionRequest{
 			ShardID: "test-sub-id",
