@@ -20,7 +20,6 @@ import (
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/balancer/roundrobin"
 	"google.golang.org/grpc/keepalive"
 )
 
@@ -117,7 +116,7 @@ func (t *TrafficController) Start() {
 			t.conf.LogCacheAddr,
 			logcache.WithViaGRPC(
 				grpc.WithTransportCredentials(logCacheCreds),
-				grpc.WithBalancerName(roundrobin.Name),
+				grpc.WithDefaultServiceConfig(`{"loadBalancingConfig": [{"round_robin":{}}]}`),
 				grpc.WithBlock(),
 			),
 		)
