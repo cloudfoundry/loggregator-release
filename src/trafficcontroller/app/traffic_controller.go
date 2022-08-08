@@ -174,8 +174,9 @@ func (t *TrafficController) startServer(dopplerHandler http.Handler) {
 	log.Printf("ws bound to: %s", lis.Addr())
 
 	server := http.Server{
-		Handler:   dopplerHandler,
-		TLSConfig: t.buildTLSConfig(),
+		Handler:           dopplerHandler,
+		TLSConfig:         t.buildTLSConfig(),
+		ReadHeaderTimeout: 2 * time.Second,
 	}
 
 	log.Fatal(server.ServeTLS(lis, "", ""))
