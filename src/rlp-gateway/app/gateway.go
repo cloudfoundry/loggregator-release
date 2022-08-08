@@ -103,9 +103,10 @@ func (g *Gateway) Start(blocking bool) {
 
 	g.listener = l
 	g.server = &http.Server{
-		Addr:      g.cfg.HTTP.GatewayAddr,
-		Handler:   stack,
-		TLSConfig: g.buildTlsConfig(),
+		Addr:              g.cfg.HTTP.GatewayAddr,
+		Handler:           stack,
+		TLSConfig:         g.buildTlsConfig(),
+		ReadHeaderTimeout: 2 * time.Second,
 	}
 
 	if blocking {
