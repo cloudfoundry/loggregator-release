@@ -21,7 +21,7 @@ var _ = Describe("Pool", func() {
 	)
 
 	BeforeEach(func() {
-		pool = plumbing.NewPool(2, grpc.WithInsecure())
+		pool = plumbing.NewPool(grpc.WithInsecure())
 	})
 
 	AfterEach(func(done Done) {
@@ -55,8 +55,8 @@ var _ = Describe("Pool", func() {
 				pool.RegisterDoppler(lis1.Addr().String())
 				pool.RegisterDoppler(lis2.Addr().String())
 
-				Eventually(accepter1).Should(HaveLen(2))
-				Eventually(accepter2).Should(HaveLen(2))
+				Eventually(accepter1).Should(HaveLen(1))
+				Eventually(accepter2).Should(HaveLen(1))
 			})
 		})
 

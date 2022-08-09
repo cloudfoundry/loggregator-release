@@ -3,7 +3,7 @@ package v2
 import (
 	"hash/crc64"
 
-	loggregator_v2 "code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
+	loggregator_v2 "code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
 	"code.cloudfoundry.org/go-pubsub"
 )
 

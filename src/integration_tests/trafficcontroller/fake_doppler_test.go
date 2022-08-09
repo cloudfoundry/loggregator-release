@@ -13,6 +13,8 @@ import (
 )
 
 type FakeDoppler struct {
+	plumbing.DopplerServer
+
 	GrpcEndpoint         string
 	grpcListener         net.Listener
 	grpcOut              chan []byte

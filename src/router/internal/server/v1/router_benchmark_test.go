@@ -10,7 +10,7 @@ import (
 	"code.cloudfoundry.org/loggregator/plumbing"
 	v1 "code.cloudfoundry.org/loggregator/router/internal/server/v1"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 var (

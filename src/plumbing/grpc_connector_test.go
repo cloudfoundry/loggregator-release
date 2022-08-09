@@ -15,9 +15,9 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"google.golang.org/protobuf/proto"
 )
 
 var _ = Describe("GRPCConnector", func() {
@@ -37,7 +37,7 @@ var _ = Describe("GRPCConnector", func() {
 		mockDopplerServerB = startMockDopplerServer()
 		mockFinder = newMockFinder()
 
-		pool := plumbing.NewPool(2, grpc.WithInsecure())
+		pool := plumbing.NewPool(grpc.WithInsecure())
 
 		req = &plumbing.SubscriptionRequest{
 			ShardID: "test-sub-id",
@@ -426,6 +426,8 @@ func captureSubscribeSender(doppler *spyRouter) plumbing.Doppler_BatchSubscribeS
 }
 
 type spyRouter struct {
+	plumbing.DopplerServer
+
 	addr       net.Addr
 	grpcServer *grpc.Server
 	requests   chan *plumbing.SubscriptionRequest

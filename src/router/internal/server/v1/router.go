@@ -6,6 +6,7 @@ import (
 
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"github.com/cloudfoundry/sonde-go/events"
+	"google.golang.org/protobuf/proto"
 )
 
 type shardID string
@@ -134,7 +135,7 @@ func (r *Router) buildCleanup(req *plumbing.SubscriptionRequest, dataSetter Data
 }
 
 func (r *Router) marshal(envelope *events.Envelope) []byte {
-	data, err := envelope.Marshal()
+	data, err := proto.Marshal(envelope)
 	if err != nil {
 		return nil
 	}

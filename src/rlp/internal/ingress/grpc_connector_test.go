@@ -4,7 +4,7 @@ import (
 	"log"
 	"net"
 
-	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
+	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"code.cloudfoundry.org/loggregator/rlp/internal/ingress"
@@ -14,9 +14,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"google.golang.org/protobuf/proto"
 )
 
 var _ = Describe("GRPCConnector", func() {
@@ -177,6 +177,8 @@ var _ = Describe("GRPCConnector", func() {
 })
 
 type spyRouter struct {
+	loggregator_v2.EgressServer
+
 	addr       net.Addr
 	grpcServer *grpc.Server
 	requests   chan *loggregator_v2.EgressBatchRequest

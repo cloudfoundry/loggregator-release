@@ -1,13 +1,14 @@
 package internal
 
 import (
-	"code.cloudfoundry.org/go-log-cache/rpc/logcache_v1"
 	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
 
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"code.cloudfoundry.org/go-log-cache/rpc/logcache_v1"
+
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
 
 type PromqlMarshaler struct {
@@ -140,7 +141,7 @@ func assembleVectorResultData(v *logcache_v1.PromQL_Vector) (resultData, error) 
 
 		metric := s.GetMetric()
 		if metric == nil {
-			metric = make(map[string]string, 0)
+			metric = make(map[string]string)
 		}
 
 		samples = append(samples, sample{
@@ -178,7 +179,7 @@ func assembleMatrixResultData(v *logcache_v1.PromQL_Matrix) (resultData, error) 
 
 		metric := s.GetMetric()
 		if metric == nil {
-			metric = make(map[string]string, 0)
+			metric = make(map[string]string)
 		}
 
 		result = append(result, series{
@@ -248,84 +249,74 @@ func (m *PromqlMarshaler) Unmarshal(data []byte, v interface{}) error {
 			return err
 		}
 
-		r, err := m.disassembleInstantQueryResult(result)
-		if err != nil {
-			return err
-		}
-		*q = *r
+		return m.disassembleInstantQueryResult(result, q)
 	case *logcache_v1.PromQL_RangeQueryResult:
 		err := json.Unmarshal(data, &result)
 		if err != nil {
 			return err
 		}
 
-		r, err := m.disassembleRangeQueryResult(result)
-		if err != nil {
-			return err
-		}
-		*q = *r
+		return m.disassembleRangeQueryResult(result, q)
 	default:
 		return m.fallback.Unmarshal(data, v)
 	}
-
-	return nil
 }
 
-func (m *PromqlMarshaler) disassembleInstantQueryResult(q queryResult) (*logcache_v1.PromQL_InstantQueryResult, error) {
+func (m *PromqlMarshaler) disassembleInstantQueryResult(q queryResult, iqr *logcache_v1.PromQL_InstantQueryResult) error {
 	switch q.Data.ResultType {
 	case "scalar":
 		r, err := unmarshalScalarResultData(q.Data.Result)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		return &logcache_v1.PromQL_InstantQueryResult{
-			Result: &logcache_v1.PromQL_InstantQueryResult_Scalar{
-				Scalar: r,
-			},
-		}, nil
+		iqr.Result = &logcache_v1.PromQL_InstantQueryResult_Scalar{
+			Scalar: r,
+		}
+
+		return nil
 	case "vector":
 		r, err := unmarshalVectorResultData(q.Data.Result)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		return &logcache_v1.PromQL_InstantQueryResult{
-			Result: &logcache_v1.PromQL_InstantQueryResult_Vector{
-				Vector: r,
-			},
-		}, nil
+		iqr.Result = &logcache_v1.PromQL_InstantQueryResult_Vector{
+			Vector: r,
+		}
+
+		return nil
 	case "matrix":
 		r, err := unmarshalMatrixResultData(q.Data.Result)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		return &logcache_v1.PromQL_InstantQueryResult{
-			Result: &logcache_v1.PromQL_InstantQueryResult_Matrix{
-				Matrix: r,
-			},
-		}, nil
+		iqr.Result = &logcache_v1.PromQL_InstantQueryResult_Matrix{
+			Matrix: r,
+		}
+
+		return nil
 	default:
-		return nil, fmt.Errorf("unknown instant query resultType '%s'", q.Data.ResultType)
+		return fmt.Errorf("unknown instant query resultType '%s'", q.Data.ResultType)
 	}
 }
 
-func (m *PromqlMarshaler) disassembleRangeQueryResult(q queryResult) (*logcache_v1.PromQL_RangeQueryResult, error) {
+func (m *PromqlMarshaler) disassembleRangeQueryResult(q queryResult, rqr *logcache_v1.PromQL_RangeQueryResult) error {
 	switch q.Data.ResultType {
 	case "matrix":
 		r, err := unmarshalMatrixResultData(q.Data.Result)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		return &logcache_v1.PromQL_RangeQueryResult{
-			Result: &logcache_v1.PromQL_RangeQueryResult_Matrix{
-				Matrix: r,
-			},
-		}, nil
+		rqr.Result = &logcache_v1.PromQL_RangeQueryResult_Matrix{
+			Matrix: r,
+		}
+
+		return nil
 	default:
-		return nil, fmt.Errorf("unknown range query resultType '%s'", q.Data.ResultType)
+		return fmt.Errorf("unknown range query resultType '%s'", q.Data.ResultType)
 	}
 }
 
@@ -443,26 +434,14 @@ func (m *PromqlMarshaler) NewDecoder(r io.Reader) runtime.Decoder {
 				return err
 			}
 
-			r, err := m.disassembleInstantQueryResult(result)
-			if err != nil {
-				return err
-			}
-			*q = *r
-
-			return nil
+			return m.disassembleInstantQueryResult(result, q)
 		case *logcache_v1.PromQL_RangeQueryResult:
 			err := jsonDecoder.Decode(&result)
 			if err != nil {
 				return err
 			}
 
-			r, err := m.disassembleRangeQueryResult(result)
-			if err != nil {
-				return err
-			}
-			*q = *r
-
-			return nil
+			return m.disassembleRangeQueryResult(result, q)
 		}
 
 		return fallbackDecoder.Decode(v)

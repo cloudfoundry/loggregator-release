@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
+	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing/batching"
 	"google.golang.org/grpc/codes"
@@ -34,6 +34,8 @@ type MetricClient interface {
 // Server represents a bridge between inbound data from the Receiver and
 // outbound data on a gRPC stream.
 type Server struct {
+	loggregator_v2.EgressServer
+
 	receiver            Receiver
 	egressMetric        *metricemitter.Counter
 	droppedMetric       *metricemitter.Counter

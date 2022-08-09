@@ -7,23 +7,19 @@ import (
 	"net/http"
 	"time"
 
-	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
-	"github.com/golang/protobuf/jsonpb"
+	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/protojson"
 )
-
-var marshaler = jsonpb.Marshaler{
-	EmitDefaults: true,
-}
 
 // ReadHandler returns a http.Handler that will serve logs over server sent
 // events. Logs are streamed from the logs provider and written to the client
 // connection. The format of the envelopes is as follows:
 //
-//     data: <JSON ENVELOPE BATCH>
+//	data: <JSON ENVELOPE BATCH>
 //
-//     data: <JSON ENVELOPE BATCH>
+//	data: <JSON ENVELOPE BATCH>
 func ReadHandler(
 	lp LogsProvider,
 	heartbeat time.Duration,
@@ -107,13 +103,13 @@ func ReadHandler(
 
 				return
 			case batch := <-data:
-				d, err := marshaler.MarshalToString(batch)
+				d, err := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(batch)
 				if err != nil {
 					log.Printf("error marshaling envelope batch to string: %s", err)
 					return
 				}
 
-				fmt.Fprintf(w, "data: %s\n\n", d)
+				fmt.Fprintf(w, "data: %s\n\n", string(d))
 				flusher.Flush()
 
 				if !heartbeatTimer.Stop() {

@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
+	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator/integration_tests/binaries"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc/grpclog"
+	"google.golang.org/protobuf/proto"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -94,11 +94,11 @@ func decodeProtoBufEnvelope(actual []byte) *events.Envelope {
 	return &receivedEnvelope
 }
 
-func unmarshalMessage(messageBytes []byte) events.Envelope {
+func unmarshalMessage(messageBytes []byte) *events.Envelope {
 	var envelope events.Envelope
 	err := proto.Unmarshal(messageBytes, &envelope)
 	Expect(err).NotTo(HaveOccurred())
-	return envelope
+	return &envelope
 }
 
 func buildV1PrimerLogMessage() []byte {

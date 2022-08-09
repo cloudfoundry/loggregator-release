@@ -7,8 +7,6 @@ import (
 	"sync"
 	"time"
 
-	throughputlb "code.cloudfoundry.org/loggregator/grpc-throughputlb"
-
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -17,7 +15,6 @@ type Pool struct {
 	mu       sync.RWMutex
 	dopplers map[string]clientInfo
 	dialOpts []grpc.DialOption
-	numConns int
 }
 
 type clientInfo struct {
@@ -25,11 +22,10 @@ type clientInfo struct {
 	closer io.Closer
 }
 
-func NewPool(numConns int, opts ...grpc.DialOption) *Pool {
+func NewPool(opts ...grpc.DialOption) *Pool {
 	return &Pool{
 		dopplers: make(map[string]clientInfo),
 		dialOpts: opts,
-		numConns: numConns,
 	}
 }
 
@@ -61,18 +57,10 @@ func (p *Pool) Close(dopplerAddr string) {
 }
 
 func (p *Pool) connectToDoppler(addr string) {
-	opts := []grpc.DialOption{
-		grpc.WithBalancer(
-			throughputlb.NewThroughputLoadBalancer(100, p.numConns),
-		),
-	}
-
-	opts = append(opts, p.dialOpts...)
-
 	for {
 		log.Printf("adding doppler %s", addr)
 
-		conn, err := grpc.Dial(addr, opts...)
+		conn, err := grpc.Dial(addr, p.dialOpts...)
 		if err != nil {
 			// TODO: We don't yet understand how this could happen, we should.
 			// TODO: Replace with exponential backoff.
