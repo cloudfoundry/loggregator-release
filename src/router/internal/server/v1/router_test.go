@@ -5,9 +5,9 @@ import (
 	v1 "code.cloudfoundry.org/loggregator/router/internal/server/v1"
 
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"google.golang.org/protobuf/proto"
 )
 
 var _ = Describe("Router", func() {
@@ -31,10 +31,10 @@ var _ = Describe("Router", func() {
 			EventType: events.Envelope_LogMessage.Enum(),
 		}
 		var err error
-		counterEnvelopeBytes, err = counterEnvelope.Marshal()
+		counterEnvelopeBytes, err = proto.Marshal(counterEnvelope)
 		Expect(err).ToNot(HaveOccurred())
 
-		logEnvelopeBytes, err = logEnvelope.Marshal()
+		logEnvelopeBytes, err = proto.Marshal(logEnvelope)
 		Expect(err).ToNot(HaveOccurred())
 
 		router = v1.NewRouter()

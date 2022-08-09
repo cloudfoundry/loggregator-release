@@ -1,8 +1,8 @@
 package v2
 
 import (
-	"code.cloudfoundry.org/go-loggregator/v8/conversion"
-	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
+	"code.cloudfoundry.org/go-loggregator/v9/conversion"
+	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"golang.org/x/net/context"
@@ -16,6 +16,8 @@ type MetricClient interface {
 }
 
 type IngressServer struct {
+	loggregator_v2.IngressServer
+
 	v1Buf         *diodes.ManyToOneEnvelope
 	v2Buf         *diodes.ManyToOneEnvelopeV2
 	ingressMetric *metricemitter.Counter

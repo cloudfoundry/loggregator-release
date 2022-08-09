@@ -1,8 +1,6 @@
 package client
 
 import (
-	marshaler "code.cloudfoundry.org/go-log-cache/internal"
-	"code.cloudfoundry.org/go-log-cache/rpc/logcache_v1"
 	"context"
 	"encoding/json"
 	"errors"
@@ -13,11 +11,14 @@ import (
 	"strconv"
 	"time"
 
-	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
+	marshaler "code.cloudfoundry.org/go-log-cache/internal"
+	"code.cloudfoundry.org/go-log-cache/rpc/logcache_v1"
+
+	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
 	"github.com/blang/semver"
-	"github.com/golang/protobuf/jsonpb"
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // Client reads from LogCache via the RESTful or gRPC API.
@@ -143,8 +144,13 @@ func (c *Client) Read(
 		return nil, fmt.Errorf("unexpected status code %d", resp.StatusCode)
 	}
 
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
 	var r logcache_v1.ReadResponse
-	if err := jsonpb.Unmarshal(resp.Body, &r); err != nil {
+	if err := protojson.Unmarshal(body, &r); err != nil {
 		return nil, err
 	}
 
@@ -271,8 +277,13 @@ func (c *Client) Meta(ctx context.Context) (map[string]*logcache_v1.MetaInfo, er
 		return nil, fmt.Errorf("unexpected status code %d", resp.StatusCode)
 	}
 
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
 	var metaResponse logcache_v1.MetaResponse
-	if err := jsonpb.Unmarshal(resp.Body, &metaResponse); err != nil {
+	if err := protojson.Unmarshal(body, &metaResponse); err != nil {
 		return nil, err
 	}
 
@@ -381,7 +392,7 @@ func (c *Client) LogCacheVMUptime(ctx context.Context) (int64, error) {
 	}
 
 	if info.VMUptime == "" {
-		return -1, errors.New("This version of log cache does not support vm_uptime info")
+		return -1, errors.New("this version of log cache does not support vm_uptime info")
 	}
 
 	uptime, err := strconv.ParseInt(info.VMUptime, 10, 64)

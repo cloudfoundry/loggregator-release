@@ -10,12 +10,12 @@ import (
 
 	logcache "code.cloudfoundry.org/go-log-cache"
 	"code.cloudfoundry.org/go-log-cache/rpc/logcache_v1"
-	"code.cloudfoundry.org/go-loggregator/v8/conversion"
-	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
+	"code.cloudfoundry.org/go-loggregator/v9/conversion"
+	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/mux"
+	"google.golang.org/protobuf/proto"
 )
 
 const backoffRate = 0.75
@@ -64,7 +64,7 @@ func NewRecentLogsHandler(
 
 func (h *RecentLogsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !h.logCacheEnabled {
-		envelopeBytes, err := (&events.Envelope{
+		envelopeBytes, err := proto.Marshal(&events.Envelope{
 			Origin:    proto.String("loggregator.trafficcontroller"),
 			EventType: events.Envelope_LogMessage.Enum(),
 			Timestamp: proto.Int64(time.Now().UnixNano()),
@@ -74,7 +74,7 @@ func (h *RecentLogsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				MessageType: events.LogMessage_ERR.Enum(),
 				SourceType:  proto.String("Loggregator"),
 			},
-		}).Marshal()
+		})
 		if err != nil {
 			log.Panicf("A safe envelope marshalling failed: %s", err)
 		}

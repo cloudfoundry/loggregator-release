@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
+	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -235,6 +235,8 @@ func newgRPCServerWithAddr(addr string) *SpyIngressServer {
 }
 
 type SpyIngressServer struct {
+	loggregator_v2.IngressServer
+
 	addr      string
 	senders   chan loggregator_v2.Ingress_SenderServer
 	server    *grpc.Server

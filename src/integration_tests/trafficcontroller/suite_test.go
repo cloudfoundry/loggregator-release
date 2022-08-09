@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc/grpclog"
+	"google.golang.org/protobuf/proto"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

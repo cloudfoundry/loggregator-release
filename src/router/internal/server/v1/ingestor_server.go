@@ -7,15 +7,17 @@ import (
 	"sync/atomic"
 	"time"
 
-	"code.cloudfoundry.org/go-loggregator/v8/conversion"
+	"code.cloudfoundry.org/go-loggregator/v9/conversion"
 	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 type IngestorServer struct {
+	plumbing.DopplerIngestorServer
+
 	v1Buf         *diodes.ManyToOneEnvelope
 	v2Buf         *diodes.ManyToOneEnvelopeV2
 	ingressMetric *metricemitter.Counter

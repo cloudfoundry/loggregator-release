@@ -9,13 +9,13 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	"code.cloudfoundry.org/go-loggregator/v8/conversion"
+	"code.cloudfoundry.org/go-loggregator/v9/conversion"
 	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	v1 "code.cloudfoundry.org/loggregator/router/internal/server/v1"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -78,15 +78,13 @@ var _ = Describe("IngestorServer", func() {
 		err = pusherClient.Send(&plumbing.EnvelopeData{Payload: data})
 		Expect(err).ToNot(HaveOccurred())
 
-		f := func() *events.Envelope {
+		Eventually(func() bool {
 			env, ok := v1Buf.TryNext()
 			if !ok {
-				return nil
+				return false
 			}
-			return env
-		}
-
-		Eventually(f).Should(Equal(someEnvelope))
+			return proto.Equal(env, someEnvelope)
+		}).Should(BeTrue())
 		Expect(ingressMetric.GetDelta()).To(BeNumerically(">", 0))
 	})
 

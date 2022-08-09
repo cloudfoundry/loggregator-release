@@ -5,6 +5,8 @@ import (
 )
 
 type mockDopplerServer struct {
+	plumbing.DopplerServer
+
 	SubscribeCalled chan bool
 	SubscribeInput  struct {
 		Req    chan *plumbing.SubscriptionRequest

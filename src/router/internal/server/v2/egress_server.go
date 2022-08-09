@@ -5,7 +5,7 @@ import (
 	"time"
 
 	gendiode "code.cloudfoundry.org/go-diodes"
-	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
+	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing/batching"
@@ -26,6 +26,8 @@ type DataSetter interface {
 
 // EgressServer implements the loggregator_v2.EgressServer interface.
 type EgressServer struct {
+	loggregator_v2.EgressServer
+
 	subscriber          Subscriber
 	egressMetric        *metricemitter.Counter
 	droppedMetric       *metricemitter.Counter

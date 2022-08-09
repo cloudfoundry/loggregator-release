@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
+	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
 )
 
 // Window crawls a reader incrementally to give the Visitor a batch of

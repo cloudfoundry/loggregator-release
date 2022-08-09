@@ -15,14 +15,14 @@ import (
 
 	"code.cloudfoundry.org/loggregator/internal/testhelper"
 
-	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
+	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator/plumbing" // TODO: Resolve duplicate proto error
 	"code.cloudfoundry.org/loggregator/rlp-gateway/app"
 	"code.cloudfoundry.org/loggregator/testservers"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"code.cloudfoundry.org/tlsconfig/certtest"
-	"github.com/gogo/protobuf/jsonpb"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -380,6 +380,8 @@ var (
 )
 
 type stubLogsProvider struct {
+	loggregator_v2.EgressServer
+
 	listener net.Listener
 	toSend   int
 }
@@ -482,12 +484,15 @@ func (tc *testClient) open(url string) (*http.Response, error) {
 
 		switch {
 		case bytes.HasPrefix(line, []byte("data:")):
-			buf.Write(line[6:])
+			if _, err := buf.Write(line[6:]); err != nil {
+				panic(fmt.Sprintf("failed to write to buffer: %s\n", err))
+			}
 		case bytes.Equal(line, []byte("\n")):
 			var batch loggregator_v2.EnvelopeBatch
-			if err := jsonpb.Unmarshal(buf, &batch); err != nil {
+			if err := protojson.Unmarshal(buf.Bytes(), &batch); err != nil {
 				panic(fmt.Sprintf("failed to unmarshal envelopes: %s", err))
 			}
+			buf.Reset()
 			tc.mu.Lock()
 			tc._envelopes = append(tc._envelopes, batch.GetBatch()...)
 			tc.mu.Unlock()

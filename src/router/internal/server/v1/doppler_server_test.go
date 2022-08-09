@@ -14,6 +14,7 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -72,7 +73,9 @@ var _ = Describe("v1 doppler server", func() {
 				_, err := dopplerClient.Subscribe(context.TODO(), subscribeRequest)
 				Expect(err).ToNot(HaveOccurred())
 
-				Eventually(mockRegistrar.registerRequest).Should(Equal(subscribeRequest))
+				Eventually(func() bool {
+					return proto.Equal(mockRegistrar.registerRequest(), subscribeRequest)
+				}).Should(BeTrue())
 			})
 
 			Context("when the client does not close the connection", func() {
@@ -167,14 +170,15 @@ var _ = Describe("v1 doppler server", func() {
 					egressDropped,
 					subscriptionsMetric,
 				)
-
 			})
 
 			It("registers subscription", func() {
 				_, err := dopplerClient.BatchSubscribe(context.TODO(), subscribeRequest)
 				Expect(err).ToNot(HaveOccurred())
 
-				Eventually(mockRegistrar.registerRequest).Should(Equal(subscribeRequest))
+				Eventually(func() bool {
+					return proto.Equal(mockRegistrar.registerRequest(), subscribeRequest)
+				}).Should(BeTrue())
 			})
 
 			Context("when the client does not close the connection", func() {

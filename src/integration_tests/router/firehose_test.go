@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"code.cloudfoundry.org/go-loggregator/v8/rpc/loggregator_v2"
+	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator/integration_tests/fakes"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"code.cloudfoundry.org/loggregator/testservers"
@@ -210,7 +210,7 @@ var _ = Describe("Firehose test", func() {
 					select {
 					case <-stop:
 						return
-					case envs <- &e:
+					case envs <- e:
 					}
 				}
 			}()
@@ -276,7 +276,7 @@ var _ = Describe("Firehose test", func() {
 					select {
 					case <-stop:
 						return
-					case envs <- &e:
+					case envs <- e:
 						// Do Nothing
 					}
 				}

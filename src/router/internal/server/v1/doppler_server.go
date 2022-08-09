@@ -11,8 +11,8 @@ import (
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
 	"golang.org/x/net/context"
+	"google.golang.org/protobuf/proto"
 )
 
 // Registrar registers stream and firehose DataSetters to accept reads.
@@ -28,6 +28,8 @@ type DataSetter interface {
 // DopplerServer is the GRPC server component that accepts requests for firehose
 // streams, application streams, and recent logs.
 type DopplerServer struct {
+	plumbing.DopplerServer
+
 	registrar           Registrar
 	egressMetric        *metricemitter.Counter
 	egressDropped       *metricemitter.Counter
