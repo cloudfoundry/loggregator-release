@@ -140,7 +140,7 @@ var _ = Describe("FirehoseHandler", func() {
 		Expect(adminAuth.TokenParam).To(Equal("token"))
 
 		Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
-		Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
+		Expect(recorder.Header().Get("WWW-Authenticate")).To(Equal("Basic"))
 		Expect(recorder.Body.String()).To(Equal("You are not authorized. Error: Invalid authorization"))
 	})
 

@@ -98,7 +98,7 @@ var _ = Describe("StreamHandler", func() {
 			Expect(auth.Target).To(Equal("8de7d390-9044-41ff-ab76-432299923511"))
 
 			Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
-			Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
+			Expect(recorder.Header().Get("WWW-Authenticate")).To(Equal("Basic"))
 		})
 
 		It("does not attempt to connect to doppler", func() {
