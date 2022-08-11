@@ -8,6 +8,7 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"code.cloudfoundry.org/go-loggregator/v9/conversion"
 	"code.cloudfoundry.org/loggregator/diodes"
@@ -33,7 +34,7 @@ var _ = Describe("IngestorServer", func() {
 	}
 
 	var establishClient = func(dopplerAddr string) (plumbing.DopplerIngestorClient, io.Closer) {
-		conn, err := grpc.Dial(dopplerAddr, grpc.WithInsecure())
+		conn, err := grpc.Dial(dopplerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		Expect(err).ToNot(HaveOccurred())
 		c := plumbing.NewDopplerIngestorClient(conn)
 

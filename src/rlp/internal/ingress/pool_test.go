@@ -8,6 +8,7 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -19,7 +20,7 @@ var _ = Describe("Pool", func() {
 	)
 
 	BeforeEach(func() {
-		pool = ingress.NewPool(2, grpc.WithInsecure())
+		pool = ingress.NewPool(2, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	})
 
 	Describe("Register() & Close()", func() {

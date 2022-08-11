@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
@@ -37,7 +38,7 @@ var _ = Describe("GRPCConnector", func() {
 		mockDopplerServerB = startMockDopplerServer()
 		mockFinder = newMockFinder()
 
-		pool := plumbing.NewPool(grpc.WithInsecure())
+		pool := plumbing.NewPool(grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 		req = &plumbing.SubscriptionRequest{
 			ShardID: "test-sub-id",
