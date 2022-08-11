@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -337,7 +336,7 @@ var _ = Describe("Read", func() {
 		resp, err := server.Client().Do(req.WithContext(ctx))
 		Expect(err).ToNot(HaveOccurred())
 
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
@@ -354,7 +353,7 @@ var _ = Describe("Read", func() {
 		resp, err := server.Client().Do(req.WithContext(ctx))
 		Expect(err).ToNot(HaveOccurred())
 
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(resp.StatusCode).To(Equal(http.StatusMethodNotAllowed))

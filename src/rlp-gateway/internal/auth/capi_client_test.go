@@ -2,7 +2,7 @@ package auth_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"sync"
 
@@ -31,7 +31,7 @@ var _ = Describe("CAPIClient", func() {
 			"http://external.capi.com",
 			capiClient,
 			metrics,
-			log.New(ioutil.Discard, "", 0),
+			log.New(io.Discard, "", 0),
 		)
 	})
 

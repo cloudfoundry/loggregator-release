@@ -3,7 +3,7 @@ package proxy_test
 import (
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -70,7 +70,7 @@ var _ = Describe("Recent Logs Handler", func() {
 			part, err := reader.NextPart()
 			Expect(err).ToNot(HaveOccurred())
 
-			partBytes, err := ioutil.ReadAll(part)
+			partBytes, err := io.ReadAll(part)
 			Expect(err).ToNot(HaveOccurred())
 
 			var logEnvelope events.Envelope
@@ -147,7 +147,7 @@ var _ = Describe("Recent Logs Handler", func() {
 
 		recentLogsHandler.ServeHTTP(recorder, req)
 		resp := recorder.Result()
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 
 		Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
 		Expect(string(body)).To(Equal("It failed"))
@@ -177,7 +177,7 @@ var _ = Describe("Recent Logs Handler", func() {
 		part, err := reader.NextPart()
 		Expect(err).ToNot(HaveOccurred())
 
-		partBytes, err := ioutil.ReadAll(part)
+		partBytes, err := io.ReadAll(part)
 		Expect(err).ToNot(HaveOccurred())
 
 		var logEnvelope events.Envelope
