@@ -12,6 +12,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 
 	. "github.com/onsi/ginkgo"
@@ -36,7 +37,7 @@ var _ = Describe("GRPCConnector", func() {
 		mockDopplerServerB = startMockDopplerServer()
 		mockFinder = newMockFinder()
 
-		pool := ingress.NewPool(2, grpc.WithInsecure())
+		pool := ingress.NewPool(2, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 		req = &loggregator_v2.EgressBatchRequest{
 			ShardId: "test-sub-id",

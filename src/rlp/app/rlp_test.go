@@ -18,10 +18,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/cloudfoundry/sonde-go/events"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"google.golang.org/protobuf/proto"
 )
 
 var _ = Describe("Start", func() {
@@ -185,22 +183,6 @@ var _ = Describe("Start", func() {
 		})
 	})
 })
-
-func buildContainerMetric() []byte {
-	e := &events.Envelope{
-		Origin:    proto.String("some-origin"),
-		EventType: events.Envelope_ContainerMetric.Enum(),
-		ContainerMetric: &events.ContainerMetric{
-			ApplicationId: proto.String("test-app"),
-			InstanceIndex: proto.Int32(1),
-			CpuPercentage: proto.Float64(10.0),
-			MemoryBytes:   proto.Uint64(1),
-			DiskBytes:     proto.Uint64(1),
-		},
-	}
-	b, _ := proto.Marshal(e)
-	return b
-}
 
 func setupDoppler(testCerts *testservers.TestCerts) (*mockDopplerServer, *spyDopplerV2, net.Listener) {
 	dopplerV1 := newMockDopplerServer()

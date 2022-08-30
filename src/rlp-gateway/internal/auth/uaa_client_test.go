@@ -1,6 +1,7 @@
 package auth_test
 
 import (
+	"io"
 	"log"
 	"sync"
 
@@ -9,7 +10,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -34,7 +34,7 @@ var _ = Describe("UAAClient", func() {
 			"some-client-secret",
 			httpClient,
 			metrics,
-			log.New(ioutil.Discard, "", 0),
+			log.New(io.Discard, "", 0),
 		)
 	})
 
@@ -94,7 +94,7 @@ var _ = Describe("UAAClient", func() {
 		Expect(client).To(Equal("some-client"))
 		Expect(clientSecret).To(Equal("some-client-secret"))
 
-		reqBytes, err := ioutil.ReadAll(r.Body)
+		reqBytes, err := io.ReadAll(r.Body)
 		Expect(err).ToNot(HaveOccurred())
 		urlValues, err := url.ParseQuery(string(reqBytes))
 		Expect(err).ToNot(HaveOccurred())
@@ -175,7 +175,7 @@ func (s *spyHTTPClient) Do(r *http.Request) (*http.Response, error) {
 	if len(s.resps) == 0 {
 		return &http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewReader(nil)),
+			Body:       io.NopCloser(bytes.NewReader(nil)),
 		}, nil
 	}
 
@@ -184,7 +184,7 @@ func (s *spyHTTPClient) Do(r *http.Request) (*http.Response, error) {
 
 	resp := http.Response{
 		StatusCode: result.status,
-		Body:       ioutil.NopCloser(bytes.NewReader(result.body)),
+		Body:       io.NopCloser(bytes.NewReader(result.body)),
 	}
 
 	if result.err != nil {

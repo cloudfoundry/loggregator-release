@@ -27,8 +27,11 @@ var (
 )
 
 func TestIntegrationTest(t *testing.T) {
-	grpclog.SetLogger(log.New(GinkgoWriter, "", log.LstdFlags))
+	l := grpclog.NewLoggerV2(GinkgoWriter, GinkgoWriter, GinkgoWriter)
+	grpclog.SetLoggerV2(l)
+
 	log.SetOutput(GinkgoWriter)
+
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Traffic Controller Integration Suite")
 }

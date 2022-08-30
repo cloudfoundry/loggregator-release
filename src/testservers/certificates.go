@@ -1,8 +1,8 @@
 package testservers
 
 import (
-	"io/ioutil"
 	"log"
+	"os"
 	"sync"
 
 	"code.cloudfoundry.org/tlsconfig/certtest"
@@ -81,7 +81,7 @@ func generateCA(caName string) (*certtest.Authority, string) {
 }
 
 func tmpFile(prefix string, caBytes []byte) string {
-	file, err := ioutil.TempFile("", prefix)
+	file, err := os.CreateTemp("", prefix)
 	if err != nil {
 		log.Fatal(err)
 	}

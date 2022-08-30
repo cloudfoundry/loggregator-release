@@ -294,13 +294,11 @@ type dopplerClientInfo struct {
 }
 
 type consumerState struct {
-	ctx       context.Context
-	req       *SubscriptionRequest
-	data      chan []byte
-	errs      chan error
-	missed    int
-	maxMissed int
-	dead      int64
+	ctx  context.Context
+	req  *SubscriptionRequest
+	data chan []byte
+	errs chan error
+	dead int64
 
 	mu       sync.Mutex
 	dopplers map[string]bool
@@ -321,7 +319,7 @@ func (cs *consumerState) tryAddDoppler(doppler string) bool {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
-	ok, _ := cs.dopplers[doppler]
+	ok := cs.dopplers[doppler]
 	if ok {
 		return false
 	}

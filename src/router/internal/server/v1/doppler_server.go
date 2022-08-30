@@ -10,9 +10,7 @@ import (
 	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
-	"github.com/cloudfoundry/sonde-go/events"
 	"golang.org/x/net/context"
-	"google.golang.org/protobuf/proto"
 )
 
 // Registrar registers stream and firehose DataSetters to accept reads.
@@ -93,18 +91,6 @@ func (m *DopplerServer) BatchSubscribe(req *plumbing.SubscriptionRequest, sender
 	defer m.subscriptionsMetric.Decrement(1.0)
 
 	return m.sendBatchData(req, sender)
-}
-
-func marshalEnvelopes(envelopes []*events.Envelope) [][]byte {
-	var marshalled [][]byte
-	for _, env := range envelopes {
-		bts, err := proto.Marshal(env)
-		if err != nil {
-			continue
-		}
-		marshalled = append(marshalled, bts)
-	}
-	return marshalled
 }
 
 func (m *DopplerServer) sendData(req *plumbing.SubscriptionRequest, sender sender) error {

@@ -11,9 +11,9 @@ import (
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	v1 "code.cloudfoundry.org/loggregator/router/internal/server/v1"
-	"github.com/cloudfoundry/sonde-go/events"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
 
 	. "github.com/onsi/ginkgo"
@@ -350,7 +350,7 @@ func startGRPCServer(ds plumbing.DopplerServer) net.Listener {
 }
 
 func establishClient(dopplerAddr string) (plumbing.DopplerClient, io.Closer) {
-	conn, err := grpc.Dial(dopplerAddr, grpc.WithInsecure())
+	conn, err := grpc.Dial(dopplerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	Expect(err).ToNot(HaveOccurred())
 	c := plumbing.NewDopplerClient(conn)
 
@@ -428,19 +428,4 @@ func (s *spyRegistrar) registerSetter() v1.DataSetter {
 	defer s.mu.Unlock()
 
 	return s.registerSetter_
-}
-
-func newSpyDataDumper() *spyDataDumper {
-	return &spyDataDumper{}
-}
-
-type spyDataDumper struct {
-	recentLogsForAppID     string
-	recentLogsForEnvelopes []*events.Envelope
-}
-
-func (s *spyDataDumper) RecentLogsFor(appID string) []*events.Envelope {
-	s.recentLogsForAppID = appID
-
-	return s.recentLogsForEnvelopes
 }

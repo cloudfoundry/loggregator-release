@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
-	"sync"
 
 	"code.cloudfoundry.org/loggregator/diodes"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -13,9 +12,8 @@ import (
 // MessageRouter consumes from a diode and sends envelopes to all recipients
 // passed to the NewMessageRouter constructor.
 type MessageRouter struct {
-	senders  []EnvelopeSender
-	done     chan struct{}
-	stopOnce sync.Once
+	senders []EnvelopeSender
+	done    chan struct{}
 }
 
 // EnvelopeSender is the interface the MessageRouter uses to send envelopes

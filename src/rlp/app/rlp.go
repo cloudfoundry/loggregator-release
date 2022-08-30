@@ -17,6 +17,7 @@ import (
 	"code.cloudfoundry.org/loggregator/rlp/internal/ingress"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
@@ -55,7 +56,7 @@ func NewRLP(m MetricClient, opts ...RLPOption) *RLP {
 	ctx, cancel := context.WithCancel(context.Background())
 	rlp := &RLP{
 		ingressAddrs:         []string{"doppler.service.cf.internal"},
-		ingressDialOpts:      []grpc.DialOption{grpc.WithInsecure()},
+		ingressDialOpts:      []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())},
 		egressServerOpts:     []grpc.ServerOption{},
 		maxEgressConnections: 500,
 		maxEgressStreams:     500,

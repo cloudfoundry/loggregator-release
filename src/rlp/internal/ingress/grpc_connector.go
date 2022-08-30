@@ -291,13 +291,11 @@ type dopplerClientInfo struct {
 }
 
 type consumerState struct {
-	ctx       context.Context
-	req       *loggregator_v2.EgressBatchRequest
-	data      chan *loggregator_v2.Envelope
-	errs      chan error
-	missed    int
-	maxMissed int
-	dead      int64
+	ctx  context.Context
+	req  *loggregator_v2.EgressBatchRequest
+	data chan *loggregator_v2.Envelope
+	errs chan error
+	dead int64
 
 	mu       sync.Mutex
 	dopplers map[string]bool
@@ -318,7 +316,7 @@ func (cs *consumerState) tryAddDoppler(doppler string) bool {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
-	ok, _ := cs.dopplers[doppler]
+	ok := cs.dopplers[doppler]
 	if ok {
 		return false
 	}

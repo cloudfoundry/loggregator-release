@@ -60,7 +60,7 @@ var _ = Describe("KeepAlive", func() {
 
 func makeTestHandler(keepAliveCompleted chan struct{}) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		conn, _ := websocket.Upgrade(rw, req, nil, 0, 0)
+		conn, _ := (&websocket.Upgrader{}).Upgrade(rw, req, nil)
 		go conn.ReadMessage()
 		proxy.NewKeepAlive(conn, 50*time.Millisecond).Run()
 		close(keepAliveCompleted)

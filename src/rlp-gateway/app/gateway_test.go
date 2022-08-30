@@ -112,7 +112,7 @@ var _ = Describe("Gateway", func() {
 			gateway.Start(false)
 			defer gateway.Stop()
 
-			client := newTestClient(&tls.Config{InsecureSkipVerify: true})
+			client := newTestClient(&tls.Config{InsecureSkipVerify: true}) //nolint:gosec
 			go func() {
 				defer GinkgoRecover()
 				resp, err := client.open("https://" + gateway.Addr() + "/v2/read?log&source_id=deadbeef-dead-dead-dead-deaddeafbeef")
@@ -132,7 +132,7 @@ var _ = Describe("Gateway", func() {
 			gateway.Start(false)
 			defer gateway.Stop()
 
-			client := newTestClient(&tls.Config{InsecureSkipVerify: true})
+			client := newTestClient(&tls.Config{InsecureSkipVerify: true}) //nolint:gosec
 			Expect(func() {
 				client.open("https://" + gateway.Addr() + "/v2/read?log&source_id=deadbeef-dead-dead-dead-deaddeafbeef")
 			}).ToNot(Panic())
@@ -143,7 +143,7 @@ var _ = Describe("Gateway", func() {
 			gateway.Start(false)
 			defer gateway.Stop()
 
-			client := newTestClient(&tls.Config{InsecureSkipVerify: true})
+			client := newTestClient(&tls.Config{InsecureSkipVerify: true}) //nolint:gosec
 			resp, err := client.open("http://" + gateway.Addr() + "/v2/read?log&source_id=deadbeef")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
@@ -178,7 +178,7 @@ var _ = Describe("Gateway", func() {
 			gateway.Start(false)
 			defer gateway.Stop()
 
-			client := newTestClient(&tls.Config{InsecureSkipVerify: true})
+			client := newTestClient(&tls.Config{InsecureSkipVerify: true}) //nolint:gosec
 			go func() {
 				defer GinkgoRecover()
 				resp, err := client.open("https://" + gateway.Addr() + "/v2/read?log&source_id=deadbeef-dead-dead-dead-deaddeafbeef")
@@ -198,7 +198,7 @@ var _ = Describe("Gateway", func() {
 			gateway.Start(false)
 			defer gateway.Stop()
 
-			client := newTestClient(&tls.Config{InsecureSkipVerify: true})
+			client := newTestClient(&tls.Config{InsecureSkipVerify: true}) //nolint:gosec
 			Expect(func() {
 				client.open("https://" + gateway.Addr() + "/v2/read?log")
 			}).ToNot(Panic())
@@ -232,7 +232,7 @@ var _ = Describe("Gateway", func() {
 			gateway.Start(false)
 			defer gateway.Stop()
 
-			client := newTestClient(&tls.Config{InsecureSkipVerify: true})
+			client := newTestClient(&tls.Config{InsecureSkipVerify: true}) //nolint:gosec
 			resp, err := client.open("https://" + gateway.Addr() + "/v2/read?log&source_id=some-id")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
@@ -243,7 +243,7 @@ var _ = Describe("Gateway", func() {
 			gateway.Start(false)
 			defer gateway.Stop()
 
-			client := newTestClient(&tls.Config{InsecureSkipVerify: true})
+			client := newTestClient(&tls.Config{InsecureSkipVerify: true}) //nolint:gosec
 			resp, err := client.open("https://" + gateway.Addr() + "/v2/read?log")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
@@ -293,7 +293,7 @@ var _ = Describe("Gateway", func() {
 				Expect(runTest).To(Panic())
 			}
 		},
-			Entry("unsupported SSL 3.0", tls.VersionSSL30, false),
+			Entry("unsupported SSL 3.0", tls.VersionSSL30, false), //nolint:staticcheck
 			Entry("unsupported TLS 1.0", tls.VersionTLS10, false),
 			Entry("unsupported TLS 1.1", tls.VersionTLS11, false),
 			Entry("supported TLS 1.2", tls.VersionTLS12, true),
@@ -359,7 +359,7 @@ func buildTLSConfig(maxVersion, cipherSuite uint16) *tls.Config {
 			ServerName:         "",
 			MaxVersion:         uint16(maxVersion),
 			CipherSuites:       []uint16{cipherSuite},
-			InsecureSkipVerify: true,
+			InsecureSkipVerify: true, //nolint:gosec
 		}
 	}
 

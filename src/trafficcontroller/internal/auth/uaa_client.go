@@ -3,7 +3,7 @@ package auth
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -52,7 +52,7 @@ func (c *uaaClient) GetAuthData(token string) (*AuthData, error) {
 		return nil, errors.New("API endpoint not found")
 	}
 
-	responseBody, err := ioutil.ReadAll(response.Body)
+	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
 	}

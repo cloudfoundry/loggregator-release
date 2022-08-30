@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -21,7 +22,7 @@ var _ = Describe("Pool", func() {
 	)
 
 	BeforeEach(func() {
-		pool = plumbing.NewPool(grpc.WithInsecure())
+		pool = plumbing.NewPool(grpc.WithTransportCredentials(insecure.NewCredentials()))
 	})
 
 	AfterEach(func(done Done) {

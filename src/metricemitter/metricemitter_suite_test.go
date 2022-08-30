@@ -11,8 +11,11 @@ import (
 )
 
 func TestMetricemitter(t *testing.T) {
-	grpclog.SetLogger(log.New(GinkgoWriter, "", 0))
+	l := grpclog.NewLoggerV2(GinkgoWriter, GinkgoWriter, GinkgoWriter)
+	grpclog.SetLoggerV2(l)
+
 	log.SetOutput(GinkgoWriter)
+
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Metricemitter Suite")
 }

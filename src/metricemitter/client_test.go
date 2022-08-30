@@ -9,6 +9,7 @@ import (
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -21,7 +22,7 @@ var _ = Describe("Emitter Client", func() {
 
 		_, err := metricemitter.NewClient(
 			grpcServer.addr,
-			metricemitter.WithGRPCDialOptions(grpc.WithInsecure()),
+			metricemitter.WithGRPCDialOptions(grpc.WithTransportCredentials(insecure.NewCredentials())),
 			metricemitter.WithPulseInterval(50*time.Millisecond),
 		)
 
@@ -33,7 +34,7 @@ var _ = Describe("Emitter Client", func() {
 
 		client, err := metricemitter.NewClient(
 			grpcServer.addr,
-			metricemitter.WithGRPCDialOptions(grpc.WithInsecure()),
+			metricemitter.WithGRPCDialOptions(grpc.WithTransportCredentials(insecure.NewCredentials())),
 			metricemitter.WithPulseInterval(50*time.Millisecond),
 		)
 		Expect(err).ToNot(HaveOccurred())
@@ -63,7 +64,7 @@ var _ = Describe("Emitter Client", func() {
 
 		client, err := metricemitter.NewClient(
 			grpcServer.addr,
-			metricemitter.WithGRPCDialOptions(grpc.WithInsecure()),
+			metricemitter.WithGRPCDialOptions(grpc.WithTransportCredentials(insecure.NewCredentials())),
 			metricemitter.WithPulseInterval(50*time.Millisecond),
 		)
 		Expect(err).ToNot(HaveOccurred())
@@ -78,7 +79,7 @@ var _ = Describe("Emitter Client", func() {
 
 		client, err := metricemitter.NewClient(
 			grpcServer.addr,
-			metricemitter.WithGRPCDialOptions(grpc.WithInsecure()),
+			metricemitter.WithGRPCDialOptions(grpc.WithTransportCredentials(insecure.NewCredentials())),
 			metricemitter.WithPulseInterval(50*time.Millisecond),
 			metricemitter.WithSourceID("some-id"),
 		)
@@ -97,7 +98,7 @@ var _ = Describe("Emitter Client", func() {
 	It("does not try to emit an event when loggregator is not available", func() {
 		client, err := metricemitter.NewClient(
 			"127.0.0.1:9093",
-			metricemitter.WithGRPCDialOptions(grpc.WithInsecure()),
+			metricemitter.WithGRPCDialOptions(grpc.WithTransportCredentials(insecure.NewCredentials())),
 			metricemitter.WithPulseInterval(50*time.Millisecond),
 		)
 		Expect(err).ToNot(HaveOccurred())
@@ -115,7 +116,7 @@ var _ = Describe("Emitter Client", func() {
 
 			client, err := metricemitter.NewClient(
 				grpcServer.addr,
-				metricemitter.WithGRPCDialOptions(grpc.WithInsecure()),
+				metricemitter.WithGRPCDialOptions(grpc.WithTransportCredentials(insecure.NewCredentials())),
 				metricemitter.WithPulseInterval(50*time.Millisecond),
 				metricemitter.WithSourceID("a-source"),
 			)
@@ -143,7 +144,7 @@ var _ = Describe("Emitter Client", func() {
 
 			client, err := metricemitter.NewClient(
 				grpcServer.addr,
-				metricemitter.WithGRPCDialOptions(grpc.WithInsecure()),
+				metricemitter.WithGRPCDialOptions(grpc.WithTransportCredentials(insecure.NewCredentials())),
 				metricemitter.WithPulseInterval(50*time.Millisecond),
 				metricemitter.WithSourceID("a-source"),
 				metricemitter.WithOrigin("a-origin"),
@@ -184,7 +185,7 @@ var _ = Describe("Emitter Client", func() {
 
 				client, err := metricemitter.NewClient(
 					grpcServer.addr,
-					metricemitter.WithGRPCDialOptions(grpc.WithInsecure()),
+					metricemitter.WithGRPCDialOptions(grpc.WithTransportCredentials(insecure.NewCredentials())),
 					metricemitter.WithPulseInterval(50*time.Millisecond),
 				)
 				Expect(err).ToNot(HaveOccurred())
