@@ -38,16 +38,16 @@ var _ = Describe("AccessLog", func() {
 		timestamp = time.Now()
 
 		method = "GET"
-		path = fmt.Sprintf("/some/path?with_query=params-%d", rand.Int())
+		path = fmt.Sprintf("/some/path?with_query=params-%d", rand.Int()) //nolint:gosec
 		url = "http://example.com" + path
-		sourceHost = fmt.Sprintf("10.0.1.%d", rand.Int()%256)
-		sourcePort = strconv.Itoa(rand.Int()%65535 + 1)
+		sourceHost = fmt.Sprintf("10.0.1.%d", rand.Intn(256)) //nolint:gosec
+		sourcePort = strconv.Itoa(rand.Intn(65535) + 1)       //nolint:gosec
 		remoteAddr = sourceHost + ":" + sourcePort
-		dstHost = fmt.Sprintf("10.1.2.%d", rand.Int()%256)
-		dstPort = strconv.Itoa(rand.Int()%65535 + 1)
+		dstHost = fmt.Sprintf("10.1.2.%d", rand.Intn(256)) //nolint:gosec
+		dstPort = strconv.Itoa(rand.Intn(65535) + 1)       //nolint:gosec
 
-		forwardedFor = fmt.Sprintf("10.0.0.%d", rand.Int()%256)
-		requestId = fmt.Sprintf("test-vcap-request-id-%d", rand.Int())
+		forwardedFor = fmt.Sprintf("10.0.0.%d", rand.Intn(256))        //nolint:gosec
+		requestId = fmt.Sprintf("test-vcap-request-id-%d", rand.Int()) //nolint:gosec
 	})
 
 	JustBeforeEach(func() {
