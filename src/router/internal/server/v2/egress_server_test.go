@@ -36,10 +36,15 @@ var _ = Describe("EgressServer", func() {
 	Describe("BatchedReceiver", func() {
 		It("forwards messages to a connected client", func() {
 			ctx, cancel := context.WithCancel(context.Background())
+			errors := make(chan error)
+			defer func() {
+				cancel()
+				Eventually(errors).Should(Receive(MatchError("context canceled")))
+			}()
+
 			spyReceiver := &spyBatchReceiver{
 				_context: ctx,
 			}
-			defer cancel()
 			subscriber := &spySubscriber{}
 			server := v2.NewEgressServer(
 				subscriber,
@@ -50,7 +55,9 @@ var _ = Describe("EgressServer", func() {
 				10,
 			)
 
-			go server.BatchedReceiver(&loggregator_v2.EgressBatchRequest{}, spyReceiver)
+			go func() {
+				errors <- server.BatchedReceiver(&loggregator_v2.EgressBatchRequest{}, spyReceiver)
+			}()
 
 			Eventually(spyReceiver.batches).ShouldNot(BeEmpty())
 		})
