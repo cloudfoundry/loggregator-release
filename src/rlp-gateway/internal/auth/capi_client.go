@@ -139,7 +139,11 @@ func (c *CAPIClient) AvailableSourceIDs(token string) []string {
 		} `json:"resources"`
 	}
 
-	json.NewDecoder(resp.Body).Decode(&appSources)
+	err = json.NewDecoder(resp.Body).Decode(&appSources)
+	if err != nil && err != io.EOF {
+		log.Printf("Failure decoding CAPI request: %s", err)
+		return nil
+	}
 
 	for _, v := range appSources.Resources {
 		sourceIDs = append(sourceIDs, v.Guid)
@@ -177,7 +181,11 @@ func (c *CAPIClient) AvailableSourceIDs(token string) []string {
 		} `json:"resources"`
 	}
 
-	json.NewDecoder(resp.Body).Decode(&serviceSources)
+	err = json.NewDecoder(resp.Body).Decode(&serviceSources)
+	if err != nil && err != io.EOF {
+		log.Printf("Failure decoding CAPI request: %s", err)
+		return nil
+	}
 
 	for _, v := range serviceSources.Resources {
 		sourceIDs = append(sourceIDs, v.Metadata.Guid)
@@ -187,6 +195,6 @@ func (c *CAPIClient) AvailableSourceIDs(token string) []string {
 }
 
 func cleanup(resp *http.Response) {
-	io.Copy(io.Discard, resp.Body)
+	_, _ = io.Copy(io.Discard, resp.Body)
 	resp.Body.Close()
 }

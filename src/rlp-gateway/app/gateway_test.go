@@ -134,7 +134,8 @@ var _ = Describe("Gateway", func() {
 
 			client := newTestClient(&tls.Config{InsecureSkipVerify: true}) //nolint:gosec
 			Expect(func() {
-				client.open("https://" + gateway.Addr() + "/v2/read?log&source_id=deadbeef-dead-dead-dead-deaddeafbeef")
+				_, err := client.open("https://" + gateway.Addr() + "/v2/read?log&source_id=deadbeef-dead-dead-dead-deaddeafbeef")
+				Expect(err).To(MatchError("EOF"))
 			}).ToNot(Panic())
 		})
 
@@ -200,7 +201,8 @@ var _ = Describe("Gateway", func() {
 
 			client := newTestClient(&tls.Config{InsecureSkipVerify: true}) //nolint:gosec
 			Expect(func() {
-				client.open("https://" + gateway.Addr() + "/v2/read?log")
+				_, err := client.open("https://" + gateway.Addr() + "/v2/read?log")
+				Expect(err).To(MatchError("EOF"))
 			}).ToNot(Panic())
 		})
 	})
@@ -279,7 +281,8 @@ var _ = Describe("Gateway", func() {
 			gateway.Start(false)
 			defer gateway.Stop()
 
-			client.open("https://" + gateway.Addr() + "/v2/read?log&source_id=deadbeef-dead-dead-dead-deaddeafbeef")
+			_, err := client.open("https://" + gateway.Addr() + "/v2/read?log&source_id=deadbeef-dead-dead-dead-deaddeafbeef")
+			Expect(err).To(MatchError("EOF"))
 		}
 
 		DescribeTable("allows only supported TLS versions", func(clientTLSVersion int, serverShouldAllow bool) {

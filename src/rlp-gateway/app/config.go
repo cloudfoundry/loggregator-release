@@ -76,7 +76,10 @@ func LoadConfig() Config {
 		log.Fatalf("failed to load config from environment: %s", err)
 	}
 
-	envstruct.WriteReport(&cfg)
+	err := envstruct.WriteReport(&cfg)
+	if err != nil {
+		log.Printf("Failed to print a report of the from environment: %s\n", err)
+	}
 
 	return cfg
 }

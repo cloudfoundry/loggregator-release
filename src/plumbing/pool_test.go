@@ -119,8 +119,11 @@ var _ = Describe("Pool", func() {
 					resp := &plumbing.BatchResponse{
 						Payload: [][]byte{[]byte("some-data")},
 					}
-					sender11.Send(resp)
-					sender12.Send(resp)
+					err11 := sender11.Send(resp)
+					err12 := sender12.Send(resp)
+
+					Expect(err11).NotTo(HaveOccurred())
+					Expect(err12).NotTo(HaveOccurred())
 				}
 
 				Eventually(data).Should(HaveLen(20))
@@ -183,7 +186,7 @@ func accepter(lis net.Listener) (net.Listener, chan bool) {
 				return
 			}
 
-			dontGC = append(dontGC, conn)
+			dontGC = append(dontGC, conn) //nolint: staticcheck
 			c <- true
 		}
 	}()

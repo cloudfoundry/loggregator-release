@@ -20,5 +20,5 @@ func (fakeAuthServer *FakeAuthServer) Start() {
 }
 
 func (fakeAuthServer *FakeAuthServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	writer.Write([]byte("Hello from the fake AUTH server!!!"))
+	_, _ = writer.Write([]byte("Hello from the fake AUTH server!!!"))
 }

@@ -36,10 +36,15 @@ var _ = Describe("EgressServer", func() {
 	Describe("BatchedReceiver", func() {
 		It("forwards messages to a connected client", func() {
 			ctx, cancel := context.WithCancel(context.Background())
+			errors := make(chan error)
+			defer func() {
+				cancel()
+				Eventually(errors).Should(Receive(MatchError("context canceled")))
+			}()
+
 			spyReceiver := &spyBatchReceiver{
 				_context: ctx,
 			}
-			defer cancel()
 			subscriber := &spySubscriber{}
 			server := v2.NewEgressServer(
 				subscriber,
@@ -50,7 +55,9 @@ var _ = Describe("EgressServer", func() {
 				10,
 			)
 
-			go server.BatchedReceiver(&loggregator_v2.EgressBatchRequest{}, spyReceiver)
+			go func() {
+				errors <- server.BatchedReceiver(&loggregator_v2.EgressBatchRequest{}, spyReceiver)
+			}()
 
 			Eventually(spyReceiver.batches).ShouldNot(BeEmpty())
 		})
@@ -60,7 +67,11 @@ var _ = Describe("EgressServer", func() {
 			spyReceiver := &spyBatchReceiver{
 				_context: ctx,
 			}
-			defer cancel()
+			errors := make(chan error)
+			defer func() {
+				cancel()
+				Eventually(errors).Should(Receive(MatchError("context canceled")))
+			}()
 			subscriber := &spySubscriber{
 				wait: time.Hour,
 			}
@@ -73,7 +84,9 @@ var _ = Describe("EgressServer", func() {
 				2000,
 			)
 
-			go server.BatchedReceiver(&loggregator_v2.EgressBatchRequest{}, spyReceiver)
+			go func() {
+				errors <- server.BatchedReceiver(&loggregator_v2.EgressBatchRequest{}, spyReceiver)
+			}()
 
 			Eventually(spyReceiver.batches).Should(HaveLen(1))
 
@@ -128,7 +141,11 @@ var _ = Describe("EgressServer", func() {
 				_context: ctx,
 				err:      errors.New("some error"),
 			}
-			defer cancel()
+			errors := make(chan error)
+			defer func() {
+				cancel()
+				Eventually(errors).Should(Receive(MatchError("some error")))
+			}()
 			subscriber := &spySubscriber{}
 			server := v2.NewEgressServer(
 				subscriber,
@@ -139,7 +156,9 @@ var _ = Describe("EgressServer", func() {
 				10,
 			)
 
-			go server.BatchedReceiver(&loggregator_v2.EgressBatchRequest{}, spyReceiver)
+			go func() {
+				errors <- server.BatchedReceiver(&loggregator_v2.EgressBatchRequest{}, spyReceiver)
+			}()
 
 			Eventually(subscriber.cleanupCalled).Should(BeTrue())
 		})
@@ -149,7 +168,11 @@ var _ = Describe("EgressServer", func() {
 			spyReceiver := &spyBatchReceiver{
 				_context: ctx,
 			}
-			defer cancel()
+			errors := make(chan error)
+			defer func() {
+				cancel()
+				Eventually(errors).Should(Receive(MatchError("context canceled")))
+			}()
 			subscriber := &spySubscriber{}
 			server := v2.NewEgressServer(
 				subscriber,
@@ -163,7 +186,9 @@ var _ = Describe("EgressServer", func() {
 			req := &loggregator_v2.EgressBatchRequest{
 				ShardId: "some-shard-id",
 			}
-			go server.BatchedReceiver(req, spyReceiver)
+			go func() {
+				errors <- server.BatchedReceiver(req, spyReceiver)
+			}()
 
 			Eventually(subscriber.request).Should(Equal(req))
 		})
@@ -174,6 +199,7 @@ var _ = Describe("EgressServer", func() {
 			spyReceiver := &spyBatchReceiver{
 				_context: ctx,
 			}
+			errors := make(chan error)
 			subscriber := &spySubscriber{}
 			server := v2.NewEgressServer(
 				subscriber,
@@ -187,13 +213,16 @@ var _ = Describe("EgressServer", func() {
 			req := &loggregator_v2.EgressBatchRequest{
 				ShardId: "some-shard-id",
 			}
-			go server.BatchedReceiver(req, spyReceiver)
+			go func() {
+				errors <- server.BatchedReceiver(req, spyReceiver)
+			}()
 
 			Eventually(func() float64 {
 				return subscriptionsMetric.GetValue()
 			}).Should(Equal(1.0))
 
 			cancel()
+			Eventually(errors).Should(Receive(MatchError("context canceled")))
 
 			Eventually(func() float64 {
 				return subscriptionsMetric.GetValue()
@@ -208,7 +237,11 @@ var _ = Describe("EgressServer", func() {
 			spyReceiver := &spyBatchReceiver{
 				_context: ctx,
 			}
-			defer cancel()
+			errors := make(chan error)
+			defer func() {
+				cancel()
+				Eventually(errors).Should(Receive(MatchError("context canceled")))
+			}()
 
 			subscriber := &spySubscriber{}
 			server := v2.NewEgressServer(
@@ -219,7 +252,9 @@ var _ = Describe("EgressServer", func() {
 				time.Millisecond,
 				10,
 			)
-			go server.BatchedReceiver(&loggregator_v2.EgressBatchRequest{}, spyReceiver)
+			go func() {
+				errors <- server.BatchedReceiver(&loggregator_v2.EgressBatchRequest{}, spyReceiver)
+			}()
 
 			Eventually(func() uint64 {
 				return metricClient.GetDelta("egress")
@@ -245,9 +280,15 @@ var _ = Describe("EgressServer", func() {
 
 			ctx, cancel := context.WithCancel(context.Background())
 			br := newSlowBatchReciever(100*time.Millisecond, ctx)
-			defer cancel()
+			errors := make(chan error)
+			defer func() {
+				cancel()
+				Eventually(errors).Should(Receive(MatchError("context canceled")))
+			}()
 
-			go server.BatchedReceiver(&loggregator_v2.EgressBatchRequest{}, br)
+			go func() {
+				errors <- server.BatchedReceiver(&loggregator_v2.EgressBatchRequest{}, br)
+			}()
 
 			Eventually(egressDropped.GetDelta, 10).Should(BeNumerically(">", 1))
 		})

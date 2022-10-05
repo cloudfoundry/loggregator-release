@@ -108,8 +108,11 @@ var _ = Describe("Pool", func() {
 					resp := &loggregator_v2.EnvelopeBatch{
 						Batch: []*loggregator_v2.Envelope{{SourceId: "A"}},
 					}
-					senderA.Send(resp)
-					senderB.Send(resp)
+					errA := senderA.Send(resp)
+					errB := senderB.Send(resp)
+
+					Expect(errA).NotTo(HaveOccurred())
+					Expect(errB).NotTo(HaveOccurred())
 				}
 
 				Eventually(data).Should(HaveLen(20))
@@ -173,7 +176,7 @@ func accepter(lis net.Listener) (net.Listener, chan bool) {
 				return
 			}
 
-			dontGC = append(dontGC, conn)
+			dontGC = append(dontGC, conn) //nolint: staticcheck
 			c <- true
 		}
 	}()

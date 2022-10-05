@@ -36,7 +36,10 @@ var _ = Describe("GRPC Streaming Logs", func() {
 			}
 			subscribeClient, err := egressClient.Subscribe(ctx, req)
 			Expect(err).ToNot(HaveOccurred())
-			defer subscribeClient.CloseSend()
+			defer func() {
+				err := subscribeClient.CloseSend()
+				Expect(err).ToNot(HaveOccurred())
+			}()
 			primePumpV1(ingressClient, subscribeClient)
 			logMessage := buildLogMessage()
 

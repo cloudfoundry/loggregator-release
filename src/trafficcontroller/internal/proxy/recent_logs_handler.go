@@ -105,7 +105,7 @@ func (h *RecentLogsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.logCacheFailsMetric.Increment(1)
 		log.Printf("error communicating with log cache: %s", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		_, _ = w.Write([]byte(err.Error()))
 		return
 	}
 
