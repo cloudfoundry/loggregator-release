@@ -74,7 +74,10 @@ var _ = Describe("WebsocketHandler", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(msg)).To(Equal("message"))
 		}
-		go ws.ReadMessage()
+		go func() {
+			_, _, err := ws.ReadMessage()
+			Expect(err.Error()).To(ContainSubstring("websocket: close 1000"))
+		}()
 		close(messagesChan)
 		Eventually(handlerDone).Should(BeClosed())
 	})
@@ -121,7 +124,10 @@ var _ = Describe("WebsocketHandler", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		ws.SetPingHandler(func(string) error { return nil })
-		go ws.ReadMessage()
+		go func() {
+			_, _, err := ws.ReadMessage()
+			Expect(err.Error()).To(ContainSubstring("websocket: close 1008"))
+		}()
 
 		Eventually(handlerDone).Should(BeClosed())
 	})
@@ -130,7 +136,10 @@ var _ = Describe("WebsocketHandler", func() {
 		ws, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		go ws.ReadMessage()
+		go func() {
+			_, _, err := ws.ReadMessage()
+			Expect(err.Error()).To(ContainSubstring("websocket: close 1000"))
+		}()
 
 		Consistently(handlerDone, 200*time.Millisecond).ShouldNot(BeClosed())
 		close(messagesChan)
@@ -143,11 +152,14 @@ var _ = Describe("WebsocketHandler", func() {
 
 		go func() {
 			for {
-				ws.WriteMessage(websocket.TextMessage, []byte("I'm alive!"))
+				_ = ws.WriteMessage(websocket.TextMessage, []byte("I'm alive!"))
 				time.Sleep(100 * time.Millisecond)
 			}
 		}()
-		go ws.ReadMessage()
+		go func() {
+			_, _, err := ws.ReadMessage()
+			Expect(err.Error()).To(ContainSubstring("websocket: close 1000"))
+		}()
 
 		Consistently(handlerDone, 200*time.Millisecond).ShouldNot(BeClosed())
 		close(messagesChan)

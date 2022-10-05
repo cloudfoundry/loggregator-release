@@ -68,7 +68,7 @@ var setupFakeAuthServer = func() {
 
 var setupFakeUaaServer = func() {
 	fakeUaaServer := &FakeUaaHandler{}
-	go http.ListenAndServe("127.0.0.1:5678", fakeUaaServer)
+	go http.ListenAndServe("127.0.0.1:5678", fakeUaaServer) //nolint:errcheck
 	Eventually(func() error {
 		_, err := http.Get("http://" + localIPAddress + ":5678/check_token")
 		return err

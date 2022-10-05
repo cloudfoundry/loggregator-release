@@ -16,7 +16,7 @@ func (h *FakeUaaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if r.Header.Get("Authorization") != "Basic Ym9iOnlvdXJVbmNsZQ==" {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("{\"error\":\"unauthorized\",\"error_description\":\"No client with requested id: wrongUser\"}"))
+		_, _ = w.Write([]byte("{\"error\":\"unauthorized\",\"error_description\":\"No client with requested id: wrongUser\"}"))
 		return
 	}
 
@@ -30,7 +30,7 @@ func (h *FakeUaaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		marshaled, _ := json.Marshal(authData)
-		w.Write(marshaled)
+		_, _ = w.Write(marshaled)
 	} else if token == "iAmNotAnAdmin" {
 		authData := map[string]interface{}{
 			"scope": []string{
@@ -39,13 +39,13 @@ func (h *FakeUaaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		marshaled, _ := json.Marshal(authData)
-		w.Write(marshaled)
+		_, _ = w.Write(marshaled)
 	} else if token == "expiredToken" {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("{\"error\":\"invalid_token\",\"error_description\":\"Token has expired\"}"))
+		_, _ = w.Write([]byte("{\"error\":\"invalid_token\",\"error_description\":\"Token has expired\"}"))
 	} else if token == "invalidToken" {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("{\"invalidToken\":\"invalid_token\",\"error_description\":\"Invalid token (could not decode): invalidToken\"}"))
+		_, _ = w.Write([]byte("{\"invalidToken\":\"invalid_token\",\"error_description\":\"Invalid token (could not decode): invalidToken\"}"))
 	} else {
 		w.WriteHeader(http.StatusInternalServerError)
 	}

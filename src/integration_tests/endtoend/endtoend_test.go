@@ -36,7 +36,7 @@ var _ = Describe("End to end tests", func() {
 
 		go func() {
 			for range time.Tick(time.Millisecond) {
-				ingressClient.Send(endtoend.BasicLogMessageEnvelopeV2("custom-app-id"))
+				_ = ingressClient.Send(endtoend.BasicLogMessageEnvelopeV2("custom-app-id"))
 			}
 		}()
 

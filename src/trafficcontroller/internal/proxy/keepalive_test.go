@@ -41,19 +41,31 @@ var _ = Describe("KeepAlive", func() {
 			return nil
 		})
 
-		go wsClient.ReadMessage()
+		go func() {
+			defer GinkgoRecover()
+			_, _, err := wsClient.ReadMessage()
+			Expect(err.Error()).To(ContainSubstring("closed network connection"))
+		}()
 		Eventually(func() int32 { return atomic.LoadInt32(&pingCount) }).ShouldNot(BeZero())
 	})
 
 	It("doesn't close the client when it responds with pong frames", func() {
-		go wsClient.ReadMessage()
+		go func() {
+			defer GinkgoRecover()
+			_, _, err := wsClient.ReadMessage()
+			Expect(err.Error()).To(ContainSubstring("closed network connection"))
+		}()
 		// default ping handler responds with pong frames
 		Consistently(keepAliveCompleted).ShouldNot(BeClosed())
 	})
 
 	It("closes the client when it doesn't respond with pong frames", func() {
 		wsClient.SetPingHandler(func(string) error { return nil })
-		go wsClient.ReadMessage()
+		go func() {
+			defer GinkgoRecover()
+			_, _, err := wsClient.ReadMessage()
+			Expect(err.Error()).To(ContainSubstring("closed network connection"))
+		}()
 		Eventually(keepAliveCompleted).Should(BeClosed())
 	})
 })
@@ -61,7 +73,10 @@ var _ = Describe("KeepAlive", func() {
 func makeTestHandler(keepAliveCompleted chan struct{}) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		conn, _ := (&websocket.Upgrader{}).Upgrade(rw, req, nil)
-		go conn.ReadMessage()
+		go func() {
+			defer GinkgoRecover()
+			_, _, _ = conn.ReadMessage()
+		}()
 		proxy.NewKeepAlive(conn, 50*time.Millisecond).Run()
 		close(keepAliveCompleted)
 	})

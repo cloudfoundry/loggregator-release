@@ -290,7 +290,10 @@ func newSpyAgent(addr string) *spyAgent {
 	a.addr = lis.Addr().String()
 
 	loggregator_v2.RegisterIngressServer(a.s, a)
-	go a.s.Serve(lis)
+	go func() {
+		err := a.s.Serve(lis)
+		Expect(err).ToNot(HaveOccurred())
+	}()
 
 	return a
 }

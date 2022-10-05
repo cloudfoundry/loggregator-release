@@ -36,7 +36,10 @@ func main() {
 		log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	}
 
-	envstruct.WriteReport(conf)
+	err = envstruct.WriteReport(conf)
+	if err != nil {
+		log.Printf("Failed to print a report of the from environment: %s\n", err)
+	}
 
 	dopplerCredentials, err := plumbing.NewClientCredentials(
 		conf.GRPC.CertFile,

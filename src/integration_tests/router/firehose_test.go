@@ -36,7 +36,10 @@ var _ = Describe("Firehose test", func() {
 				},
 			)
 			Expect(err).ToNot(HaveOccurred())
-			defer subscribeClient.CloseSend()
+			defer func() {
+				err := subscribeClient.CloseSend()
+				Expect(err).ToNot(HaveOccurred())
+			}()
 			primePumpV1(ingressClient, subscribeClient)
 
 			done := make(chan struct{})
@@ -81,7 +84,10 @@ var _ = Describe("Firehose test", func() {
 				},
 			)
 			Expect(err).ToNot(HaveOccurred())
-			defer subscribeClient0.CloseSend()
+			defer func() {
+				err := subscribeClient0.CloseSend()
+				Expect(err).ToNot(HaveOccurred())
+			}()
 			primePumpV1(ingressClient, subscribeClient0)
 			subscribeClient1, err := egressClient.Subscribe(
 				ctx,
@@ -90,7 +96,10 @@ var _ = Describe("Firehose test", func() {
 				},
 			)
 			Expect(err).ToNot(HaveOccurred())
-			defer subscribeClient1.CloseSend()
+			defer func() {
+				err := subscribeClient1.CloseSend()
+				Expect(err).ToNot(HaveOccurred())
+			}()
 			primePumpV1(ingressClient, subscribeClient1)
 
 			err = sendAppLog("some-test-app-id", "message", ingressClient)
@@ -131,7 +140,10 @@ var _ = Describe("Firehose test", func() {
 				},
 			)
 			Expect(err).ToNot(HaveOccurred())
-			defer subscribeClient0.CloseSend()
+			defer func() {
+				err := subscribeClient0.CloseSend()
+				Expect(err).ToNot(HaveOccurred())
+			}()
 			primePumpV1(ingressClient, subscribeClient0)
 			subscribeClient1, err := egressClient.Subscribe(
 				ctx,
@@ -140,7 +152,10 @@ var _ = Describe("Firehose test", func() {
 				},
 			)
 			Expect(err).ToNot(HaveOccurred())
-			defer subscribeClient1.CloseSend()
+			defer func() {
+				err := subscribeClient1.CloseSend()
+				Expect(err).ToNot(HaveOccurred())
+			}()
 			primePumpV1(ingressClient, subscribeClient1)
 
 			for i := 0; i < 100; i++ {
@@ -177,7 +192,10 @@ var _ = Describe("Firehose test", func() {
 				},
 			)
 			Expect(err).ToNot(HaveOccurred())
-			defer subscribeClient.CloseSend()
+			defer func() {
+				err := subscribeClient.CloseSend()
+				Expect(err).ToNot(HaveOccurred())
+			}()
 			primePumpV2(ingressClient, subscribeClient)
 
 			err = ingressClient.Send(&loggregator_v2.Envelope{
@@ -243,7 +261,10 @@ var _ = Describe("Firehose test", func() {
 				},
 			)
 			Expect(err).ToNot(HaveOccurred())
-			defer subscribeClient.CloseSend()
+			defer func() {
+				err := subscribeClient.CloseSend()
+				Expect(err).ToNot(HaveOccurred())
+			}()
 			primePumpV2(ingressClient, subscribeClient)
 
 			err = ingressClient.Send(&loggregator_v2.Envelope{

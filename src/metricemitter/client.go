@@ -125,7 +125,7 @@ func (c *Client) EmitEvent(title, body string) {
 	if err != nil {
 		return
 	}
-	defer senderClient.CloseAndRecv()
+	defer senderClient.CloseAndRecv() //nolint:errcheck
 
 	err = senderClient.Send(&loggregator_v2.Envelope{
 		Timestamp: time.Now().UnixNano(),
@@ -157,7 +157,7 @@ func (c *Client) pulse(s sendable) {
 		})
 
 		if err != nil {
-			senderClient.CloseAndRecv()
+			senderClient.CloseAndRecv() //nolint:errcheck
 			senderClient = nil
 		}
 	}

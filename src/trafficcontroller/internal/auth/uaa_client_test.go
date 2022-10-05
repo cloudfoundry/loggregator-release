@@ -75,6 +75,15 @@ var _ = Describe("UaaClient", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("Invalid token (could not decode): invalidToken"))
 		})
+		Context("the server returns an unparseable response", func() {
+			It("returns the json parsing error", func() {
+				uaaClient := auth.NewUaaClient(client, fakeUaaServer.URL, "bob", "yourUncle")
+
+				_, err := uaaClient.GetAuthData("invalidTokenWithBadResponse")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("JSON"))
+			})
+		})
 	})
 
 	Context("the server returns a 500 ", func() {
@@ -171,6 +180,10 @@ func (h *FakeUaaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else if token == "invalidToken" {
 		w.WriteHeader(http.StatusBadRequest)
 		_, err := w.Write([]byte("{\"invalidToken\":\"invalid_token\",\"error_description\":\"Invalid token (could not decode): invalidToken\"}"))
+		Expect(err).ToNot(HaveOccurred())
+	} else if token == "invalidTokenWithBadResponse" {
+		w.WriteHeader(http.StatusBadRequest)
+		_, err := w.Write([]byte("{"))
 		Expect(err).ToNot(HaveOccurred())
 	} else {
 		w.WriteHeader(http.StatusInternalServerError)

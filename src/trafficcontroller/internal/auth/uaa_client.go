@@ -59,7 +59,9 @@ func (c *uaaClient) GetAuthData(token string) (*AuthData, error) {
 
 	if response.StatusCode == http.StatusBadRequest {
 		var uaaError uaaErrorResponse
-		json.Unmarshal(responseBody, &uaaError)
+		if err := json.Unmarshal(responseBody, &uaaError); err != nil {
+			return nil, err
+		}
 		return nil, errors.New(uaaError.ErrorDescription)
 	}
 
