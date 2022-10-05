@@ -373,11 +373,13 @@ func buildTLSConfig(maxVersion, cipherSuite uint16) *tls.Config {
 }
 
 var (
-	invalidTokenResponse = `{
+	invalidTokenResponse = //nolint:gosec
+	`{
 		"invalidToken": "invalid_token",
 		"error_description": "Invalid token (could not decode): invalidToken"
 	}`
-	validTokenResponse = `{
+	validTokenResponse = //nolint:gosec
+	`{
 		"scope": ["logs.admin"]
 	}`
 )
