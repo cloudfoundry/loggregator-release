@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"log"
 	"time"
 
 	"code.cloudfoundry.org/go-envstruct"
@@ -83,7 +84,10 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 
-	envstruct.WriteReport(&config)
+	err = envstruct.WriteReport(&config)
+	if err != nil {
+		log.Printf("Failed to print a report of the from environment: %s\n", err)
+	}
 
 	return &config, nil
 }

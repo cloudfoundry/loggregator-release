@@ -28,7 +28,9 @@ var _ = Describe("IngestorServer", func() {
 		Expect(err).ToNot(HaveOccurred())
 		s := grpc.NewServer()
 		plumbing.RegisterDopplerIngestorServer(s, ds)
-		go s.Serve(lis)
+		go func() {
+			_ = s.Serve(lis)
+		}()
 
 		return s, lis.Addr().String()
 	}
@@ -94,7 +96,8 @@ var _ = Describe("IngestorServer", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		someEnvelope, data := buildContainerMetric()
-		pusherClient.Send(&plumbing.EnvelopeData{Payload: data})
+		err = pusherClient.Send(&plumbing.EnvelopeData{Payload: data})
+		Expect(err).ToNot(HaveOccurred())
 
 		v2e := conversion.ToV2(someEnvelope, true)
 		Eventually(v2Buf.Next).Should(Equal(v2e))
@@ -141,7 +144,10 @@ var _ = Describe("IngestorServer", func() {
 			fakeStream := newSpyIngestorGRPCServer()
 			fakeStream.recvError = errors.New("fake error")
 
-			go manager.Pusher(fakeStream)
+			go func() {
+				err := manager.Pusher(fakeStream)
+				Expect(err).NotTo(HaveOccurred())
+			}()
 			Consistently(func() bool {
 				_, ok := v1Buf.TryNext()
 				return ok

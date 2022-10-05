@@ -80,7 +80,8 @@ var _ = Describe("v1 doppler server", func() {
 
 			Context("when the client does not close the connection", func() {
 				It("does not unregister itself", func() {
-					dopplerClient.Subscribe(context.TODO(), subscribeRequest)
+					_, err := dopplerClient.Subscribe(context.TODO(), subscribeRequest)
+					Expect(err).ToNot(HaveOccurred())
 					Eventually(mockRegistrar.registerSetter).ShouldNot(BeNil())
 
 					Consistently(cleanupCalled).ShouldNot(BeClosed())
@@ -89,7 +90,8 @@ var _ = Describe("v1 doppler server", func() {
 
 			Context("when the client closes connection", func() {
 				It("unregisters subscription", func() {
-					dopplerClient.Subscribe(context.TODO(), subscribeRequest)
+					_, err := dopplerClient.Subscribe(context.TODO(), subscribeRequest)
+					Expect(err).ToNot(HaveOccurred())
 					Eventually(mockRegistrar.registerSetter).ShouldNot(BeNil())
 					connCloser.Close()
 
@@ -183,7 +185,8 @@ var _ = Describe("v1 doppler server", func() {
 
 			Context("when the client does not close the connection", func() {
 				It("does not unregister itself", func() {
-					dopplerClient.BatchSubscribe(context.TODO(), subscribeRequest)
+					_, err := dopplerClient.BatchSubscribe(context.TODO(), subscribeRequest)
+					Expect(err).ToNot(HaveOccurred())
 					Eventually(mockRegistrar.registerSetter).ShouldNot(BeNil())
 
 					Consistently(cleanupCalled).ShouldNot(BeClosed())
@@ -192,7 +195,8 @@ var _ = Describe("v1 doppler server", func() {
 
 			Context("when the client closes connection", func() {
 				It("unregisters subscription", func() {
-					dopplerClient.BatchSubscribe(context.TODO(), subscribeRequest)
+					_, err := dopplerClient.BatchSubscribe(context.TODO(), subscribeRequest)
+					Expect(err).ToNot(HaveOccurred())
 					Eventually(mockRegistrar.registerSetter).ShouldNot(BeNil())
 					connCloser.Close()
 
@@ -344,7 +348,9 @@ func startGRPCServer(ds plumbing.DopplerServer) net.Listener {
 	Expect(err).ToNot(HaveOccurred())
 	s := grpc.NewServer()
 	plumbing.RegisterDopplerServer(s, ds)
-	go s.Serve(lis)
+	go func() {
+		_ = s.Serve(lis)
+	}()
 
 	return lis
 }

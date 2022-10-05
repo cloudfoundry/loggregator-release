@@ -91,7 +91,7 @@ func (c *UAAClient) Read(token string) (Oauth2Client, error) {
 	}
 
 	defer func() {
-		io.Copy(io.Discard, resp.Body)
+		_, _ = io.Copy(io.Discard, resp.Body)
 		resp.Body.Close()
 	}()
 

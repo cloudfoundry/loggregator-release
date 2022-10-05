@@ -41,7 +41,10 @@ var _ = Describe("V2 Egress", func() {
 				},
 			})
 			Expect(err).ToNot(HaveOccurred())
-			defer receiverClient.CloseSend()
+			defer func() {
+				err := receiverClient.CloseSend()
+				Expect(err).ToNot(HaveOccurred())
+			}()
 
 			done := make(chan struct{})
 			defer close(done)
@@ -112,7 +115,10 @@ var _ = Describe("V2 Egress", func() {
 				},
 			})
 			Expect(err).ToNot(HaveOccurred())
-			defer receiverClient.CloseSend()
+			defer func() {
+				err := receiverClient.CloseSend()
+				Expect(err).ToNot(HaveOccurred())
+			}()
 
 			done := make(chan struct{})
 			defer close(done)
@@ -156,7 +162,10 @@ var _ = Describe("V2 Egress", func() {
 					},
 				)
 				Expect(err).ToNot(HaveOccurred())
-				defer receiverClient.CloseSend()
+				defer func() {
+					err := receiverClient.CloseSend()
+					Expect(err).ToNot(HaveOccurred())
+				}()
 
 				done := make(chan struct{})
 				defer close(done)

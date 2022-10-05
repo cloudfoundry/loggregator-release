@@ -121,7 +121,7 @@ func serveMultiPartResponse(rw http.ResponseWriter, messages [][]byte) {
 			return
 		}
 
-		partWriter.Write(message)
+		_, _ = partWriter.Write(message)
 	}
 }
 

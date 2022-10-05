@@ -79,7 +79,8 @@ var _ = Describe("UAAClient", func() {
 
 	It("calls UAA correctly", func() {
 		token := "my-token"
-		client.Read(token)
+		_, err := client.Read(token)
+		Expect(err).To(Equal(io.EOF))
 
 		r := httpClient.requests[0]
 
@@ -102,7 +103,8 @@ var _ = Describe("UAAClient", func() {
 	})
 
 	It("sets the last request latency metric", func() {
-		client.Read("my-token")
+		_, err := client.Read("my-token")
+		Expect(err).To(Equal(io.EOF))
 
 		Expect(metrics.GetMetric("LastUAALatency", nil).Value()).ToNot(BeZero())
 	})

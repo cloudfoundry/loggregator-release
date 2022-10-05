@@ -110,11 +110,17 @@ func (g *Gateway) Start(blocking bool) {
 	}
 
 	if blocking {
-		g.server.ServeTLS(g.listener, "", "")
+		if err := g.server.ServeTLS(g.listener, "", ""); err != nil {
+			g.log.Printf("failed to serve HTTPS endpoint: %s", err)
+		}
 		return
 	}
 
-	go g.server.ServeTLS(g.listener, "", "")
+	go func() {
+		if err := g.server.ServeTLS(g.listener, "", ""); err != nil {
+			g.log.Printf("failed to serve HTTPS endpoint: %s", err)
+		}
+	}()
 }
 
 func (g *Gateway) buildTlsConfig() *tls.Config {

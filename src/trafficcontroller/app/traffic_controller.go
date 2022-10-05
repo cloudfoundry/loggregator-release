@@ -145,7 +145,10 @@ func (t *TrafficController) Start() {
 			log.Panicf("Unable to open access log: %s", err)
 		}
 		defer func() {
-			accessLog.Sync()
+			err := accessLog.Sync()
+			if err != nil {
+				log.Printf("Error syncing access log: %s", err)
+			}
 			accessLog.Close()
 		}()
 		accessLogger := auth.NewAccessLogger(accessLog)

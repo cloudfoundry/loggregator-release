@@ -65,7 +65,7 @@ func (fakeDoppler *FakeDoppler) Start() error {
 
 	go func() {
 		defer close(fakeDoppler.done)
-		fakeDoppler.grpcServer.Serve(fakeDoppler.grpcListener)
+		_ = fakeDoppler.grpcServer.Serve(fakeDoppler.grpcListener)
 	}()
 	return nil
 }

@@ -266,15 +266,21 @@ var _ = Describe("Server", func() {
 				time.Nanosecond,
 			)
 
-			go server.Receiver(&loggregator_v2.EgressRequest{
-				Selectors: []*loggregator_v2.Selector{
-					{
-						Message: &loggregator_v2.Selector_Log{
-							Log: &loggregator_v2.LogSelector{},
+			go func() {
+				defer GinkgoRecover()
+				err := server.Receiver(&loggregator_v2.EgressRequest{
+
+					Selectors: []*loggregator_v2.Selector{
+						{
+							Message: &loggregator_v2.Selector_Log{
+								Log: &loggregator_v2.LogSelector{},
+							},
 						},
 					},
-				},
-			}, receiverServer)
+				}, receiverServer)
+
+				Expect(err).To(Equal(io.ErrUnexpectedEOF))
+			}()
 
 			var ctx context.Context
 			Eventually(receiver.ctx).Should(Receive(&ctx))
@@ -473,15 +479,18 @@ var _ = Describe("Server", func() {
 					time.Nanosecond,
 				)
 
-				go server.Receiver(&loggregator_v2.EgressRequest{
-					Selectors: []*loggregator_v2.Selector{
-						{
-							Message: &loggregator_v2.Selector_Log{
-								Log: &loggregator_v2.LogSelector{},
+				go func() {
+					err := server.Receiver(&loggregator_v2.EgressRequest{
+						Selectors: []*loggregator_v2.Selector{
+							{
+								Message: &loggregator_v2.Selector_Log{
+									Log: &loggregator_v2.LogSelector{},
+								},
 							},
 						},
-					},
-				}, receiverServer)
+					}, receiverServer)
+					Expect(err).ToNot(HaveOccurred())
+				}()
 
 				Eventually(func() uint64 {
 					return metricClient.GetDelta("dropped")
@@ -504,15 +513,19 @@ var _ = Describe("Server", func() {
 					egress.WithMaxStreams(0),
 				)
 
-				go server.Receiver(&loggregator_v2.EgressRequest{
-					Selectors: []*loggregator_v2.Selector{
-						{
-							Message: &loggregator_v2.Selector_Log{
-								Log: &loggregator_v2.LogSelector{},
+				go func() {
+					defer GinkgoRecover()
+					err := server.Receiver(&loggregator_v2.EgressRequest{
+						Selectors: []*loggregator_v2.Selector{
+							{
+								Message: &loggregator_v2.Selector_Log{
+									Log: &loggregator_v2.LogSelector{},
+								},
 							},
 						},
-					},
-				}, receiverServer)
+					}, receiverServer)
+					Expect(err.Error()).To(ContainSubstring("unable to create stream"))
+				}()
 
 				Eventually(func() uint64 {
 					return metricClient.GetDelta("rejected_streams")
@@ -531,15 +544,18 @@ var _ = Describe("Server", func() {
 					time.Nanosecond,
 				)
 
-				go server.Receiver(&loggregator_v2.EgressRequest{
-					Selectors: []*loggregator_v2.Selector{
-						{
-							Message: &loggregator_v2.Selector_Log{
-								Log: &loggregator_v2.LogSelector{},
+				go func() {
+					err := server.Receiver(&loggregator_v2.EgressRequest{
+						Selectors: []*loggregator_v2.Selector{
+							{
+								Message: &loggregator_v2.Selector_Log{
+									Log: &loggregator_v2.LogSelector{},
+								},
 							},
 						},
-					},
-				}, receiverServer)
+					}, receiverServer)
+					Expect(err).ToNot(HaveOccurred())
+				}()
 
 				Eventually(func() float64 {
 					return metricClient.GetValue("subscriptions")
@@ -795,15 +811,19 @@ var _ = Describe("Server", func() {
 				1,
 				time.Nanosecond,
 			)
-			go server.BatchedReceiver(&loggregator_v2.EgressBatchRequest{
-				Selectors: []*loggregator_v2.Selector{
-					{
-						Message: &loggregator_v2.Selector_Log{
-							Log: &loggregator_v2.LogSelector{},
+			go func() {
+				defer GinkgoRecover()
+				err := server.BatchedReceiver(&loggregator_v2.EgressBatchRequest{
+					Selectors: []*loggregator_v2.Selector{
+						{
+							Message: &loggregator_v2.Selector_Log{
+								Log: &loggregator_v2.LogSelector{},
+							},
 						},
 					},
-				},
-			}, receiverServer)
+				}, receiverServer)
+				Expect(err).To(Equal(io.ErrUnexpectedEOF))
+			}()
 
 			var ctx context.Context
 			Eventually(receiver.ctx).Should(Receive(&ctx))
@@ -946,17 +966,21 @@ var _ = Describe("Server", func() {
 					1,
 					time.Nanosecond,
 				)
-				go server.BatchedReceiver(
-					&loggregator_v2.EgressBatchRequest{
-						Selectors: []*loggregator_v2.Selector{
-							{
-								Message: &loggregator_v2.Selector_Log{
-									Log: &loggregator_v2.LogSelector{},
+				go func() {
+					err := server.BatchedReceiver(
+						&loggregator_v2.EgressBatchRequest{
+							Selectors: []*loggregator_v2.Selector{
+								{
+									Message: &loggregator_v2.Selector_Log{
+										Log: &loggregator_v2.LogSelector{},
+									},
 								},
 							},
-						},
-					}, receiverServer,
-				)
+						}, receiverServer,
+					)
+
+					Expect(err).ToNot(HaveOccurred())
+				}()
 
 				Eventually(func() uint64 {
 					return metricClient.GetDelta("dropped")
@@ -976,17 +1000,20 @@ var _ = Describe("Server", func() {
 					time.Nanosecond,
 					egress.WithMaxStreams(0),
 				)
-				go server.BatchedReceiver(
-					&loggregator_v2.EgressBatchRequest{
-						Selectors: []*loggregator_v2.Selector{
-							{
-								Message: &loggregator_v2.Selector_Log{
-									Log: &loggregator_v2.LogSelector{},
+				go func() {
+					err := server.BatchedReceiver(
+						&loggregator_v2.EgressBatchRequest{
+							Selectors: []*loggregator_v2.Selector{
+								{
+									Message: &loggregator_v2.Selector_Log{
+										Log: &loggregator_v2.LogSelector{},
+									},
 								},
 							},
-						},
-					}, receiverServer,
-				)
+						}, receiverServer,
+					)
+					Expect(err.Error()).To(ContainSubstring("unable to create stream"))
+				}()
 
 				Eventually(func() uint64 {
 					return metricClient.GetDelta("rejected_streams")
@@ -1004,18 +1031,22 @@ var _ = Describe("Server", func() {
 					time.Nanosecond,
 				)
 
-				go server.BatchedReceiver(
-					&loggregator_v2.EgressBatchRequest{
-						Selectors: []*loggregator_v2.Selector{
-							{
-								Message: &loggregator_v2.Selector_Log{
-									Log: &loggregator_v2.LogSelector{},
+				go func() {
+					err := server.BatchedReceiver(
+						&loggregator_v2.EgressBatchRequest{
+							Selectors: []*loggregator_v2.Selector{
+								{
+									Message: &loggregator_v2.Selector_Log{
+										Log: &loggregator_v2.LogSelector{},
+									},
 								},
 							},
 						},
-					},
-					newSpyBatchedReceiverServer(nil),
-				)
+						newSpyBatchedReceiverServer(nil),
+					)
+
+					Expect(err).ToNot(HaveOccurred())
+				}()
 
 				Eventually(func() float64 {
 					return metricClient.GetValue("subscriptions")

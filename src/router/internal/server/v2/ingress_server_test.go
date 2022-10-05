@@ -57,7 +57,8 @@ var _ = Describe("IngressServer", func() {
 			},
 		}
 
-		ingestor.BatchSender(spyBatchSenderServer)
+		err := ingestor.BatchSender(spyBatchSenderServer)
+		Expect(err).To(Equal(io.EOF))
 
 		_, ok := v1Buf.TryNext()
 		Expect(ok).To(BeTrue())
@@ -82,7 +83,8 @@ var _ = Describe("IngressServer", func() {
 			},
 		}
 
-		ingestor.Sender(spySenderServer)
+		err := ingestor.Sender(spySenderServer)
+		Expect(err).To(Equal(io.EOF))
 
 		_, ok := v1Buf.TryNext()
 		Expect(ok).To(BeTrue())
@@ -105,7 +107,10 @@ var _ = Describe("IngressServer", func() {
 			Tags: tags,
 		}
 
-		go ingestor.Sender(spySenderServer)
+		go func() {
+			err := ingestor.Sender(spySenderServer)
+			Expect(err).To(Equal(io.EOF))
+		}()
 
 		for {
 			v2e, ok := v2Buf.TryNext()
@@ -123,7 +128,8 @@ var _ = Describe("IngressServer", func() {
 		spySenderServer.recvCount = 1
 		spySenderServer.envelope = &loggregator_v2.Envelope{}
 
-		ingestor.Sender(spySenderServer)
+		err := ingestor.Sender(spySenderServer)
+		Expect(err).To(Equal(io.EOF))
 		_, ok := v1Buf.TryNext()
 		Expect(ok).ToNot(BeTrue())
 	})
