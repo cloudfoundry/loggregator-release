@@ -80,7 +80,7 @@ func (r *Router) writeToShard(id shardID, setters []DataSetter, data []byte) {
 		return
 	}
 
-	setters[rand.Intn(len(setters))].Set(data)
+	setters[rand.Intn(len(setters))].Set(data) //nolint:gosec
 }
 
 func (r *Router) createTypedFilters(appID string, envelope *events.Envelope) []filter {

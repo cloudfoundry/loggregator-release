@@ -18,7 +18,7 @@ import (
 
 const (
 	APP_ID          = "efe5c422-e8a7-42c2-a52b-98bffd8d6a07"
-	AUTH_TOKEN      = "bearer iAmAnAdmin"
+	AUTH_TOKEN      = "bearer iAmAnAdmin" //nolint:gosec
 	SUBSCRIPTION_ID = "firehose-subscription-1"
 )
 

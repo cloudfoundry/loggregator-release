@@ -53,7 +53,7 @@ func randEnvGen() func() *events.Envelope {
 	var s []*events.Envelope
 	for i := 0; i < 100; i++ {
 		buf := make([]byte, 10)
-		rand.Read(buf)
+		rand.Read(buf) //nolint:gosec
 		s = append(s, buildLog(fmt.Sprintf("%d", i%20000), buf))
 	}
 

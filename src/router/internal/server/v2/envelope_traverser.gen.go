@@ -1,3 +1,4 @@
+//nolint:unused
 package v2
 
 import (

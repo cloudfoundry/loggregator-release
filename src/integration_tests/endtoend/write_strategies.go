@@ -102,5 +102,5 @@ func random(minimum int, maximum int) int {
 	}
 	rand.Seed(time.Now().Unix())
 	diff := maximum - minimum
-	return minimum + rand.Intn(diff)
+	return minimum + rand.Intn(diff) //nolint:gosec
 }
