@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	_ "net/http/pprof"
+	"time"
 )
 
 // New creates a profiler server
@@ -27,7 +28,11 @@ func (s *Server) Start() {
 	}
 
 	log.Printf("pprof bound to: %s", lis.Addr())
-	err = http.Serve(lis, nil)
+	server := &http.Server{
+		Addr:              addr,
+		ReadHeaderTimeout: 2 * time.Second,
+	}
+	err = server.Serve(lis)
 	if err != nil {
 		log.Panicf("Error starting pprof server: %s", err)
 	}

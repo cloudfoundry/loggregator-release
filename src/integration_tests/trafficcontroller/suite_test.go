@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"google.golang.org/grpc/grpclog"
@@ -68,7 +69,16 @@ var setupFakeAuthServer = func() {
 
 var setupFakeUaaServer = func() {
 	fakeUaaServer := &FakeUaaHandler{}
-	go http.ListenAndServe("127.0.0.1:5678", fakeUaaServer) //nolint:errcheck
+	go func() {
+
+		server := &http.Server{
+			Addr:              "127.0.0.1:5678",
+			ReadHeaderTimeout: 2 * time.Second,
+			Handler:           fakeUaaServer,
+		}
+		err := server.ListenAndServe()
+		Expect(err).NotTo(HaveOccurred())
+	}()
 	Eventually(func() error {
 		_, err := http.Get("http://" + localIPAddress + ":5678/check_token")
 		return err
