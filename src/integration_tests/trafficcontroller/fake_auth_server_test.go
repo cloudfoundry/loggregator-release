@@ -3,6 +3,7 @@ package trafficcontroller_test
 import (
 	"net/http"
 	"sync"
+	"time"
 )
 
 type FakeAuthServer struct {
@@ -12,7 +13,14 @@ type FakeAuthServer struct {
 
 func (fakeAuthServer *FakeAuthServer) Start() {
 	go func() {
-		err := http.ListenAndServe(fakeAuthServer.ApiEndpoint, fakeAuthServer)
+		server := &http.Server{
+			Addr:              fakeAuthServer.ApiEndpoint,
+			ReadHeaderTimeout: 2 * time.Second,
+			Handler:           fakeAuthServer,
+		}
+
+		err := server.ListenAndServe()
+
 		if err != nil {
 			panic(err)
 		}
