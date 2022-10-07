@@ -5,6 +5,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+
+	//nolint:gosec
 	_ "net/http/pprof"
 	"time"
 )

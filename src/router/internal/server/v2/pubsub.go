@@ -94,7 +94,7 @@ func (p *PubSub) hashEnvelope(e *loggregator_v2.Envelope) uint64 {
 		}
 		return h
 	default:
-		return rand.Uint64()
+		return rand.Uint64() //nolint:gosec
 	}
 }
 

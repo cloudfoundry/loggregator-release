@@ -86,7 +86,7 @@ func (p *Pool) Close(dopplerAddr string) {
 }
 
 func (p *Pool) fetchClient(clients []unsafe.Pointer) loggregator_v2.EgressClient {
-	seed := rand.Int()
+	seed := rand.Int() //nolint:gosec
 	for i := range clients {
 		idx := (i + seed) % p.size
 		clt := atomic.LoadPointer(&clients[idx])
