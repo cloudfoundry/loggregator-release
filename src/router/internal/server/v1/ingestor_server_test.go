@@ -1,12 +1,12 @@
 package v1_test
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net"
 	"time"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -141,17 +141,23 @@ var _ = Describe("IngestorServer", func() {
 
 	Context("When the Recv returns an error", func() {
 		It("does not forward the message to the sender", func() {
+			ctx, cancel := context.WithCancel(context.Background())
 			fakeStream := newSpyIngestorGRPCServer()
+			fakeStream.context = ctx
 			fakeStream.recvError = errors.New("fake error")
 
+			errCh := make(chan error)
 			go func() {
-				err := manager.Pusher(fakeStream)
-				Expect(err).NotTo(HaveOccurred())
+				errCh <- manager.Pusher(fakeStream)
 			}()
+
 			Consistently(func() bool {
 				_, ok := v1Buf.TryNext()
 				return ok
 			}).Should(BeFalse())
+
+			cancel()
+			Expect(<-errCh).To(MatchError("context canceled"))
 		})
 	})
 
