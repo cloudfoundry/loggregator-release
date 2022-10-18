@@ -20,7 +20,7 @@ require (
 	github.com/onsi/gomega v1.22.1
 	github.com/prometheus/client_golang v1.13.0
 	golang.org/x/net v0.0.0-20220809012201-f428fae20770
-	google.golang.org/grpc v1.49.0
+	google.golang.org/grpc v1.50.1
 )
 
 require (
