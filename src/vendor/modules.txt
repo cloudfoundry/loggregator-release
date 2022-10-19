@@ -12,7 +12,7 @@ code.cloudfoundry.org/go-envstruct
 code.cloudfoundry.org/go-log-cache
 code.cloudfoundry.org/go-log-cache/internal
 code.cloudfoundry.org/go-log-cache/rpc/logcache_v1
-# code.cloudfoundry.org/go-loggregator/v9 v9.0.2
+# code.cloudfoundry.org/go-loggregator/v9 v9.0.3
 ## explicit; go 1.18
 code.cloudfoundry.org/go-loggregator/v9/conversion
 code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2
@@ -143,7 +143,7 @@ github.com/onsi/ginkgo/reporters/stenographer
 github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable
 github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
 github.com/onsi/ginkgo/types
-# github.com/onsi/ginkgo/v2 v2.3.0
+# github.com/onsi/ginkgo/v2 v2.3.1
 ## explicit; go 1.18
 github.com/onsi/ginkgo/v2/config
 github.com/onsi/ginkgo/v2/formatter
