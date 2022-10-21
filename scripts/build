@@ -1,9 +1,0 @@
-#!/bin/bash
-
-set -e
-
-mkdir -p bin
-for line in rlp trafficcontroller router; do
-  echo building $line
-  go build -o bin/$line code.cloudfoundry.org/loggregator/$line
-done
