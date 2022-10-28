@@ -4,8 +4,8 @@ code.cloudfoundry.org/go-batching
 # code.cloudfoundry.org/go-diodes v0.0.0-20220725190411-383eb6634c40
 ## explicit; go 1.18
 code.cloudfoundry.org/go-diodes
-# code.cloudfoundry.org/go-envstruct v1.5.0
-## explicit; go 1.12
+# code.cloudfoundry.org/go-envstruct v1.6.0
+## explicit; go 1.19
 code.cloudfoundry.org/go-envstruct
 # code.cloudfoundry.org/go-log-cache v1.0.1-0.20220808235537-54ad6006c0c4
 ## explicit; go 1.14

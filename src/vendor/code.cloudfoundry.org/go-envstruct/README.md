@@ -1,6 +1,8 @@
 # envstruct
 
-[![GoDoc][go-doc-badge]][go-doc] [![travis][travis-badge]][travis] [![slack.cloudfoundry.org][slack-badge]][loggregator-slack]
+[![GoDoc][go-doc-badge]][go-doc] [![slack.cloudfoundry.org][slack-badge]][loggregator-slack]
+
+If you have any questions, or want to get attention for a PR or issue please reach out on the [#logging-and-metrics channel in the cloudfoundry slack](https://cloudfoundry.slack.com/archives/CUW93AF3M)
 
 envstruct is a simple library for populating values on structs from environment
 variables.
@@ -19,7 +21,7 @@ $ export PASSWORD="abc123"
 sensitive. The casing of the set environment variable must match the casing in
 the struct tag.
 
-Write some code. In this example, `Ip` requires that the `HOST_IP` environment
+Write some code. In this example, `IP` requires that the `HOST_IP` environment
 variable is set to non empty value and `Port` defaults to `80` if `HOST_PORT` is
 an empty value. Then we use the `envstruct.WriteReport()` to print a table with
 a report of what fields are on the struct, the type, the environment variable
@@ -104,14 +106,8 @@ Credentials: {Username:my-user Password:my-password}
 Run tests using ginkgo.
 
 ```
-$ go get github.com/onsi/ginkgo/ginkgo
-$ go get github.com/onsi/gomega
-$ ginkgo
+$ go run github.com/onsi/ginkgo/v2/ginkgo -r
 ```
 
-[slack-badge]:       https://slack.cloudfoundry.org/badge.svg
-[loggregator-slack]: https://cloudfoundry.slack.com/archives/loggregator
 [go-doc-badge]:      https://godoc.org/code.cloudfoundry.org/go-envstruct?status.svg
 [go-doc]:            https://godoc.org/code.cloudfoundry.org/go-envstruct
-[travis-badge]:      https://travis-ci.org/cloudfoundry/go-envstruct.svg?branch=master
-[travis]:            https://travis-ci.org/cloudfoundry/go-envstruct?branch=master

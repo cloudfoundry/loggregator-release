@@ -1,7 +1,6 @@
 package envstruct
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -144,7 +143,7 @@ func setField(value reflect.Value, input string, hasEnvTag bool) (missing []stri
 		return nil, unmarshaller.UnmarshalEnv(input)
 	} else {
 		if value.Kind() == reflect.Struct && hasEnvTag {
-			return nil, errors.New(fmt.Sprintf("Nested struct %s with env tag needs to have an UnmarshallEnv method\n", value.Type().Name()))
+			return nil, fmt.Errorf("Nested struct %s with env tag needs to have an UnmarshallEnv method\n", value.Type().Name())
 		}
 	}
 
@@ -330,8 +329,14 @@ func setMap(value reflect.Value, input string) error {
 		castedKey := reflect.New(value.Type().Key()).Elem()
 		castedValue := reflect.New(value.Type().Elem()).Elem()
 
-		setField(castedKey, kv[0], false)
-		setField(castedValue, kv[1], false)
+		_, err := setField(castedKey, kv[0], false)
+		if err != nil {
+			return fmt.Errorf("setMap: %w", err)
+		}
+		_, err = setField(castedValue, kv[1], false)
+		if err != nil {
+			return fmt.Errorf("setMap: %w", err)
+		}
 
 		m.SetMapIndex(castedKey, castedValue)
 	}
