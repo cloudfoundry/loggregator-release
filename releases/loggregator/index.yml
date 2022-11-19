@@ -177,6 +177,8 @@ builds:
     version: 106.6.5
   79a7f922-4ab5-4407-82e7-80fba9c76eab:
     version: "64"
+  7d81ca54-c716-45e2-5d19-9f3a86954052:
+    version: 106.7.4
   7daf12ba-bf99-4a93-4a85-74a982572c8a:
     version: "101.1"
   7e2c64cc-72c5-407f-9209-39fc3d5bdc7f:
