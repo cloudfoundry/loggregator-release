@@ -117,7 +117,6 @@ func (t *TrafficController) Start() {
 			logcache.WithViaGRPC(
 				grpc.WithTransportCredentials(logCacheCreds),
 				grpc.WithDefaultServiceConfig(`{"loadBalancingConfig": [{"round_robin":{}}]}`),
-				grpc.WithBlock(),
 			),
 		)
 		recentLogsEnabled = true
