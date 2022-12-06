@@ -97,15 +97,6 @@ func (s *stubGrpcLogCache) Meta(context.Context, *logcache_v1.MetaRequest) (*log
 	panic("Meta is not implemented")
 }
 
-func (s *stubGrpcLogCache) requests() []*logcache_v1.ReadRequest {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	r := make([]*logcache_v1.ReadRequest, len(s.reqs))
-	copy(r, s.reqs)
-	return r
-}
-
 func (s *stubGrpcLogCache) stop() {
 	if s.grpcServer != nil {
 		s.grpcServer.Stop()
