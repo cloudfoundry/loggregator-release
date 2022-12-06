@@ -47,8 +47,7 @@ type GRPCConnector struct {
 	consumerStates []unsafe.Pointer
 	bufferSize     int
 
-	ingressMetric   *metricemitter.Counter
-	recentLogsError *metricemitter.Counter
+	ingressMetric *metricemitter.Counter
 }
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
@@ -69,20 +68,13 @@ func NewGRPCConnector(
 		}),
 		metricemitter.WithVersion(2, 0),
 	)
-	recentLogsError := m.NewCounter("query_error",
-		metricemitter.WithTags(map[string]string{
-			"query": "recent_logs",
-		}),
-		metricemitter.WithVersion(2, 0),
-	)
 
 	c := &GRPCConnector{
-		bufferSize:      bufferSize,
-		pool:            pool,
-		finder:          f,
-		consumerStates:  make([]unsafe.Pointer, maxConnections),
-		ingressMetric:   ingressMetric,
-		recentLogsError: recentLogsError,
+		bufferSize:     bufferSize,
+		pool:           pool,
+		finder:         f,
+		consumerStates: make([]unsafe.Pointer, maxConnections),
+		ingressMetric:  ingressMetric,
 	}
 	go c.readFinder()
 	return c
