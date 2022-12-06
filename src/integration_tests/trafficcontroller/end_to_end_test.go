@@ -34,41 +34,6 @@ var _ = Describe("TrafficController for v1 messages", func() {
 		}
 	)
 
-	Context("without a configured log cache", func() {
-		BeforeEach(func() {
-			fakeDoppler = NewFakeDoppler()
-			err := fakeDoppler.Start()
-			Expect(err).ToNot(HaveOccurred())
-
-			cfg := testservers.BuildTrafficControllerConfWithoutLogCache(fakeDoppler.Addr(), 37474)
-
-			var tcPorts testservers.TrafficControllerPorts
-			tcCleanupFunc, tcPorts = testservers.StartTrafficController(cfg)
-
-			wsPort = tcPorts.WS
-
-			tcHTTPEndpoint := fmt.Sprintf("https://%s:%d", localIPAddress, tcPorts.WS)
-			tcWSEndpoint = fmt.Sprintf("wss://%s:%d", localIPAddress, tcPorts.WS)
-
-			// wait for TC
-			Eventually(func() error {
-				resp, err := httpClient.Get(tcHTTPEndpoint)
-				if err == nil {
-					resp.Body.Close()
-				}
-				return err
-			}, 10).Should(Succeed())
-		})
-
-		AfterEach(func(done Done) {
-			defer close(done)
-			fakeDoppler.Stop()
-		}, 30)
-
-		Describe("LogCache API Paths", func() {
-		})
-	})
-
 	Context("with a configured log cache", func() {
 		Context("when log cache is available", func() {
 			BeforeEach(func() {
