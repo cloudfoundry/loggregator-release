@@ -66,19 +66,6 @@ var _ = Describe("TrafficController for v1 messages", func() {
 		}, 30)
 
 		Describe("LogCache API Paths", func() {
-			Context("Recent", func() {
-				It("returns a helpful error message", func() {
-					client := consumer.New(tcWSEndpoint, &tls.Config{
-						InsecureSkipVerify: true, //nolint:gosec
-					}, nil)
-
-					logMessages, err := client.RecentLogs("efe5c422-e8a7-42c2-a52b-98bffd8d6a07", "bearer iAmAnAdmin")
-
-					Expect(err).ToNot(HaveOccurred())
-					Expect(logMessages).To(HaveLen(1))
-					Expect(string(logMessages[0].GetMessage())).To(Equal("recent log endpoint requires a log cache. please talk to you operator"))
-				})
-			})
 		})
 	})
 
@@ -196,27 +183,6 @@ var _ = Describe("TrafficController for v1 messages", func() {
 					})
 				})
 
-			})
-
-			Describe("LogCache API Paths", func() {
-				Context("Recent", func() {
-					It("returns a multi-part HTTP response with all recent messages", func() {
-						client := consumer.New(tcWSEndpoint, &tls.Config{
-							InsecureSkipVerify: true, //nolint:gosec
-						}, nil)
-
-						Eventually(func() int {
-							messages, err := client.RecentLogs("efe5c422-e8a7-42c2-a52b-98bffd8d6a07", "bearer iAmAnAdmin")
-							Expect(err).NotTo(HaveOccurred())
-
-							if len(logCache.requests()) > 0 {
-								Expect(logCache.requests()[0].SourceId).To(Equal("efe5c422-e8a7-42c2-a52b-98bffd8d6a07"))
-							}
-
-							return len(messages)
-						}, 5).Should(Equal(2))
-					})
-				})
 			})
 
 			Context("SetCookie", func() {

@@ -25,8 +25,6 @@ var _ = Describe("DopplerProxy", func() {
 		mockDopplerStreamClient *mockReceiver
 
 		mockSender *testhelper.SpyMetricClient
-
-		recentLogsHandler *spyRecentLogsHandler
 	)
 
 	BeforeEach(func() {
@@ -39,8 +37,6 @@ var _ = Describe("DopplerProxy", func() {
 
 		mockGrpcConnector.SubscribeOutput.Ret0 <- mockDopplerStreamClient.Recv
 
-		recentLogsHandler = newSpyRecentLogsHandler()
-
 		dopplerProxy = proxy.NewDopplerProxy(
 			auth.Authorize,
 			adminAuth.Authorize,
@@ -48,7 +44,6 @@ var _ = Describe("DopplerProxy", func() {
 			"cookieDomain",
 			time.Hour,
 			mockSender,
-			recentLogsHandler,
 			false,
 		)
 
@@ -65,18 +60,6 @@ var _ = Describe("DopplerProxy", func() {
 	})
 
 	Describe("metrics", func() {
-		It("emits latency value metric for recentlogs request", func() {
-			req, _ := http.NewRequest("GET", "/apps/12bdb5e8-ba61-48e3-9dda-30ecd1446663/recentlogs", nil)
-			metricName := "doppler_proxy.recent_logs_latency"
-			requestStart := time.Now()
-
-			dopplerProxy.ServeHTTP(recorder, req)
-
-			metricValue := mockSender.GetValue(metricName)
-			elapsed := float64(time.Since(requestStart)) / float64(time.Millisecond)
-			Expect(metricValue).To(BeNumerically("<", elapsed))
-		})
-
 		DescribeTable("increments a counter for every envelope that is written", func(url, endpoint string) {
 			server := httptest.NewServer(dopplerProxy)
 			defer server.CloseClientConnections()
@@ -108,41 +91,6 @@ var _ = Describe("DopplerProxy", func() {
 			Entry("stream requests", "/apps/12bdb5e8-ba61-48e3-9dda-30ecd1446663/stream", "stream"),
 			Entry("firehose requests", "/firehose/streamID", "firehose"),
 		)
-	})
-
-	It("calls the recent logs handler", func() {
-		req, _ := http.NewRequest("GET", "/apps/8de7d390-9044-41ff-ab76-432299923511/recentlogs", nil)
-		req.Header.Add("Authorization", "token")
-
-		dopplerProxy.ServeHTTP(recorder, req)
-
-		Eventually(func() int { return recentLogsHandler.numCalls }).Should(Equal(1))
-	})
-
-	It("rejects badly-formed app GUIDs", func() {
-		req, _ := http.NewRequest("GET", "/apps/not-a-valid-guid/recentlogs?limit=2", nil)
-		req.Header.Add("Authorization", "token")
-
-		dopplerProxy.ServeHTTP(recorder, req)
-		Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
-	})
-
-	It("accepts non-GUIDs when disableAccessControl is set", func() {
-		req, _ := http.NewRequest("GET", "/apps/not-a-valid-guid/recentlogs?limit=2", nil)
-		req.Header.Add("Authorization", "token")
-
-		dopplerProxy = proxy.NewDopplerProxy(
-			auth.Authorize,
-			adminAuth.Authorize,
-			mockGrpcConnector,
-			"cookieDomain",
-			time.Hour,
-			mockSender,
-			recentLogsHandler,
-			true,
-		)
-		dopplerProxy.ServeHTTP(recorder, req)
-		Expect(recorder.Code).To(Equal(http.StatusOK))
 	})
 
 	Context("SetCookie", func() {
@@ -182,32 +130,5 @@ var _ = Describe("DopplerProxy", func() {
 			Expect(recorder.Header().Get("Access-Control-Allow-Credentials")).To(Equal("true"))
 			Expect(recorder.Header().Get("Access-Control-Allow-Headers")).To(Equal("Content-Type"))
 		})
-
-		It("configures CORS for recentlogs", func() {
-			req, _ := http.NewRequest(
-				"GET",
-				"/apps/guid/recentlogs",
-				nil,
-			)
-			req.Header.Set("Origin", "fake-origin-string")
-
-			dopplerProxy.ServeHTTP(recorder, req)
-
-			Expect(recorder.Header().Get("Access-Control-Allow-Origin")).To(Equal("fake-origin-string"))
-			Expect(recorder.Header().Get("Access-Control-Allow-Credentials")).To(Equal("true"))
-			Expect(recorder.Header().Get("Access-Control-Allow-Headers")).To(Equal(""))
-		})
 	})
 })
-
-type spyRecentLogsHandler struct {
-	numCalls int
-}
-
-func (rlh *spyRecentLogsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	rlh.numCalls += 1
-}
-
-func newSpyRecentLogsHandler() *spyRecentLogsHandler {
-	return &spyRecentLogsHandler{}
-}

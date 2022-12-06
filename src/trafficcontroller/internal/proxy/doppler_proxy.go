@@ -41,7 +41,6 @@ func NewDopplerProxy(
 	cookieDomain string,
 	slowConsumerTimeout time.Duration,
 	m MetricClient,
-	recentLogsHandler http.Handler,
 	disableAccessControl bool,
 ) *DopplerProxy {
 	// metric-documentation-v2: (doppler_proxy.firehoses) Number of open firehose streams
@@ -66,14 +65,6 @@ func NewDopplerProxy(
 			NewSetCookieHandler(cookieDomain),
 			AllowCredentials(),
 			AllowHeader("Content-Type"),
-		),
-	)
-
-	r.Handle(
-		"/apps/{appID}/recentlogs",
-		corsMiddleware.Wrap(
-			logAccessMiddleware.Wrap(recentLogsHandler),
-			AllowCredentials(),
 		),
 	)
 

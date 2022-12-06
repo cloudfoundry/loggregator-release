@@ -39,7 +39,6 @@ var _ = Describe("StreamHandler", func() {
 			"cookieDomain",
 			time.Hour,
 			mockSender,
-			newSpyRecentLogsHandler(),
 			false,
 		)
 
