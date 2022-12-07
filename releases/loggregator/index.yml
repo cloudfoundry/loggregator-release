@@ -141,6 +141,8 @@ builds:
     version: 106.6.0
   60497a84-ec50-4b33-4c5a-39e9b2c99cff:
     version: "77.1"
+  6103fa8f-a23d-46f3-5333-3cf3283cd212:
+    version: 106.7.5
   62c976f8-3f99-4ade-4d3b-368571d884a3:
     version: "105.5"
   62ec93ef-997c-4076-b2ed-6264ea5c7130:
