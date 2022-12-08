@@ -21,14 +21,6 @@ type GRPC struct {
 	KeyFile  string `env:"ROUTER_KEY_FILE"`
 }
 
-// LogCacheTLSConfig stores TLS configuration for gRPC communcation to router and agent.
-type LogCacheTLSConfig struct {
-	CAFile     string `env:"LOG_CACHE_CA_FILE"`
-	CertFile   string `env:"LOG_CACHE_CERT_FILE"`
-	KeyFile    string `env:"LOG_CACHE_KEY_FILE"`
-	ServerName string `env:"LOG_CACHE_SERVER_NAME"`
-}
-
 // CCTLSClientConfig stores TLS cofiguration for communication with cloud
 // controller.
 type CCTLSClientConfig struct {
@@ -57,21 +49,16 @@ type Config struct {
 	MetricEmitterInterval time.Duration `env:"TRAFFIC_CONTROLLER_METRIC_EMITTER_INTERVAL, report"`
 	DisableAccessControl  bool          `env:"TRAFFIC_CONTROLLER_DISABLE_ACCESS_CONTROL, report"`
 	RouterAddrs           []string      `env:"ROUTER_ADDRS, report"`
-	LogCacheAddr          string        `env:"LOG_CACHE_ADDR, report"`
 
 	CCTLSClientConfig CCTLSClientConfig
 	Agent             Agent
 	GRPC              GRPC
-	LogCacheTLSConfig LogCacheTLSConfig
 }
 
 // LoadConfig reads from the environment to create a Config.
 func LoadConfig() (*Config, error) {
 	config := Config{
 		MetricEmitterInterval: time.Minute,
-		LogCacheTLSConfig: LogCacheTLSConfig{
-			ServerName: "log_cache",
-		},
 	}
 
 	err := envstruct.Load(&config)

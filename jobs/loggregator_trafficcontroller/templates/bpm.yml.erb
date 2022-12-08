@@ -15,13 +15,6 @@
   end
 
   uaa_host = p("uaa.internal_url")
-
-  log_cache_addr = ""
-  if_p("log-cache.override_addr") do |override_addr|
-    log_cache_addr = override_addr
-  end.else_if_link("log-cache") do |logcache|
-    log_cache_addr = logcache.address
-  end
 %>
 
 processes:
@@ -63,13 +56,6 @@ processes:
       TRAFFIC_CONTROLLER_SECURITY_EVENT_LOG: "/var/vcap/sys/log/loggregator_trafficcontroller/loggregator_trafficcontroller_security_events.log"
       <% end %>
 
-      <% if_link("log-cache") do |logcache| %>
-      LOG_CACHE_ADDR: "<%= log_cache_addr %>:<%= logcache.p('port') %>"
-      LOG_CACHE_CA_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/logcache_ca.crt"
-      LOG_CACHE_CERT_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/logcache_trafficcontroller.crt"
-      LOG_CACHE_KEY_FILE: "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/logcache_trafficcontroller.key"
-      LOG_CACHE_SERVER_NAME: "<%= p('logcache.tls.server_name') %>"
-      <% end %>
       USE_RFC339: "<%= p("logging.format.timestamp") == "rfc3339" %>"
     limits:
       open_files: 65536

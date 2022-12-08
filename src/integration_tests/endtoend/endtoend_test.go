@@ -25,7 +25,7 @@ var _ = Describe("End to end tests", func() {
 		defer ingressCleanup()
 
 		trafficcontrollerCleanup, tcPorts := testservers.StartTrafficController(
-			testservers.BuildTrafficControllerConfWithoutLogCache(
+			testservers.BuildTrafficControllerConf(
 				fmt.Sprintf("127.0.0.1:%d", dopplerPorts.GRPC),
 				0,
 			),

@@ -6,9 +6,6 @@ templates:
   trafficcontroller.key.erb: config/certs/trafficcontroller.key
   trafficcontroller_outgoing.crt.erb: config/certs/trafficcontroller_outgoing.crt
   trafficcontroller_outgoing.key.erb: config/certs/trafficcontroller_outgoing.key
-  logcache_ca.crt.erb: config/certs/logcache_ca.crt
-  logcache_trafficcontroller.crt.erb: config/certs/logcache_trafficcontroller.crt
-  logcache_trafficcontroller.key.erb: config/certs/logcache_trafficcontroller.key
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
   cc_trafficcontroller.crt.erb: config/certs/cc_trafficcontroller.crt
   cc_trafficcontroller.key.erb: config/certs/cc_trafficcontroller.key
@@ -31,9 +28,6 @@ provides:
 consumes:
 - name: doppler
   type: doppler
-  optional: true
-- name: log-cache
-  type: log-cache
   optional: true
 
 properties:
@@ -72,12 +66,6 @@ properties:
     description: "TLS certificate for trafficcontroller"
   loggregator.tls.trafficcontroller.key:
     description: "TLS key for trafficcontroller"
-
-  logcache.tls.server_name:
-    description: "The common name of the Log Cache server"
-    default: "log-cache"
-  logcache.override_addr:
-    description: "Address for log-cache to override from the default from the bosh link"
 
   loggregator.doppler.addrs:
     description: "The addresses of Dopplers (alternative to doppler link)"
