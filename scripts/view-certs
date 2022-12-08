@@ -1,6 +1,0 @@
-#!/bin/bash
-
-# e.g., api.run.pivotal.io:443
-domain_with_port="$1"
-
-openssl s_client -showcerts -connect "$domain_with_port" < /dev/null
