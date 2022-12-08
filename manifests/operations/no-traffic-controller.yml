@@ -1,3 +1,0 @@
----
-- type: remove
-  path: /instance_groups/name=log-api/jobs/name=loggregator_trafficcontroller?

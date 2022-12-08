@@ -14,7 +14,6 @@ If you have any questions, or want to get attention for a PR or issue please rea
 
 ## Table of Contents
 
-* [Generating TLS Certificates](#generating-tls-certificates)
 * [Streaming Application Logs](#streaming-application-logs)
   * [Using the CF CLI](#using-the-cf-cli)
   * [Forwarding to a Log Drain](#forwarding-to-a-log-drain)
@@ -33,13 +32,6 @@ If you have any questions, or want to get attention for a PR or issue please rea
   * [Scaling](#scaling)
   * [Noise](#noise)
 
-## Generating TLS Certificates
-
-In order to secure transport of logs throughout the system, Loggregator needs
-several certificates to be generated for each of the components. You start
-this process by running the `scripts/generate-certs`, and then configure the
-corresponding certificates for each of the components you are deploying. For
-more details see our [Certificate Configuration README](docs/cert-config.md)
 
 ## Streaming Application Logs
 
@@ -105,24 +97,6 @@ component is intended to be a replacement for traffic controller.
 
 By default, the RLP communicates with clients via gRPC over mutual TLS. To enable HTTP access to the Reverse Log
 Proxy, deploy the RLP Gateway.
-
-## Standalone Loggregator
-
-Standalone Loggregator provides logging support for services that do not
-require a CloudFoundry.
-
-TrafficController has several CloudFoundry concerns. Therefore, there is an
-[operations file](./manifests/operations/no-traffic-controller.yml) to deploy
-standalone Loggregator without it.
-
-### Deploying with TrafficController
-
-##### Example bosh lite deploy
-
-```
-bosh -e lite deploy -d loggregator manifests/loggregator.yml \
-    --vars-store=/tmp/loggregator-vars.yml
-```
 
 ### Loggregator API
 
