@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
-	"code.cloudfoundry.org/loggregator/plumbing"
-	"code.cloudfoundry.org/loggregator/router/app"
-	"code.cloudfoundry.org/loggregator/testservers"
+	"code.cloudfoundry.org/loggregator-release/plumbing"
+	"code.cloudfoundry.org/loggregator-release/router/app"
+	"code.cloudfoundry.org/loggregator-release/testservers"
 	"google.golang.org/grpc"
 
 	. "github.com/onsi/ginkgo"

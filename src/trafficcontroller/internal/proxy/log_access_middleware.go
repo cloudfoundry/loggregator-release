@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"regexp"
 
-	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/auth"
+	"code.cloudfoundry.org/loggregator-release/trafficcontroller/internal/auth"
 
 	"github.com/gorilla/mux"
 )

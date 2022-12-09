@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
-	"code.cloudfoundry.org/loggregator/integration_tests/fakes"
-	"code.cloudfoundry.org/loggregator/testservers"
+	"code.cloudfoundry.org/loggregator-release/integration_tests/fakes"
+	"code.cloudfoundry.org/loggregator-release/testservers"
 	"golang.org/x/net/context"
 
 	. "github.com/onsi/ginkgo"

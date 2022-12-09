@@ -5,9 +5,9 @@ import (
 	"os"
 
 	metrics "code.cloudfoundry.org/go-metric-registry"
-	"code.cloudfoundry.org/loggregator/plumbing"
-	"code.cloudfoundry.org/loggregator/profiler"
-	"code.cloudfoundry.org/loggregator/rlp-gateway/app"
+	"code.cloudfoundry.org/loggregator-release/plumbing"
+	"code.cloudfoundry.org/loggregator-release/profiler"
+	"code.cloudfoundry.org/loggregator-release/rlp-gateway/app"
 )
 
 func main() {

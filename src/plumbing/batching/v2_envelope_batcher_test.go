@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
-	"code.cloudfoundry.org/loggregator/plumbing/batching"
+	"code.cloudfoundry.org/loggregator-release/plumbing/batching"
 )
 
 var _ = Describe("V2EnvelopeBatcher", func() {

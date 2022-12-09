@@ -5,9 +5,9 @@ import (
 	"net"
 
 	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
-	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
-	"code.cloudfoundry.org/loggregator/plumbing"
-	"code.cloudfoundry.org/loggregator/rlp/internal/ingress"
+	"code.cloudfoundry.org/loggregator-release/metricemitter/testhelper"
+	"code.cloudfoundry.org/loggregator-release/plumbing"
+	"code.cloudfoundry.org/loggregator-release/rlp/internal/ingress"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"

@@ -4,9 +4,9 @@ import (
 	"io"
 
 	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
-	"code.cloudfoundry.org/loggregator/diodes"
-	"code.cloudfoundry.org/loggregator/metricemitter"
-	v2 "code.cloudfoundry.org/loggregator/router/internal/server/v2"
+	"code.cloudfoundry.org/loggregator-release/diodes"
+	"code.cloudfoundry.org/loggregator-release/metricemitter"
+	v2 "code.cloudfoundry.org/loggregator-release/router/internal/server/v2"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -7,9 +7,9 @@ import (
 
 	"code.cloudfoundry.org/go-batching"
 	gendiode "code.cloudfoundry.org/go-diodes"
-	"code.cloudfoundry.org/loggregator/diodes"
-	"code.cloudfoundry.org/loggregator/metricemitter"
-	"code.cloudfoundry.org/loggregator/plumbing"
+	"code.cloudfoundry.org/loggregator-release/diodes"
+	"code.cloudfoundry.org/loggregator-release/metricemitter"
+	"code.cloudfoundry.org/loggregator-release/plumbing"
 	"golang.org/x/net/context"
 )
 

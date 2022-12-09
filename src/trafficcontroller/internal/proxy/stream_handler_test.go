@@ -5,10 +5,10 @@ import (
 	"net/http/httptest"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
-	"code.cloudfoundry.org/loggregator/plumbing"
+	"code.cloudfoundry.org/loggregator-release/metricemitter/testhelper"
+	"code.cloudfoundry.org/loggregator-release/plumbing"
 
-	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
+	"code.cloudfoundry.org/loggregator-release/trafficcontroller/internal/proxy"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

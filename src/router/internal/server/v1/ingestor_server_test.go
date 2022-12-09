@@ -11,10 +11,10 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"code.cloudfoundry.org/go-loggregator/v9/conversion"
-	"code.cloudfoundry.org/loggregator/diodes"
-	"code.cloudfoundry.org/loggregator/metricemitter"
-	"code.cloudfoundry.org/loggregator/plumbing"
-	v1 "code.cloudfoundry.org/loggregator/router/internal/server/v1"
+	"code.cloudfoundry.org/loggregator-release/diodes"
+	"code.cloudfoundry.org/loggregator-release/metricemitter"
+	"code.cloudfoundry.org/loggregator-release/plumbing"
+	v1 "code.cloudfoundry.org/loggregator-release/router/internal/server/v1"
 	"github.com/cloudfoundry/sonde-go/events"
 	"google.golang.org/protobuf/proto"
 

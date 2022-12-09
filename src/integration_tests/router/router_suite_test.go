@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
-	"code.cloudfoundry.org/loggregator/integration_tests/binaries"
-	"code.cloudfoundry.org/loggregator/plumbing"
+	"code.cloudfoundry.org/loggregator-release/integration_tests/binaries"
+	"code.cloudfoundry.org/loggregator-release/plumbing"
 	"github.com/cloudfoundry/sonde-go/events"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/protobuf/proto"
