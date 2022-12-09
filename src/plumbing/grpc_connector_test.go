@@ -9,9 +9,9 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 
-	"code.cloudfoundry.org/loggregator-release/metricemitter/testhelper"
+	"code.cloudfoundry.org/loggregator-release/src/metricemitter/testhelper"
 
-	"code.cloudfoundry.org/loggregator-release/plumbing"
+	"code.cloudfoundry.org/loggregator-release/src/plumbing"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"

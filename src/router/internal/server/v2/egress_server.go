@@ -6,9 +6,9 @@ import (
 
 	gendiode "code.cloudfoundry.org/go-diodes"
 	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
-	"code.cloudfoundry.org/loggregator-release/diodes"
-	"code.cloudfoundry.org/loggregator-release/metricemitter"
-	"code.cloudfoundry.org/loggregator-release/plumbing/batching"
+	"code.cloudfoundry.org/loggregator-release/src/diodes"
+	"code.cloudfoundry.org/loggregator-release/src/metricemitter"
+	"code.cloudfoundry.org/loggregator-release/src/plumbing/batching"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

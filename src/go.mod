@@ -1,4 +1,4 @@
-module code.cloudfoundry.org/loggregator-release
+module code.cloudfoundry.org/loggregator-release/src
 
 go 1.19
 

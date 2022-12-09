@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package plumbing;
 
-option go_package = "code.cloudfoundry.org/loggregator-release/plumbing";
+option go_package = "code.cloudfoundry.org/loggregator-release/src/plumbing";
 
 service Doppler {
   rpc Subscribe(SubscriptionRequest) returns (stream Response) {}

@@ -8,7 +8,7 @@ import (
 	"time"
 	"unsafe"
 
-	"code.cloudfoundry.org/loggregator-release/metricemitter"
+	"code.cloudfoundry.org/loggregator-release/src/metricemitter"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 

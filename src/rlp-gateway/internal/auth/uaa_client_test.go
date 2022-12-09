@@ -5,7 +5,7 @@ import (
 	"log"
 	"sync"
 
-	"code.cloudfoundry.org/loggregator-release/internal/testhelper"
+	"code.cloudfoundry.org/loggregator-release/src/internal/testhelper"
 
 	"bytes"
 	"encoding/json"
@@ -13,7 +13,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"code.cloudfoundry.org/loggregator-release/rlp-gateway/internal/auth"
+	"code.cloudfoundry.org/loggregator-release/src/rlp-gateway/internal/auth"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

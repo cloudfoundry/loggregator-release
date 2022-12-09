@@ -6,7 +6,7 @@
 package proxy_test
 
 import (
-	"code.cloudfoundry.org/loggregator-release/plumbing"
+	"code.cloudfoundry.org/loggregator-release/src/plumbing"
 	"golang.org/x/net/context"
 )
 

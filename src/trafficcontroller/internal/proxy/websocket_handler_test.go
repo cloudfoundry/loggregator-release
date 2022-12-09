@@ -7,9 +7,9 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"code.cloudfoundry.org/loggregator-release/metricemitter"
-	"code.cloudfoundry.org/loggregator-release/metricemitter/testhelper"
-	"code.cloudfoundry.org/loggregator-release/trafficcontroller/internal/proxy"
+	"code.cloudfoundry.org/loggregator-release/src/metricemitter"
+	"code.cloudfoundry.org/loggregator-release/src/metricemitter/testhelper"
+	"code.cloudfoundry.org/loggregator-release/src/trafficcontroller/internal/proxy"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

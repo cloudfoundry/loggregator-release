@@ -9,16 +9,16 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/go-envstruct"
-	"code.cloudfoundry.org/loggregator-release/metricemitter"
+	"code.cloudfoundry.org/loggregator-release/src/metricemitter"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/keepalive"
 
-	"code.cloudfoundry.org/loggregator-release/plumbing"
-	"code.cloudfoundry.org/loggregator-release/profiler"
+	"code.cloudfoundry.org/loggregator-release/src/plumbing"
+	"code.cloudfoundry.org/loggregator-release/src/profiler"
 
-	"code.cloudfoundry.org/loggregator-release/rlp/app"
+	"code.cloudfoundry.org/loggregator-release/src/rlp/app"
 )
 
 func main() {

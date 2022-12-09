@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
-	"code.cloudfoundry.org/loggregator-release/metricemitter/testhelper"
-	"code.cloudfoundry.org/loggregator-release/plumbing"
-	"code.cloudfoundry.org/loggregator-release/testservers"
+	"code.cloudfoundry.org/loggregator-release/src/metricemitter/testhelper"
+	"code.cloudfoundry.org/loggregator-release/src/plumbing"
+	"code.cloudfoundry.org/loggregator-release/src/testservers"
 
-	app "code.cloudfoundry.org/loggregator-release/rlp/app"
+	app "code.cloudfoundry.org/loggregator-release/src/rlp/app"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

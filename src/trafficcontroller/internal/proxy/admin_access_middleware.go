@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"code.cloudfoundry.org/loggregator-release/trafficcontroller/internal/auth"
+	"code.cloudfoundry.org/loggregator-release/src/trafficcontroller/internal/auth"
 )
 
 type AdminAccessMiddleware struct {

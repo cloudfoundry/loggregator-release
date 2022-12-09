@@ -7,9 +7,9 @@ import (
 	"time"
 
 	envstruct "code.cloudfoundry.org/go-envstruct"
-	"code.cloudfoundry.org/loggregator-release/plumbing"
-	"code.cloudfoundry.org/loggregator-release/profiler"
-	"code.cloudfoundry.org/loggregator-release/router/app"
+	"code.cloudfoundry.org/loggregator-release/src/plumbing"
+	"code.cloudfoundry.org/loggregator-release/src/profiler"
+	"code.cloudfoundry.org/loggregator-release/src/router/app"
 	"google.golang.org/grpc/grpclog"
 )
 

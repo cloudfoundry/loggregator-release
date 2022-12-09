@@ -6,7 +6,7 @@
 package plumbing_test
 
 import (
-	"code.cloudfoundry.org/loggregator-release/plumbing"
+	"code.cloudfoundry.org/loggregator-release/src/plumbing"
 )
 
 type mockFinder struct {
