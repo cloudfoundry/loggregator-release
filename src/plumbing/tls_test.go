@@ -1,11 +1,11 @@
 package plumbing_test
 
 import (
-	"code.cloudfoundry.org/loggregator-release/testservers"
+	"code.cloudfoundry.org/loggregator-release/src/testservers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"code.cloudfoundry.org/loggregator-release/plumbing"
+	"code.cloudfoundry.org/loggregator-release/src/plumbing"
 )
 
 var _ = Describe("TLS", func() {

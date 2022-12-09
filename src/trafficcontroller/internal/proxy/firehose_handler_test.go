@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"code.cloudfoundry.org/loggregator-release/metricemitter/testhelper"
-	"code.cloudfoundry.org/loggregator-release/plumbing"
+	"code.cloudfoundry.org/loggregator-release/src/metricemitter/testhelper"
+	"code.cloudfoundry.org/loggregator-release/src/plumbing"
 
-	"code.cloudfoundry.org/loggregator-release/trafficcontroller/internal/proxy"
+	"code.cloudfoundry.org/loggregator-release/src/trafficcontroller/internal/proxy"
 
 	"golang.org/x/net/context"
 

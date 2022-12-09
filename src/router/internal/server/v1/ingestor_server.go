@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/go-loggregator/v9/conversion"
-	"code.cloudfoundry.org/loggregator-release/diodes"
-	"code.cloudfoundry.org/loggregator-release/metricemitter"
-	"code.cloudfoundry.org/loggregator-release/plumbing"
+	"code.cloudfoundry.org/loggregator-release/src/diodes"
+	"code.cloudfoundry.org/loggregator-release/src/metricemitter"
+	"code.cloudfoundry.org/loggregator-release/src/plumbing"
 	"github.com/cloudfoundry/sonde-go/events"
 	"google.golang.org/protobuf/proto"
 )

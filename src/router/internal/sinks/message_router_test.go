@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"code.cloudfoundry.org/loggregator-release/diodes"
-	"code.cloudfoundry.org/loggregator-release/router/internal/sinks"
+	"code.cloudfoundry.org/loggregator-release/src/diodes"
+	"code.cloudfoundry.org/loggregator-release/src/router/internal/sinks"
 	"github.com/cloudfoundry/sonde-go/events"
 	"google.golang.org/protobuf/proto"
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"code.cloudfoundry.org/loggregator-release/diodes"
+	"code.cloudfoundry.org/loggregator-release/src/diodes"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 

@@ -13,12 +13,12 @@ import (
 	"sync"
 	"time"
 
-	"code.cloudfoundry.org/loggregator-release/internal/testhelper"
+	"code.cloudfoundry.org/loggregator-release/src/internal/testhelper"
 
 	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
-	"code.cloudfoundry.org/loggregator-release/plumbing" // TODO: Resolve duplicate proto error
-	"code.cloudfoundry.org/loggregator-release/rlp-gateway/app"
-	"code.cloudfoundry.org/loggregator-release/testservers"
+	"code.cloudfoundry.org/loggregator-release/src/plumbing" // TODO: Resolve duplicate proto error
+	"code.cloudfoundry.org/loggregator-release/src/rlp-gateway/app"
+	"code.cloudfoundry.org/loggregator-release/src/testservers"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/encoding/protojson"
 

@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"code.cloudfoundry.org/loggregator-release/trafficcontroller/internal/proxy"
+	"code.cloudfoundry.org/loggregator-release/src/trafficcontroller/internal/proxy"
 
 	"github.com/gorilla/websocket"
 

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"sync/atomic"
 
-	"code.cloudfoundry.org/loggregator-release/metricemitter"
-	"code.cloudfoundry.org/loggregator-release/plumbing"
+	"code.cloudfoundry.org/loggregator-release/src/metricemitter"
+	"code.cloudfoundry.org/loggregator-release/src/plumbing"
 
 	"github.com/gorilla/mux"
 )

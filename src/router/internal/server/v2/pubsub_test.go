@@ -2,7 +2,7 @@ package v2_test
 
 import (
 	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
-	v2 "code.cloudfoundry.org/loggregator-release/router/internal/server/v2"
+	v2 "code.cloudfoundry.org/loggregator-release/src/router/internal/server/v2"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

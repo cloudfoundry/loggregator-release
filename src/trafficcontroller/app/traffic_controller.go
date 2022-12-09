@@ -12,11 +12,11 @@ import (
 
 	"code.cloudfoundry.org/tlsconfig"
 
-	"code.cloudfoundry.org/loggregator-release/metricemitter"
-	"code.cloudfoundry.org/loggregator-release/plumbing"
-	"code.cloudfoundry.org/loggregator-release/profiler"
-	"code.cloudfoundry.org/loggregator-release/trafficcontroller/internal/auth"
-	"code.cloudfoundry.org/loggregator-release/trafficcontroller/internal/proxy"
+	"code.cloudfoundry.org/loggregator-release/src/metricemitter"
+	"code.cloudfoundry.org/loggregator-release/src/plumbing"
+	"code.cloudfoundry.org/loggregator-release/src/profiler"
+	"code.cloudfoundry.org/loggregator-release/src/trafficcontroller/internal/auth"
+	"code.cloudfoundry.org/loggregator-release/src/trafficcontroller/internal/proxy"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"

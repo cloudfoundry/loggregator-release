@@ -3,7 +3,7 @@ package endtoend_test
 import (
 	"testing"
 
-	"code.cloudfoundry.org/loggregator-release/integration_tests/binaries"
+	"code.cloudfoundry.org/loggregator-release/src/integration_tests/binaries"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

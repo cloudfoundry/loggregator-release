@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"code.cloudfoundry.org/loggregator-release/rlp-gateway/internal/auth"
-	"code.cloudfoundry.org/loggregator-release/rlp-gateway/internal/web"
+	"code.cloudfoundry.org/loggregator-release/src/rlp-gateway/internal/auth"
+	"code.cloudfoundry.org/loggregator-release/src/rlp-gateway/internal/web"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

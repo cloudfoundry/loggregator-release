@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"code.cloudfoundry.org/loggregator-release/metricemitter"
+	"code.cloudfoundry.org/loggregator-release/src/metricemitter"
 
 	"github.com/gorilla/websocket"
 )

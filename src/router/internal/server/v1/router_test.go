@@ -1,8 +1,8 @@
 package v1_test
 
 import (
-	"code.cloudfoundry.org/loggregator-release/plumbing"
-	v1 "code.cloudfoundry.org/loggregator-release/router/internal/server/v1"
+	"code.cloudfoundry.org/loggregator-release/src/plumbing"
+	v1 "code.cloudfoundry.org/loggregator-release/src/router/internal/server/v1"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	. "github.com/onsi/ginkgo"
