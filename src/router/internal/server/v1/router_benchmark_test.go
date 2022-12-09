@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/plumbing"
-	v1 "code.cloudfoundry.org/loggregator/router/internal/server/v1"
+	"code.cloudfoundry.org/loggregator-release/plumbing"
+	v1 "code.cloudfoundry.org/loggregator-release/router/internal/server/v1"
 	"github.com/cloudfoundry/sonde-go/events"
 	"google.golang.org/protobuf/proto"
 )

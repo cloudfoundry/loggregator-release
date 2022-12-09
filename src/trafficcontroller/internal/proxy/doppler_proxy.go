@@ -5,9 +5,9 @@ import (
 	"net/url"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/metricemitter"
-	"code.cloudfoundry.org/loggregator/plumbing"
-	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/auth"
+	"code.cloudfoundry.org/loggregator-release/metricemitter"
+	"code.cloudfoundry.org/loggregator-release/plumbing"
+	"code.cloudfoundry.org/loggregator-release/trafficcontroller/internal/auth"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"

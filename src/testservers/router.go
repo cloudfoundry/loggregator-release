@@ -6,7 +6,7 @@ import (
 	"os/exec"
 
 	envstruct "code.cloudfoundry.org/go-envstruct"
-	"code.cloudfoundry.org/loggregator/router/app"
+	"code.cloudfoundry.org/loggregator-release/router/app"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

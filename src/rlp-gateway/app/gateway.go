@@ -11,10 +11,10 @@ import (
 	metrics "code.cloudfoundry.org/go-metric-registry"
 	"code.cloudfoundry.org/tlsconfig"
 
-	"code.cloudfoundry.org/loggregator/plumbing"
-	"code.cloudfoundry.org/loggregator/rlp-gateway/internal/auth"
-	"code.cloudfoundry.org/loggregator/rlp-gateway/internal/ingress"
-	"code.cloudfoundry.org/loggregator/rlp-gateway/internal/web"
+	"code.cloudfoundry.org/loggregator-release/plumbing"
+	"code.cloudfoundry.org/loggregator-release/rlp-gateway/internal/auth"
+	"code.cloudfoundry.org/loggregator-release/rlp-gateway/internal/ingress"
+	"code.cloudfoundry.org/loggregator-release/rlp-gateway/internal/web"
 	"github.com/gorilla/handlers"
 )
 

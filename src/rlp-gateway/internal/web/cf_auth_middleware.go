@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"regexp"
 
-	"code.cloudfoundry.org/loggregator/rlp-gateway/internal/auth"
+	"code.cloudfoundry.org/loggregator-release/rlp-gateway/internal/auth"
 	"github.com/gorilla/mux"
 )
 

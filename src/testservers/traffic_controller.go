@@ -10,7 +10,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 
 	envstruct "code.cloudfoundry.org/go-envstruct"
-	tcConf "code.cloudfoundry.org/loggregator/trafficcontroller/app"
+	tcConf "code.cloudfoundry.org/loggregator-release/trafficcontroller/app"
 )
 
 func BuildTrafficControllerConf(routerAddr string, agentPort int) tcConf.Config {

@@ -11,10 +11,10 @@ import (
 	"golang.org/x/net/netutil"
 
 	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
-	"code.cloudfoundry.org/loggregator/metricemitter"
-	"code.cloudfoundry.org/loggregator/plumbing"
-	"code.cloudfoundry.org/loggregator/rlp/internal/egress"
-	"code.cloudfoundry.org/loggregator/rlp/internal/ingress"
+	"code.cloudfoundry.org/loggregator-release/metricemitter"
+	"code.cloudfoundry.org/loggregator-release/plumbing"
+	"code.cloudfoundry.org/loggregator-release/rlp/internal/egress"
+	"code.cloudfoundry.org/loggregator-release/rlp/internal/ingress"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

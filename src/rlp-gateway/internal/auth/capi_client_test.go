@@ -6,12 +6,12 @@ import (
 	"log"
 	"sync"
 
-	"code.cloudfoundry.org/loggregator/internal/testhelper"
+	"code.cloudfoundry.org/loggregator-release/internal/testhelper"
 
 	"errors"
 	"net/http"
 
-	"code.cloudfoundry.org/loggregator/rlp-gateway/internal/auth"
+	"code.cloudfoundry.org/loggregator-release/rlp-gateway/internal/auth"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

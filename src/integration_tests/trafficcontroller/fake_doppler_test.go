@@ -5,8 +5,8 @@ import (
 
 	"code.cloudfoundry.org/tlsconfig"
 
-	"code.cloudfoundry.org/loggregator/plumbing"
-	"code.cloudfoundry.org/loggregator/testservers"
+	"code.cloudfoundry.org/loggregator-release/plumbing"
+	"code.cloudfoundry.org/loggregator-release/testservers"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"

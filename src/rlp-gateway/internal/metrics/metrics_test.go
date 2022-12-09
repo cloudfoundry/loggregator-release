@@ -3,7 +3,7 @@ package metrics_test
 import (
 	"expvar"
 
-	"code.cloudfoundry.org/loggregator/rlp-gateway/internal/metrics"
+	"code.cloudfoundry.org/loggregator-release/rlp-gateway/internal/metrics"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

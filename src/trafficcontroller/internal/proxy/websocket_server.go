@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/metricemitter"
+	"code.cloudfoundry.org/loggregator-release/metricemitter"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

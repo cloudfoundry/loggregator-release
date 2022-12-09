@@ -53,7 +53,7 @@ func Build() (BuildPaths, chan error) {
 
 	go func() {
 		defer wg.Done()
-		path, err := gexec.Build("code.cloudfoundry.org/loggregator/router", "-race")
+		path, err := gexec.Build("code.cloudfoundry.org/loggregator-release/router", "-race")
 		if err != nil {
 			errors <- err
 			return
@@ -65,7 +65,7 @@ func Build() (BuildPaths, chan error) {
 
 	go func() {
 		defer wg.Done()
-		path, err := gexec.Build("code.cloudfoundry.org/loggregator/trafficcontroller", "-race")
+		path, err := gexec.Build("code.cloudfoundry.org/loggregator-release/trafficcontroller", "-race")
 		if err != nil {
 			errors <- err
 			return
@@ -77,7 +77,7 @@ func Build() (BuildPaths, chan error) {
 
 	go func() {
 		defer wg.Done()
-		path, err := gexec.Build("code.cloudfoundry.org/loggregator/rlp", "-race")
+		path, err := gexec.Build("code.cloudfoundry.org/loggregator-release/rlp", "-race")
 		if err != nil {
 			errors <- err
 			return
@@ -89,7 +89,7 @@ func Build() (BuildPaths, chan error) {
 
 	go func() {
 		defer wg.Done()
-		path, err := gexec.Build("code.cloudfoundry.org/loggregator/rlp-gateway", "-race")
+		path, err := gexec.Build("code.cloudfoundry.org/loggregator-release/rlp-gateway", "-race")
 		if err != nil {
 			errors <- err
 			return

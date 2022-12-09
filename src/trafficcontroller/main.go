@@ -8,13 +8,13 @@ import (
 
 	"code.cloudfoundry.org/tlsconfig"
 
-	"code.cloudfoundry.org/loggregator/metricemitter"
-	"code.cloudfoundry.org/loggregator/plumbing"
+	"code.cloudfoundry.org/loggregator-release/metricemitter"
+	"code.cloudfoundry.org/loggregator-release/plumbing"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
 
-	"code.cloudfoundry.org/loggregator/trafficcontroller/app"
+	"code.cloudfoundry.org/loggregator-release/trafficcontroller/app"
 )
 
 func main() {

@@ -42,7 +42,7 @@ var _ = BeforeSuite(func() {
 	setupFakeUaaServer()
 
 	var err error
-	trafficControllerExecPath, err := gexec.Build("code.cloudfoundry.org/loggregator/trafficcontroller", "-race")
+	trafficControllerExecPath, err := gexec.Build("code.cloudfoundry.org/loggregator-release/trafficcontroller", "-race")
 	Expect(err).ToNot(HaveOccurred())
 	os.Setenv("TRAFFIC_CONTROLLER_BUILD_PATH", trafficControllerExecPath)
 

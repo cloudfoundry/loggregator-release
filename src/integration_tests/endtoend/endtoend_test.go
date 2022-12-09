@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/integration_tests/endtoend"
-	"code.cloudfoundry.org/loggregator/integration_tests/fakes"
-	"code.cloudfoundry.org/loggregator/testservers"
+	"code.cloudfoundry.org/loggregator-release/integration_tests/endtoend"
+	"code.cloudfoundry.org/loggregator-release/integration_tests/fakes"
+	"code.cloudfoundry.org/loggregator-release/testservers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

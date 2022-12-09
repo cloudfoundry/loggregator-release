@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
-	"code.cloudfoundry.org/loggregator/metricemitter"
-	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
-	v2 "code.cloudfoundry.org/loggregator/router/internal/server/v2"
+	"code.cloudfoundry.org/loggregator-release/metricemitter"
+	"code.cloudfoundry.org/loggregator-release/metricemitter/testhelper"
+	v2 "code.cloudfoundry.org/loggregator-release/router/internal/server/v2"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"golang.org/x/net/context"
