@@ -47,7 +47,6 @@ var _ = Describe("Router", func() {
 	})
 
 	AfterEach(func() {
-		spyAgent.stop()
 		router.Stop()
 	})
 
@@ -62,7 +61,9 @@ var _ = Describe("Router", func() {
 
 	Describe("MetricReporting", func() {
 		It("reports metrics with source ID", func() {
+			spyAgent.start()
 			Expect(spyAgent.read().GetSourceId()).To(Equal("doppler"))
+			spyAgent.stop()
 		})
 	})
 
@@ -271,6 +272,7 @@ type spyAgent struct {
 	envs chan *loggregator_v2.Envelope
 	s    *grpc.Server
 	addr string
+	lis  net.Listener
 }
 
 func newSpyAgent(addr string) *spyAgent {
@@ -284,16 +286,12 @@ func newSpyAgent(addr string) *spyAgent {
 		envs: make(chan *loggregator_v2.Envelope, 100),
 		s:    grpc.NewServer(grpc.Creds(creds)),
 	}
-	lis, err := net.Listen("tcp", addr)
+	a.lis, err = net.Listen("tcp", addr)
 	Expect(err).ToNot(HaveOccurred())
 
-	a.addr = lis.Addr().String()
+	a.addr = a.lis.Addr().String()
 
 	loggregator_v2.RegisterIngressServer(a.s, a)
-	go func() {
-		err := a.s.Serve(lis)
-		Expect(err).ToNot(HaveOccurred())
-	}()
 
 	return a
 }
@@ -310,6 +308,14 @@ func (a *spyAgent) Sender(r loggregator_v2.Ingress_SenderServer) error {
 
 func (a *spyAgent) read() *loggregator_v2.Envelope {
 	return <-a.envs
+}
+
+func (a *spyAgent) start() {
+	go func() {
+		defer GinkgoRecover()
+		err := a.s.Serve(a.lis)
+		Expect(err).ToNot(HaveOccurred())
+	}()
 }
 
 func (a *spyAgent) stop() {
