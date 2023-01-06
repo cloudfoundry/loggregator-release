@@ -4,20 +4,29 @@ updates:
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
-    target-branch: main
     schedule:
       interval: "daily"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "v106.x"
+    schedule:
+      interval: "daily"
+    labels:
+    - "v106.x"
+    - "github_actions"
+    - "dependencies"
 
   # Maintain dependencies for Go Modules
   - package-ecosystem: "gomod"
     directory: "/src"
-    target-branch: main
     schedule:
       interval: "daily"
-
-  # Maintain dependencies for Go Modules
   - package-ecosystem: "gomod"
     directory: "/src"
-    target-branch: v106.x
+    target-branch: "v106.x"
     schedule:
       interval: "daily"
+    labels:
+    - "v106.x"
+    - "go"
+    - "dependencies"
