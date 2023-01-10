@@ -3,10 +3,12 @@ name: Go
 on:
   push:
     branches:
-    - v106.x
+    - main
+    - v[0-9]*
   pull_request:
     branches:
-    - v106.x
+    - main
+    - v[0-9]*
 
 jobs:
   test:
