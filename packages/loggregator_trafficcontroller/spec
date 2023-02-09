@@ -2,7 +2,7 @@
 name: loggregator_trafficcontroller
 
 dependencies:
-- golang-1.19-linux
+- golang-1.20-linux
 
 files:
 - metricemitter/**/*.go
