@@ -1,8 +1,8 @@
 package v2_test
 
 import (
+	"crypto/rand"
 	"fmt"
-	"math/rand"
 	"os"
 	"testing"
 	"time"
@@ -60,7 +60,10 @@ func randEnvGen() func() *loggregator_v2.Envelope {
 	var s []*loggregator_v2.Envelope
 	for i := 0; i < 100; i++ {
 		buf := make([]byte, 10)
-		rand.Read(buf) //nolint:gosec
+		_, err := rand.Read(buf) //nolint:gosec
+		if err != nil {
+			panic(err)
+		}
 		s = append(s, benchBuildLog(fmt.Sprintf("%d", i%20000), buf))
 	}
 
