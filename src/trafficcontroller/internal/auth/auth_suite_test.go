@@ -2,8 +2,6 @@ package auth_test
 
 import (
 	"log"
-	"math/rand"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,7 +14,3 @@ func TestAccesslogger(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Auth Suite")
 }
-
-var _ = BeforeSuite(func() {
-	rand.Seed(time.Now().UnixNano())
-})

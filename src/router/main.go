@@ -3,8 +3,6 @@ package main
 import (
 	"io"
 	"log"
-	"math/rand"
-	"time"
 
 	envstruct "code.cloudfoundry.org/go-envstruct"
 	"code.cloudfoundry.org/loggregator/plumbing"
@@ -14,8 +12,6 @@ import (
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-
 	l := grpclog.NewLoggerV2(io.Discard, io.Discard, io.Discard)
 	grpclog.SetLoggerV2(l)
 

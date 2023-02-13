@@ -100,7 +100,6 @@ func random(minimum int, maximum int) int {
 	if minimum == maximum {
 		return minimum
 	}
-	rand.Seed(time.Now().Unix())
 	diff := maximum - minimum
 	return minimum + rand.Intn(diff) //nolint:gosec
 }
