@@ -106,7 +106,7 @@ var _ = Describe("LogAccessAuthorizer", func() {
 			Expect(status).To(Equal(http.StatusInternalServerError))
 			Expect(err).To(BeAssignableToTypeOf(&url.Error{}))
 			urlErr := err.(*url.Error)
-			Expect(urlErr.Err).To(MatchError("x509: certificate signed by unknown authority"))
+			Expect(urlErr.Error()).To(ContainSubstring("x509: certificate signed by unknown authority"))
 		})
 	})
 })
