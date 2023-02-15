@@ -101,6 +101,8 @@ builds:
     version: "74"
   419bac7a-42f0-4600-4e47-6f51dd7827fd:
     version: "101.10"
+  431f5df7-c5e0-40e1-66c1-973cdcc2df09:
+    version: 107.0.2
   48ce16f2-34c6-4b87-9068-bd72f9230fa1:
     version: "69"
   4913a992-3700-4d9f-6583-2eef8e41fcf4:
