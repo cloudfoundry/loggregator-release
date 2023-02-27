@@ -37,7 +37,7 @@ func BuildTrafficControllerConf(routerAddr string, agentPort int, logCacheAddr s
 			ServerName: "cloud-controller",
 		},
 		Agent: tcConf.Agent{
-			UDPAddress: fmt.Sprintf("localhost:%d", agentPort),
+			GRPCAddress: fmt.Sprintf("localhost:%d", agentPort),
 		},
 		GRPC: tcConf.GRPC{
 			CertFile: LoggregatorTestCerts.Cert("trafficcontroller"),
