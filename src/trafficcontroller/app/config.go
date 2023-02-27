@@ -10,7 +10,6 @@ import (
 
 // Agent stores configuration for communication to a logging/metric agent.
 type Agent struct {
-	UDPAddress  string `env:"AGENT_UDP_ADDRESS"`
 	GRPCAddress string `env:"AGENT_GRPC_ADDRESS"`
 }
 

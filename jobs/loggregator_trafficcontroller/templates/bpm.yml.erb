@@ -28,7 +28,6 @@ processes:
   - name: loggregator_trafficcontroller
     executable: /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller
     env:
-      AGENT_UDP_ADDRESS: "<%= p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.dropsonde_port').to_s %>"
       AGENT_GRPC_ADDRESS: "<%= p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.grpc_port').to_s %>"
 
       ROUTER_ADDRS: "<%= router_addrs.join(",") %>"
