@@ -12,7 +12,7 @@ git clone https://github.com/cloudfoundry/loggregator-api.git $TMP_DIR/loggregat
 
 pushd $SCRIPT_DIR/../..
     protoc -I=$TMP_DIR --go_out=. --go-grpc_out=. $TMP_DIR/loggregator-api/v2/*.proto
-    mv code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2/* rpc/loggregator_v2/
+    mv code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2/* rpc/loggregator_v2/
     rm -rf code.cloudfoundry.org
 popd
 
