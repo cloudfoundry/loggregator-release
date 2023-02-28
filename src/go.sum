@@ -36,8 +36,8 @@ code.cloudfoundry.org/go-diodes v0.0.0-20220725190411-383eb6634c40 h1:wzkYwwcf4u
 code.cloudfoundry.org/go-diodes v0.0.0-20220725190411-383eb6634c40/go.mod h1:Nx9ASXN4nIlRDEXv+qXE3dpuhnTnO28Lxl/bMUd6BMc=
 code.cloudfoundry.org/go-envstruct v1.6.0 h1:n3ReWhxIb8T8Pedu2ONAtWZxHmytPl9MmLfm1M4x8E0=
 code.cloudfoundry.org/go-envstruct v1.6.0/go.mod h1:d36KAtkHU9KBkz1yvLM3oRoWTvZ2ipSPchQ2BX/p0pk=
-code.cloudfoundry.org/go-loggregator/v9 v9.0.3 h1:+rxFxl+qFN42oVGzh5uhnQRkyMt3H6dPsM9YCrfmpQw=
-code.cloudfoundry.org/go-loggregator/v9 v9.0.3/go.mod h1:M3KaLTzcbSuXf9xRjFk4nexDK2h8/NDsQ+nzh+45cfk=
+code.cloudfoundry.org/go-loggregator/v9 v9.0.4 h1:Pg0kMK2sLeDxbynUiskSfHrWzizxrI4KNpPIuGToyj0=
+code.cloudfoundry.org/go-loggregator/v9 v9.0.4/go.mod h1:caSKhG0LCIDEdvDiyzXTg9SK4e/DW6yJPCpSMcIaqx8=
 code.cloudfoundry.org/go-metric-registry v0.0.0-20220808220447-ed25a653652e h1:lNuxgT/aoyFLY4xBdnERX6EVYEcYBEBnAXUFPPX07VI=
 code.cloudfoundry.org/go-metric-registry v0.0.0-20220808220447-ed25a653652e/go.mod h1:3WwZYDs6xhcHy9oADkk2Zp/ODT9oA+EiaeFLuBOentw=
 code.cloudfoundry.org/go-pubsub v0.0.0-20180503211407-becd51dc37cb h1:N9iWwP+UaQWj0GB53fIEZTD/qK/0EoJjfIS+YUiRU5I=
@@ -212,8 +212,8 @@ github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+W
 github.com/onsi/ginkgo v1.12.1/go.mod h1:zj2OWP4+oCPe1qIXoGWkgMRwljMUYCdkwsT2108oapk=
 github.com/onsi/ginkgo v1.16.5 h1:8xi0RTUf59SOSfEtZMvwTvXYMzG4gV23XVHOZiXNtnE=
 github.com/onsi/ginkgo v1.16.5/go.mod h1:+E8gABHa3K6zRBolWtd+ROzc/U5bkGt0FwiG042wbpU=
-github.com/onsi/ginkgo/v2 v2.8.1 h1:xFTEVwOFa1D/Ty24Ws1npBWkDYEV9BqZrsDxVrVkrrU=
-github.com/onsi/ginkgo/v2 v2.8.1/go.mod h1:N1/NbDngAFcSLdyZ+/aYTYGSlq9qMCS/cNKGJjy+csc=
+github.com/onsi/ginkgo/v2 v2.8.3 h1:RpbK1G8nWPNaCVFBWsOGnEQQGgASi6b8fxcWBvDYjxQ=
+github.com/onsi/ginkgo/v2 v2.8.3/go.mod h1:6OaUA8BCi0aZfmzYT/q9AacwTzDpNbxILUT+TlBq6MY=
 github.com/onsi/gomega v1.7.1/go.mod h1:XdKZgCCFLUoM/7CFJVPcG8C1xQ1AJ0vpAezJrB7JYyY=
 github.com/onsi/gomega v1.10.1/go.mod h1:iN09h71vgCQne3DLsj+A5owkum+a2tYe+TOCB1ybHNo=
 github.com/onsi/gomega v1.27.1 h1:rfztXRbg6nv/5f+Raen9RcGoSecHIFgBBLQK3Wdj754=

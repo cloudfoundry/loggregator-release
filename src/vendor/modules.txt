@@ -7,7 +7,7 @@ code.cloudfoundry.org/go-diodes
 # code.cloudfoundry.org/go-envstruct v1.6.0
 ## explicit; go 1.19
 code.cloudfoundry.org/go-envstruct
-# code.cloudfoundry.org/go-loggregator/v9 v9.0.3
+# code.cloudfoundry.org/go-loggregator/v9 v9.0.4
 ## explicit; go 1.18
 code.cloudfoundry.org/go-loggregator/v9/conversion
 code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2
@@ -130,7 +130,7 @@ github.com/onsi/ginkgo/reporters/stenographer
 github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable
 github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
 github.com/onsi/ginkgo/types
-# github.com/onsi/ginkgo/v2 v2.8.1
+# github.com/onsi/ginkgo/v2 v2.8.3
 ## explicit; go 1.18
 github.com/onsi/ginkgo/v2/config
 github.com/onsi/ginkgo/v2/formatter
