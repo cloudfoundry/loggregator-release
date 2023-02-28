@@ -6,7 +6,7 @@ require (
 	code.cloudfoundry.org/go-batching v0.0.0-20171020220229-924d2a9b48ac
 	code.cloudfoundry.org/go-diodes v0.0.0-20220725190411-383eb6634c40
 	code.cloudfoundry.org/go-envstruct v1.6.0
-	code.cloudfoundry.org/go-loggregator/v9 v9.0.3
+	code.cloudfoundry.org/go-loggregator/v9 v9.0.4
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20220808220447-ed25a653652e
 	code.cloudfoundry.org/go-pubsub v0.0.0-20180503211407-becd51dc37cb
 	code.cloudfoundry.org/tlsconfig v0.0.0-20220621140725-0e6fbd869921
@@ -38,7 +38,7 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
-	github.com/onsi/ginkgo/v2 v2.8.1 // indirect
+	github.com/onsi/ginkgo/v2 v2.8.3 // indirect
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect; pinned
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
