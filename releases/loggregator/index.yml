@@ -73,6 +73,8 @@ builds:
     version: 106.3.2
   27ac6df8-24a8-4c29-6df1-df7b9cf3c6d2:
     version: 106.7.1
+  28d90dfc-f79b-4b38-57bb-4039627e68d7:
+    version: 106.7.7
   2aec061f-375f-4b2f-7313-5e1dcb32e200:
     version: "101.14"
   2c61bc84-643a-48f9-71d5-e5d4d07ab789:
