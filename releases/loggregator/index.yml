@@ -273,6 +273,8 @@ builds:
     version: "101"
   b822be69-293d-4f7a-72f7-603e12e9d471:
     version: "101.8"
+  b9a629df-707c-4ba9-4e0a-ec9b9395fd95:
+    version: 107.0.3
   b9ff4d66-fc00-4459-85bb-05f302e1732a:
     version: "52"
   ba61d767-22e6-439d-5716-dcfae3ecab39:
