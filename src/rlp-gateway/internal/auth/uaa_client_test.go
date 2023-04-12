@@ -14,7 +14,7 @@ import (
 	"net/url"
 
 	"code.cloudfoundry.org/loggregator-release/src/rlp-gateway/internal/auth"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/onsi/ginkgo/config"
+	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega/gbytes"
 )
 
@@ -22,7 +22,8 @@ const (
 )
 
 func color(oe, proc string, oeColor, procColor int) string {
-	if config.DefaultReporterConfig.NoColor {
+	_, rc := ginkgo.GinkgoConfiguration()
+	if rc.NoColor {
 		oeColor = 0
 		procColor = 0
 	}

@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/loggregator-release/src/integration_tests/fakes"
 	"code.cloudfoundry.org/loggregator-release/src/testservers"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

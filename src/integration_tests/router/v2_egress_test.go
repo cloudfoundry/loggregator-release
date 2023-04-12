@@ -9,7 +9,7 @@ import (
 	"code.cloudfoundry.org/loggregator-release/src/testservers"
 	"golang.org/x/net/context"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
