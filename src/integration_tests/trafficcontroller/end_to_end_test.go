@@ -12,8 +12,7 @@ import (
 	"code.cloudfoundry.org/loggregator-release/src/plumbing"
 	"code.cloudfoundry.org/loggregator-release/src/testservers"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry/noaa/v2/consumer"
@@ -57,10 +56,9 @@ var _ = Describe("TrafficController for v1 messages", func() {
 		}, 10).Should(Succeed())
 	})
 
-	AfterEach(func(done Done) {
-		defer close(done)
+	AfterEach(func() {
 		fakeDoppler.Stop()
-	}, 30)
+	})
 
 	Describe("Loggregator Router Paths", func() {
 		Context("Streaming", func() {

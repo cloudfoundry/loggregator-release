@@ -5,7 +5,7 @@ import (
 	v1 "code.cloudfoundry.org/loggregator-release/src/router/internal/server/v1"
 
 	"github.com/cloudfoundry/sonde-go/events"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"google.golang.org/protobuf/proto"
 )
@@ -135,14 +135,16 @@ var _ = Describe("Router", func() {
 			cleanupForAppB = router.Register(subscriptionRequestForAppB, streamForAppB)
 		})
 
-		It("survives the race detector for thread safety", func(done Done) {
+		It("survives the race detector for thread safety", func() {
 			cleanup := router.Register(subscriptionRequestForAppB, streamForAppB)
 
+			done := make(chan struct{})
 			go func() {
 				defer close(done)
 				router.SendTo("some-other-app-id", counterEnvelope)
 			}()
 			cleanup()
+			Eventually(done).Should(BeClosed())
 		})
 
 		It("sends a message to all subscriptions of the same app id", func() {

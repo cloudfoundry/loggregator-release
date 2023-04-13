@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/loggregator-release/src/rlp-gateway/internal/auth"
 	"code.cloudfoundry.org/loggregator-release/src/rlp-gateway/internal/web"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

@@ -15,7 +15,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/grpclog"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

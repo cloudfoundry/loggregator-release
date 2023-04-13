@@ -46,6 +46,10 @@ github.com/felixge/httpsnoop
 # github.com/fsnotify/fsnotify v1.5.4
 ## explicit; go 1.16
 github.com/fsnotify/fsnotify
+# github.com/go-logr/logr v1.2.3
+## explicit; go 1.16
+github.com/go-logr/logr
+github.com/go-logr/logr/funcr
 # github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572
 ## explicit; go 1.13
 github.com/go-task/slim-sprig
@@ -101,9 +105,7 @@ github.com/nxadm/tail/watch
 github.com/nxadm/tail/winfile
 # github.com/onsi/ginkgo v1.16.5
 ## explicit; go 1.16
-github.com/onsi/ginkgo
 github.com/onsi/ginkgo/config
-github.com/onsi/ginkgo/extensions/table
 github.com/onsi/ginkgo/formatter
 github.com/onsi/ginkgo/ginkgo
 github.com/onsi/ginkgo/ginkgo/convert
@@ -116,14 +118,10 @@ github.com/onsi/ginkgo/ginkgo/watch
 github.com/onsi/ginkgo/internal/codelocation
 github.com/onsi/ginkgo/internal/containernode
 github.com/onsi/ginkgo/internal/failer
-github.com/onsi/ginkgo/internal/global
 github.com/onsi/ginkgo/internal/leafnodes
 github.com/onsi/ginkgo/internal/remote
 github.com/onsi/ginkgo/internal/spec
 github.com/onsi/ginkgo/internal/spec_iterator
-github.com/onsi/ginkgo/internal/specrunner
-github.com/onsi/ginkgo/internal/suite
-github.com/onsi/ginkgo/internal/testingtproxy
 github.com/onsi/ginkgo/internal/writer
 github.com/onsi/ginkgo/reporters
 github.com/onsi/ginkgo/reporters/stenographer
@@ -132,6 +130,7 @@ github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
 github.com/onsi/ginkgo/types
 # github.com/onsi/ginkgo/v2 v2.9.2
 ## explicit; go 1.18
+github.com/onsi/ginkgo/v2
 github.com/onsi/ginkgo/v2/config
 github.com/onsi/ginkgo/v2/formatter
 github.com/onsi/ginkgo/v2/ginkgo
@@ -144,8 +143,11 @@ github.com/onsi/ginkgo/v2/ginkgo/outline
 github.com/onsi/ginkgo/v2/ginkgo/run
 github.com/onsi/ginkgo/v2/ginkgo/unfocus
 github.com/onsi/ginkgo/v2/ginkgo/watch
+github.com/onsi/ginkgo/v2/internal
+github.com/onsi/ginkgo/v2/internal/global
 github.com/onsi/ginkgo/v2/internal/interrupt_handler
 github.com/onsi/ginkgo/v2/internal/parallel_support
+github.com/onsi/ginkgo/v2/internal/testingtproxy
 github.com/onsi/ginkgo/v2/reporters
 github.com/onsi/ginkgo/v2/types
 # github.com/onsi/gomega v1.27.6

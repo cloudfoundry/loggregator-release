@@ -18,13 +18,12 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Start", func() {
-	It("receive messages via egress client", func(done Done) {
-		defer close(done)
+	It("receive messages via egress client", func() {
 		_, _, dopplerLis := setupDoppler(testservers.LoggregatorTestCerts)
 		defer func() {
 			Expect(dopplerLis.Close()).To(Succeed())
@@ -38,10 +37,9 @@ var _ = Describe("Start", func() {
 		envelope, err := egressStream.Recv()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(envelope.GetSourceId()).To(Equal("a"))
-	}, 10)
+	})
 
-	It("receive messages via egress batching client", func(done Done) {
-		defer close(done)
+	It("receive messages via egress batching client", func() {
 		_, _, dopplerLis := setupDoppler(testservers.LoggregatorTestCerts)
 		defer func() {
 			Expect(dopplerLis.Close()).To(Succeed())
@@ -59,7 +57,7 @@ var _ = Describe("Start", func() {
 			return len(batch.GetBatch())
 		}
 		Eventually(f, 2).Should(BeNumerically(">", 10))
-	}, 10)
+	})
 
 	It("limits the number of allowed connections", func() {
 		_, _, dopplerLis := setupDoppler(testservers.LoggregatorTestCerts)

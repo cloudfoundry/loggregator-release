@@ -23,8 +23,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"code.cloudfoundry.org/tlsconfig/certtest"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
