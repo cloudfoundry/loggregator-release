@@ -25,9 +25,7 @@ var _ = Describe("Pool", func() {
 		pool = plumbing.NewPool(grpc.WithTransportCredentials(insecure.NewCredentials()))
 	})
 
-	AfterEach(func(done Done) {
-		defer close(done)
-
+	AfterEach(func() {
 		for _, lis := range listeners {
 			lis.Close()
 		}

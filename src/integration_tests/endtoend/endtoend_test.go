@@ -47,5 +47,5 @@ var _ = Describe("End to end tests", func() {
 		}()
 
 		Eventually(firehoseReader.LogMessageAppIDs, 5).Should(Receive(Equal("custom-app-id")))
-	}, 10)
+	})
 })

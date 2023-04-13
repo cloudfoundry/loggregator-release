@@ -56,10 +56,9 @@ var _ = Describe("TrafficController for v1 messages", func() {
 		}, 10).Should(Succeed())
 	})
 
-	AfterEach(func(done Done) {
-		defer close(done)
+	AfterEach(func() {
 		fakeDoppler.Stop()
-	}, 30)
+	})
 
 	Describe("Loggregator Router Paths", func() {
 		Context("Streaming", func() {

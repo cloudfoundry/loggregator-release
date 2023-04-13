@@ -36,9 +36,7 @@ var _ = Describe("Pool", func() {
 			listeners = append(listeners, lis1, lis2)
 		})
 
-		AfterEach(func(done Done) {
-			defer close(done)
-
+		AfterEach(func() {
 			for _, lis := range listeners {
 				lis.Close()
 			}

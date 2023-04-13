@@ -135,14 +135,16 @@ var _ = Describe("Router", func() {
 			cleanupForAppB = router.Register(subscriptionRequestForAppB, streamForAppB)
 		})
 
-		It("survives the race detector for thread safety", func(done Done) {
+		It("survives the race detector for thread safety", func() {
 			cleanup := router.Register(subscriptionRequestForAppB, streamForAppB)
 
+			done := make(chan struct{})
 			go func() {
 				defer close(done)
 				router.SendTo("some-other-app-id", counterEnvelope)
 			}()
 			cleanup()
+			Eventually(done).Should(BeClosed())
 		})
 
 		It("sends a message to all subscriptions of the same app id", func() {
