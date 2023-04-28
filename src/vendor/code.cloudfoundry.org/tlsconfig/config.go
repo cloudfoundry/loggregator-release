@@ -87,7 +87,6 @@ func WithExternalServiceDefaults() TLSOption {
 	return func(c *tls.Config) error {
 		c.MinVersion = tls.VersionTLS12
 		c.MaxVersion = tls.VersionTLS13
-		c.PreferServerCipherSuites = false
 		c.CipherSuites = []uint16{
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
@@ -116,7 +115,6 @@ func WithInternalServiceDefaults() TLSOption {
 	return func(c *tls.Config) error {
 		c.MinVersion = tls.VersionTLS12
 		c.MaxVersion = tls.VersionTLS13
-		c.PreferServerCipherSuites = true
 		c.CipherSuites = []uint16{
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
@@ -141,7 +139,7 @@ func WithIdentity(cert tls.Certificate) TLSOption {
 			return fail(err)
 		}
 		c.Certificates = []tls.Certificate{cert}
-		c.BuildNameToCertificate()
+		c.BuildNameToCertificate() //nolint:staticcheck
 		return nil
 	}
 }

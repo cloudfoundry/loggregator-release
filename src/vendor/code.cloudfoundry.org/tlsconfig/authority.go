@@ -4,7 +4,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
+	"os"
 )
 
 // PoolOption is an functional option type that can be used to configure a
@@ -59,7 +59,7 @@ func FromSystemPool(opts ...PoolOption) PoolBuilder {
 // file to a certificate pool.
 func WithCertsFromFile(path string) PoolOption {
 	return func(pool *x509.CertPool) error {
-		pemCerts, err := ioutil.ReadFile(path)
+		pemCerts, err := os.ReadFile(path)
 		if err != nil {
 			return fmt.Errorf("failed to read certificate(s) at path %q: %s", path, err)
 		}
