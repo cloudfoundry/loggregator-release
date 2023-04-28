@@ -37,16 +37,15 @@ func TestIntegrationTest(t *testing.T) {
 	RunSpecs(t, "Traffic Controller Integration Suite")
 }
 
-var _ = BeforeSuite(func() {
+var _ = SynchronizedBeforeSuite(func() []byte {
 	setupFakeAuthServer()
 	setupFakeUaaServer()
-
-	var err error
-	trafficControllerExecPath, err := gexec.Build("code.cloudfoundry.org/loggregator-release/src/trafficcontroller", "-race")
+	tcPath, err := gexec.Build("code.cloudfoundry.org/loggregator-release/src/trafficcontroller", "-race")
 	Expect(err).ToNot(HaveOccurred())
-	os.Setenv("TRAFFIC_CONTROLLER_BUILD_PATH", trafficControllerExecPath)
-
+	return []byte(tcPath)
+}, func(path []byte) {
 	localIPAddress = "127.0.0.1"
+	os.Setenv("TRAFFIC_CONTROLLER_BUILD_PATH", string(path))
 })
 
 var _ = AfterEach(func() {
