@@ -468,40 +468,6 @@ var _ = Describe("PubSub", func() {
 			Expect(setter.envelopes).To(HaveLen(2))
 		})
 
-		// With the current implementation we get duplicate logs in this case.
-		// Selector 1 gets all envelopes for SourceId "a".
-		// Selector 2 gets all log envelopes for SourceId "a", "b", "c"
-		// Selector 3 gets the counter envelope for source id "c"
-		XIt("supports any combination of selectors", func() {
-			req := &loggregator_v2.EgressBatchRequest{
-				Selectors: []*loggregator_v2.Selector{
-					{SourceId: "a"}, // Selector 1
-					{ // Selector 2
-						Message: &loggregator_v2.Selector_Log{
-							Log: &loggregator_v2.LogSelector{},
-						},
-					},
-					{ // Selector 3
-						SourceId: "c",
-						Message: &loggregator_v2.Selector_Counter{
-							Counter: &loggregator_v2.CounterSelector{},
-						},
-					},
-				},
-			}
-			setter := newSpyDataSetter()
-
-			pubsub.Subscribe(req, setter)
-			publishAllTypes(pubsub, "a")
-			publishAllTypes(pubsub, "b")
-			publishAllTypes(pubsub, "c")
-			publishAllTypes(pubsub, "a")
-			publishAllTypes(pubsub, "b")
-			publishAllTypes(pubsub, "c")
-
-			Expect(setter.envelopes).To(HaveLen(14))
-		})
-
 		It("handles subscriptions with same shard ID but different selectors", func() {
 			req1 := &loggregator_v2.EgressBatchRequest{
 				ShardId: "a-shard-id",
