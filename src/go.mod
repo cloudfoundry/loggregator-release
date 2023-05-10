@@ -7,7 +7,7 @@ require (
 	code.cloudfoundry.org/go-diodes v0.0.0-20220725190411-383eb6634c40
 	code.cloudfoundry.org/go-envstruct v1.6.0
 	code.cloudfoundry.org/go-log-cache v1.0.1-0.20220808235537-54ad6006c0c4
-	code.cloudfoundry.org/go-loggregator/v9 v9.0.4
+	code.cloudfoundry.org/go-loggregator/v9 v9.0.5
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20220808220447-ed25a653652e
 	code.cloudfoundry.org/go-pubsub v0.0.0-20180503211407-becd51dc37cb
 	code.cloudfoundry.org/tlsconfig v0.0.0-20220621140725-0e6fbd869921
@@ -20,7 +20,7 @@ require (
 	github.com/onsi/gomega v1.27.6
 	github.com/prometheus/client_golang v1.15.1
 	golang.org/x/net v0.10.0
-	google.golang.org/grpc v1.54.0
+	google.golang.org/grpc v1.55.0
 )
 
 require github.com/rogpeppe/go-internal v1.9.0 // indirect
@@ -42,7 +42,7 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
-	github.com/onsi/ginkgo/v2 v2.9.2 // indirect
+	github.com/onsi/ginkgo/v2 v2.9.4 // indirect
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect; pinned
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
@@ -50,8 +50,8 @@ require (
 	github.com/square/certstrap v1.2.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
-	golang.org/x/tools v0.7.0 // indirect
-	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
+	golang.org/x/tools v0.8.0 // indirect
+	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
 	google.golang.org/protobuf v1.30.0
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
