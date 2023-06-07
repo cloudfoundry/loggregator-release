@@ -38,7 +38,7 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version-file: "src/go.mod"
-      - uses: golangci/golangci-lint-action@v3.4.0
+      - uses: golangci/golangci-lint-action@v3.5.0
         with:
           args: --config .golangci.yml
           working-directory: src
