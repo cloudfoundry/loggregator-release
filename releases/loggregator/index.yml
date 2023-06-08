@@ -349,6 +349,8 @@ builds:
     version: "19"
   e0a24923-86e4-4bfd-4b32-ac484ea64f59:
     version: 106.7.3
+  e20bef5d-63cf-4336-40d0-f509ac9da211:
+    version: 106.7.9
   e68cbcf3-1995-49c3-79ab-0f55a028ea0e:
     version: "102"
   e99755f5-2f53-4a45-6bec-77585740b20f:
