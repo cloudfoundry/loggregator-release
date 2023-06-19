@@ -6,7 +6,7 @@ require (
 	code.cloudfoundry.org/go-batching v0.0.0-20230410204558-9e170fab4fdc
 	code.cloudfoundry.org/go-diodes v0.0.0-20230406180255-f141159491b0
 	code.cloudfoundry.org/go-envstruct v1.6.0
-	code.cloudfoundry.org/go-loggregator/v9 v9.0.5
+	code.cloudfoundry.org/go-loggregator/v9 v9.0.6
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20230418213642-fa3811b324ec
 	code.cloudfoundry.org/go-pubsub v0.0.0-20230412182433-a8a7df0a1709
 	code.cloudfoundry.org/tlsconfig v0.0.0-20230320190829-8f91c367795b
@@ -15,7 +15,7 @@ require (
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
-	github.com/onsi/ginkgo/v2 v2.10.0
+	github.com/onsi/ginkgo/v2 v2.11.0
 	github.com/onsi/gomega v1.27.8
 	github.com/prometheus/client_golang v1.15.1
 	golang.org/x/net v0.10.0
@@ -44,7 +44,7 @@ require (
 	github.com/square/certstrap v1.3.0 // indirect
 	go.step.sm/crypto v0.16.2 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/sys v0.9.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/tools v0.9.3 // indirect
 	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
