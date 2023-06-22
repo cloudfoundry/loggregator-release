@@ -20,7 +20,7 @@ require (
 	github.com/onsi/gomega v1.27.8
 	github.com/prometheus/client_golang v1.16.0
 	golang.org/x/net v0.11.0
-	google.golang.org/grpc v1.56.0
+	google.golang.org/grpc v1.56.1
 )
 
 require github.com/rogpeppe/go-internal v1.9.0 // indirect
