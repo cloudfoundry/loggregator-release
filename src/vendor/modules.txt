@@ -12,7 +12,7 @@ code.cloudfoundry.org/go-envstruct
 code.cloudfoundry.org/go-log-cache
 code.cloudfoundry.org/go-log-cache/internal
 code.cloudfoundry.org/go-log-cache/rpc/logcache_v1
-# code.cloudfoundry.org/go-loggregator/v9 v9.0.6
+# code.cloudfoundry.org/go-loggregator/v9 v9.0.7
 ## explicit; go 1.18
 code.cloudfoundry.org/go-loggregator/v9/conversion
 code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2
