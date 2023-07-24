@@ -16,7 +16,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/onsi/ginkgo/v2 v2.11.0
-	github.com/onsi/gomega v1.27.8
+	github.com/onsi/gomega v1.27.9
 	github.com/prometheus/client_golang v1.16.0
 	golang.org/x/net v0.12.0
 	google.golang.org/grpc v1.56.2
