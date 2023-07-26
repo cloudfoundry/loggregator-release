@@ -7,7 +7,7 @@ require (
 	code.cloudfoundry.org/go-diodes v0.0.0-20220725190411-383eb6634c40
 	code.cloudfoundry.org/go-envstruct v1.6.0
 	code.cloudfoundry.org/go-log-cache v1.0.1-0.20220808235537-54ad6006c0c4
-	code.cloudfoundry.org/go-loggregator/v9 v9.0.6
+	code.cloudfoundry.org/go-loggregator/v9 v9.0.7
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20220808220447-ed25a653652e
 	code.cloudfoundry.org/go-pubsub v0.0.0-20180503211407-becd51dc37cb
 	code.cloudfoundry.org/tlsconfig v0.0.0-20220621140725-0e6fbd869921
