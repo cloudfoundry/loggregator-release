@@ -10,8 +10,8 @@ require (
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20230418213642-fa3811b324ec
 	code.cloudfoundry.org/go-pubsub v0.0.0-20230412182433-a8a7df0a1709
 	code.cloudfoundry.org/tlsconfig v0.0.0-20230320190829-8f91c367795b
-	github.com/cloudfoundry/noaa/v2 v2.2.0
-	github.com/cloudfoundry/sonde-go v0.0.0-20230412182205-eaf74d09b55a
+	github.com/cloudfoundry/noaa/v2 v2.3.0
+	github.com/cloudfoundry/sonde-go v0.0.0-20230710164515-a0a43d1dbbf8
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
@@ -28,7 +28,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/felixge/httpsnoop v1.0.1 // indirect
-	github.com/fsnotify/fsnotify v1.4.9 // indirect
+	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
@@ -46,7 +46,7 @@ require (
 	golang.org/x/crypto v0.11.0 // indirect
 	golang.org/x/sys v0.10.0 // indirect
 	golang.org/x/text v0.11.0 // indirect
-	golang.org/x/tools v0.9.3 // indirect
+	golang.org/x/tools v0.11.1 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230525234030-28d5490b6b19 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
