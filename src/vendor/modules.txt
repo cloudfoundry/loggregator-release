@@ -48,6 +48,8 @@ github.com/cloudfoundry/noaa/v2/errors
 # github.com/cloudfoundry/sonde-go v0.0.0-20220627221915-ff36de9c3435
 ## explicit; go 1.17
 github.com/cloudfoundry/sonde-go/events
+# github.com/elazarl/goproxy v0.0.0-20230731152917-f99041a5c027
+## explicit
 # github.com/felixge/httpsnoop v1.0.1
 ## explicit; go 1.13
 github.com/felixge/httpsnoop
