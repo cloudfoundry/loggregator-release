@@ -142,6 +142,8 @@ func (c *GRPCConnector) handleFinderEvent(uris []string) {
 	}
 
 	for _, deadClient := range deadClients {
+		deadClient := deadClient
+
 		log.Printf("Disabling reconnects for doppler %s", deadClient.uri)
 		deadClient.disconnect = true
 
