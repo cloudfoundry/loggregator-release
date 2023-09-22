@@ -3,7 +3,7 @@ package consumer
 import (
 	"crypto/tls"
 	"errors"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -134,7 +134,7 @@ type httpError struct {
 
 func checkForErrors(resp *http.Response) *httpError {
 	if resp.StatusCode == http.StatusUnauthorized {
-		data, _ := io.ReadAll(resp.Body)
+		data, _ := ioutil.ReadAll(resp.Body)
 		return &httpError{
 			statusCode: resp.StatusCode,
 			error:      noaa_errors.NewUnauthorizedError(string(data)),

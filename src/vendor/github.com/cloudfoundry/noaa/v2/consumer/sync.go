@@ -2,6 +2,7 @@ package consumer
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -12,6 +13,24 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"google.golang.org/protobuf/proto"
 )
+
+// RecentLogs connects to trafficcontroller via its 'recentlogs' http(s)
+// endpoint and returns a slice of recent messages.  It does not guarantee any
+// order of the messages; they are in the order returned by trafficcontroller.
+//
+// The noaa.SortRecent function is provided to sort the data returned by
+// this method.
+func (c *Consumer) RecentLogs(appGuid string, authToken string) ([]*events.LogMessage, error) {
+	envelopes, err := c.readTC(appGuid, authToken, "recentlogs")
+	if err != nil {
+		return nil, err
+	}
+	messages := make([]*events.LogMessage, 0, 200)
+	for _, env := range envelopes {
+		messages = append(messages, env.GetLogMessage())
+	}
+	return messages, nil
+}
 
 // ContainerMetrics is deprecated in favor of ContainerEnvelopes, since
 // returning the ContainerMetric type directly hides important
@@ -41,7 +60,7 @@ func (c *Consumer) ContainerEnvelopes(appGuid, authToken string) ([]*events.Enve
 	}
 	for _, env := range envelopes {
 		if env.GetEventType() == events.Envelope_LogMessage {
-			return nil, fmt.Errorf("Upstream error: %s", env.GetLogMessage().GetMessage())
+			return nil, errors.New(fmt.Sprintf("Upstream error: %s", env.GetLogMessage().GetMessage()))
 		}
 	}
 	return envelopes, nil
@@ -125,7 +144,7 @@ func (c *Consumer) tryTCConnection(recentPath, token string) (*http.Response, *h
 Please ask your Cloud Foundry Operator to check the platform configuration (trafficcontroller endpoint is %s).`
 		return nil, &httpError{
 			statusCode: -1,
-			error:      fmt.Errorf(message, err, c.trafficControllerUrl),
+			error:      errors.New(fmt.Sprintf(message, err, c.trafficControllerUrl)),
 		}
 	}
 
