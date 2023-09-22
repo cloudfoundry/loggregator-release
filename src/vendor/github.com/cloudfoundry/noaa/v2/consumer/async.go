@@ -3,7 +3,7 @@ package consumer
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -261,7 +261,10 @@ func (c *Consumer) listenForMessages(conn *connection, callback func(*events.Env
 	ws := conn.websocket()
 	for {
 		if c.idleTimeout != 0 {
-			ws.SetReadDeadline(time.Now().Add(c.idleTimeout))
+			err := ws.SetReadDeadline(time.Now().Add(c.idleTimeout))
+			if err != nil {
+				return err
+			}
 		}
 		_, data, err := ws.ReadMessage()
 
@@ -447,7 +450,7 @@ func (c *Consumer) tryWebsocketConnection(path, token string) (*websocket.Conn, 
 	httpErr := &httpError{}
 	if resp != nil {
 		if resp.StatusCode == http.StatusUnauthorized {
-			bodyData, _ := ioutil.ReadAll(resp.Body)
+			bodyData, _ := io.ReadAll(resp.Body)
 			err = noaa_errors.NewUnauthorizedError(string(bodyData))
 		}
 		httpErr.statusCode = resp.StatusCode

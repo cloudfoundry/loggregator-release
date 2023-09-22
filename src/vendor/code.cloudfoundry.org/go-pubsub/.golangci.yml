@@ -1,0 +1,20 @@
+run:
+  skip-files:
+  - gen_struct_test.go
+  - examples/structs/gen_struct.go
+  - pubsub-gen/internal/end2end/generated_traverser_test.go
+
+linters:
+  enable:
+  # Checks for non-ASCII identifiers
+  - asciicheck
+  # Computes and checks the cyclomatic complexity of functions.
+  - gocyclo
+  # Inspects source code for security problems.
+  - gosec
+
+issues:
+  # Disable max issues per linter.
+  max-issues-per-linter: 0
+  # Disable max same issues.
+  max-same-issues: 0

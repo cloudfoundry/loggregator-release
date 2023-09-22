@@ -44,7 +44,7 @@ func BuildCA(name string) (*Authority, error) {
 	// XXX: Add a month so CA expires after its certificates.
 	expiry := time.Now().AddDate(1, 1, 0)
 
-	crt, err := pkix.CreateCertificateAuthority(key, ou, expiry, o, country, province, city, name)
+	crt, err := pkix.CreateCertificateAuthority(key, ou, expiry, o, country, province, city, name, []string{})
 	if err != nil {
 		return nil, err
 	}
