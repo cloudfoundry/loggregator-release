@@ -1,28 +1,40 @@
 # tlsconfig
 
-> build tls configurations
+[![Go Report Card](https://goreportcard.com/badge/code.cloudfoundry.org/tlsconfig)](https://goreportcard.com/report/code.cloudfoundry.org/tlsconfig)
+[![Go Reference](https://pkg.go.dev/badge/code.cloudfoundry.org/tlsconfig.svg)](https://pkg.go.dev/code.cloudfoundry.org/tlsconfig)
 
-## Reporting issues and requesting features
+tlsconfig generates shared [crypto/tls configurations](https://pkg.go.dev/crypto/tls#Config) for internal and external-facing services in Cloud Foundry. This module is considered internal to Cloud Foundry, and does not provide any stability guarantees for external usage.
 
-Please report all issues and feature requests in [cloudfoundry/diego-release](https://github.com/cloudfoundry/diego-release/issues).
+## Getting Started
 
-## about
+### Usage
 
-There are requirements and guidelines for the TLS configurations
-we'd like to use for our internal services. This library stays up to date with
-those internal requirements so that services just need to link against this.
+Import this module as `code.cloudfoundry.org/tlsconfig`.
 
-This repository also includes a sub-package called `certtest` which can be used
-to build valid PKIs for test.
+Update to the latest version of the library off the main branch with:
+```
+go get -u code.cloudfoundry.org/tlsconfig@main
+```
 
-## usage
+### Running the tests
 
-**Note**: This repository should be imported as `code.cloudfoundry.org/tlsconfig`
+All the tests use the standard go testing library and can be run with:
+```
+go test ./...
+```
 
-See [GoDoc][godoc].
+## Contributing
 
-[godoc]: https://godoc.org/code.cloudfoundry.org/tlsconfig
+Cloud Foundry uses GitHub to manage reviews of pull requests and issues.
 
-## getting help
+* If you have a trivial fix or improvement, go ahead and create a pull request.
+* If you plan to do something more involved, first discuss your ideas in [Slack](cloudfoundry.slack.com). This will help avoid unnecessary work :).
+* Make sure you've signed the CLA!
 
-Please file an issue!
+## Versioning
+
+This module is not currently versioned. Whatever is on the `main` branch is considered to be the latest release of the module.
+
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
