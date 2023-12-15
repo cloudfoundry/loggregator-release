@@ -2,7 +2,6 @@ package proxy_test
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -178,11 +177,14 @@ var _ = Describe("FirehoseHandler", func() {
 		)
 		Expect(err).ToNot(HaveOccurred())
 
-		f := func() string {
+		f := func() error {
 			_, _, err := conn.ReadMessage()
-			return fmt.Sprintf("%s", err)
+			return err
 		}
-		Eventually(f).Should(ContainSubstring("websocket: close 1000"))
+		Eventually(f).Should(MatchError(&websocket.CloseError{
+			Code: websocket.CloseNormalClosure,
+			Text: "",
+		}))
 	})
 
 	It("emits the number of connections as a metric", func() {
