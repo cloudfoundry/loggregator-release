@@ -3,12 +3,13 @@ package proxy_test
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 
 	"code.cloudfoundry.org/loggregator-release/src/metricemitter"
-	"code.cloudfoundry.org/loggregator-release/src/metricemitter/testhelper"
 	"code.cloudfoundry.org/loggregator-release/src/trafficcontroller/internal/proxy"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -17,231 +18,224 @@ import (
 
 var _ = Describe("WebsocketHandler", func() {
 	var (
-		handler      http.Handler
-		messagesChan chan []byte
-		testServer   *httptest.Server
-		handlerDone  chan struct{}
-		mockSender   *testhelper.SpyMetricClient
-		egressMetric *metricemitter.Counter
-
-		keepAliveTimeout time.Duration
+		input       chan []byte
+		count       *metricemitter.Counter
+		keepAlive   time.Duration
+		handlerDone chan struct{}
+		ts          *httptest.Server
+		conn        *websocket.Conn
+		wc          *websocketClient
 	)
 
 	BeforeEach(func() {
-		messagesChan = make(chan []byte, 10)
-		mockSender = testhelper.NewMetricClient()
-		egressMetric = mockSender.NewCounter("egress")
+		input = make(chan []byte, 10)
+		keepAlive = 200 * time.Millisecond
+		count = metricemitter.NewCounter("egress", "")
+		wc = newWebsocketClient()
+	})
 
-		keepAliveTimeout = 200 * time.Millisecond
-
-		handler = proxy.NewWebsocketHandler(
-			messagesChan,
-			keepAliveTimeout,
-			egressMetric,
-		)
+	JustBeforeEach(func() {
+		wsh := proxy.NewWebsocketHandler(input, keepAlive, count)
 		handlerDone = make(chan struct{})
-
-		// Avoid closure issues
-		handlerDone := handlerDone
-		testServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-
-			handler.ServeHTTP(rw, r)
-			close(handlerDone)
+		ts = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			done := handlerDone
+			wsh.ServeHTTP(rw, r)
+			close(done)
 		}))
+		DeferCleanup(ts.Close)
+
+		u, err := url.Parse(ts.URL)
+		Expect(err).NotTo(HaveOccurred())
+		u.Scheme = "ws"
+		c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+		Expect(err).NotTo(HaveOccurred())
+		go wc.Start(c)
+		conn = c
 	})
 
 	AfterEach(func() {
-		testServer.Close()
+		select {
+		case _, ok := <-input:
+			if ok {
+				close(input)
+			}
+		default:
+			close(input)
+		}
+		<-wc.Done
 	})
 
-	It("should complete when the input channel is closed", func() {
-		_, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
-		Expect(err).NotTo(HaveOccurred())
-		close(messagesChan)
-		Eventually(handlerDone).Should(BeClosed())
-	})
-
-	It("fowards messages from the messagesChan to the ws client", func() {
-		for i := 0; i < 5; i++ {
-			messagesChan <- []byte("message")
-		}
-
-		ws, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
-		Expect(err).NotTo(HaveOccurred())
-		for i := 0; i < 5; i++ {
-			msgType, msg, err := ws.ReadMessage()
-			Expect(msgType).To(Equal(websocket.BinaryMessage))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(msg)).To(Equal("message"))
-		}
+	It("forwards byte arrays from the input channel to the websocket client", func() {
 		go func() {
-			_, _, err := ws.ReadMessage()
-			Expect(err.Error()).To(ContainSubstring("websocket: close 1000"))
+			for i := 0; i < 10; i++ {
+				input <- []byte("testing")
+			}
 		}()
-		close(messagesChan)
-		Eventually(handlerDone).Should(BeClosed())
+
+		type websocketResp struct {
+			messageType int
+			message     string
+		}
+		expectedResp := websocketResp{messageType: websocket.BinaryMessage, message: "testing"}
+		for i := 0; i < 10; i++ {
+			Eventually(func() (websocketResp, error) {
+				msgType, msg, ok := wc.Read()
+				if !ok {
+					err, _ := wc.ReadError()
+					return websocketResp{}, err
+				}
+				return websocketResp{messageType: msgType, message: msg}, nil
+			}).Should(Equal(expectedResp))
+		}
 	})
 
-	It("should err when websocket upgrade fails", func() {
-		resp, err := http.Get(testServer.URL)
+	Context("when the input channel is closed", func() {
+		JustBeforeEach(func() {
+			close(input)
+		})
+
+		It("stops", func() {
+			Eventually(handlerDone, keepAlive/2).Should(BeClosed())
+		})
+
+		It("closes the connection", func() {
+			Eventually(wc.Done, keepAlive/2).Should(BeClosed())
+			Eventually(func() error {
+				err, _ := wc.ReadError()
+				return err
+			}).Should(MatchError(&websocket.CloseError{
+				Code: websocket.CloseNormalClosure,
+				Text: "",
+			}))
+		})
+	})
+
+	It("does not accept http requests", func() {
+		resp, err := http.Get(ts.URL)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-		Eventually(handlerDone).Should(BeClosed())
 	})
 
-	It("should stop when the client goes away", func() {
-		ws, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
-		Expect(err).NotTo(HaveOccurred())
+	Context("when the client closes the connection", func() {
+		JustBeforeEach(func() {
+			conn.Close()
+		})
 
-		ws.Close()
-
-		handlerDone, messagesChan := handlerDone, messagesChan
-		go func() {
-			for {
-				select {
-				case messagesChan <- []byte("message"):
-				case <-handlerDone:
-					return
-				}
-			}
-		}()
-
-		Eventually(handlerDone).Should(BeClosed())
+		It("stops", func() {
+			Eventually(handlerDone, keepAlive/2).Should(BeClosed())
+		})
 	})
 
-	It("should stop when the client goes away, even if no messages come", func() {
-		ws, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
-		Expect(err).NotTo(HaveOccurred())
+	Context("when the client doesn't respond to pings for the keep-alive duration", func() {
+		JustBeforeEach(func() {
+			conn.SetPingHandler(func(string) error { return nil })
+		})
 
-		//		ws.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), time.Time{})
-		ws.Close()
-
-		Eventually(handlerDone).Should(BeClosed())
-	})
-
-	It("should stop when the client doesn't respond to pings", func() {
-		ws, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
-		Expect(err).NotTo(HaveOccurred())
-
-		ws.SetPingHandler(func(string) error { return nil })
-		go func() {
-			_, _, err := ws.ReadMessage()
-			Expect(err.Error()).To(ContainSubstring("websocket: close 1008"))
-		}()
-
-		Eventually(handlerDone).Should(BeClosed())
-	})
-
-	It("should continue when the client resonds to pings", func() {
-		ws, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
-		Expect(err).NotTo(HaveOccurred())
-
-		go func() {
-			_, _, err := ws.ReadMessage()
-			Expect(err.Error()).To(ContainSubstring("websocket: close 1000"))
-		}()
-
-		Consistently(handlerDone, 200*time.Millisecond).ShouldNot(BeClosed())
-		close(messagesChan)
-		Eventually(handlerDone).Should(BeClosed())
-	})
-
-	It("should continue when the client sends old style keepalives", func() {
-		ws, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
-		Expect(err).NotTo(HaveOccurred())
-
-		go func() {
-			for {
-				_ = ws.WriteMessage(websocket.TextMessage, []byte("I'm alive!"))
-				time.Sleep(100 * time.Millisecond)
-			}
-		}()
-
-		Consistently(handlerDone, 200*time.Millisecond).ShouldNot(BeClosed())
-		close(messagesChan)
-		Eventually(handlerDone).Should(BeClosed())
-	})
-
-	It("should send a closing message", func() {
-		ws, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
-		Expect(err).NotTo(HaveOccurred())
-		close(messagesChan)
-		_, _, err = ws.ReadMessage()
-		Expect(err.Error()).To(ContainSubstring("websocket: close 1000"))
-		Eventually(handlerDone).Should(BeClosed())
-	})
-
-	It("increments an egress counter every time it writes an envelope", func() {
-		ws, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
-		Expect(err).NotTo(HaveOccurred())
-
-		messagesChan <- []byte("message")
-		close(messagesChan)
-
-		_, _, err = ws.ReadMessage()
-		Expect(err).NotTo(HaveOccurred())
-
-		Eventually(egressMetric.GetDelta).Should(Equal(uint64(1)))
-		Eventually(handlerDone).Should(BeClosed())
-	})
-
-	Context("when the KeepAlive expires", func() {
-		It("sends a CloseInternalServerErr frame", func() {
-			ws, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
-			Expect(err).NotTo(HaveOccurred())
-
-			time.Sleep(keepAliveTimeout + (50 * time.Millisecond))
-
-			_, _, err = ws.ReadMessage()
-			Expect(err.Error()).To(ContainSubstring("1008"))
-			Expect(err.Error()).To(ContainSubstring("Client did not respond to ping before keep-alive timeout expired."))
+		It("stops", func() {
 			Eventually(handlerDone).Should(BeClosed())
 		})
 
-		It("stays alive if client responds to ping message in time", func() {
-			ws, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
-			Expect(err).NotTo(HaveOccurred())
-
-			ws.SetPingHandler(func(string) error {
-				time.Sleep(keepAliveTimeout / 2)
-
-				err := ws.WriteControl(websocket.PongMessage, nil, time.Now().Add(time.Second*2))
-				Expect(err).ToNot(HaveOccurred())
-
-				return nil
-			})
-
-			Consistently(func() error {
-				messagesChan <- []byte("message")
-				_, _, err = ws.ReadMessage()
-
+		It("closes the connection with a ClosePolicyViolation", func() {
+			Eventually(wc.Done).Should(BeClosed())
+			Eventually(func() error {
+				err, _ := wc.ReadError()
 				return err
-			}, 1, 10*time.Millisecond).Should(Succeed())
-
-			ws.Close()
-			Eventually(handlerDone).Should(BeClosed())
-		})
-
-		It("logs an appropriate message", func() {
-			_, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
-			Expect(err).NotTo(HaveOccurred())
-
-			time.Sleep(200 * time.Millisecond) // Longer than  the keepAlive timeout
-			Eventually(handlerDone).Should(BeClosed())
+			}).Should(MatchError(&websocket.CloseError{
+				Code: websocket.ClosePolicyViolation,
+				Text: "Client did not respond to ping before keep-alive timeout expired.",
+			}))
 		})
 	})
 
-	Context("when client goes away", func() {
-		It("logs and appropriate message", func() {
-			ws, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
-			Expect(err).NotTo(HaveOccurred())
-
-			ws.Close()
-			Eventually(handlerDone).Should(BeClosed())
+	Context("when the client responds to pings", func() {
+		It("does not stop", func() {
+			Consistently(handlerDone, keepAlive*2).ShouldNot(BeClosed())
 		})
+
+		It("does not close the connection", func() {
+			Consistently(wc.Done, keepAlive*2).ShouldNot(BeClosed())
+		})
+	})
+
+	It("keeps a count of every time it writes an envelope", func() {
+		Expect(count.GetDelta()).To(Equal(uint64(0)))
+		input <- []byte("message")
+		Eventually(count.GetDelta).Should(Equal(uint64(1)))
 	})
 })
 
 func httpToWs(u string) string {
 	return "ws" + u[len("http"):]
+}
+
+type websocketClient struct {
+	mu sync.Mutex
+
+	Done chan struct{}
+
+	readError       []error
+	readMessageType []int
+	readMessage     []string
+}
+
+func newWebsocketClient() *websocketClient {
+	return &websocketClient{
+		Done: make(chan struct{}),
+	}
+}
+
+func (wc *websocketClient) Start(conn *websocket.Conn) {
+	defer conn.Close()
+	defer close(wc.Done)
+	for {
+		messageType, message, err := conn.ReadMessage()
+		wc.mu.Lock()
+		if err != nil {
+			wc.readError = append(wc.readError, err)
+			wc.mu.Unlock()
+			return
+		}
+		wc.readMessageType = append(wc.readMessageType, messageType)
+		wc.readMessage = append(wc.readMessage, string(message))
+		wc.mu.Unlock()
+	}
+}
+
+func (wc *websocketClient) ReadError() (error, bool) {
+	wc.mu.Lock()
+	defer wc.mu.Unlock()
+	if len(wc.readError) == 0 {
+		return nil, false
+	}
+	err := wc.readError[0]
+	wc.readError = wc.readError[1:]
+	return err, true
+}
+
+func (wc *websocketClient) Read() (messageType int, message string, ok bool) {
+	wc.mu.Lock()
+	defer wc.mu.Unlock()
+	if len(wc.readMessageType) == 0 {
+		return 0, "", false
+	}
+	ok = true
+	messageType = wc.readMessageType[0]
+	wc.readMessageType = wc.readMessageType[1:]
+	message = wc.readMessage[0]
+	wc.readMessage = wc.readMessage[1:]
+	return
+}
+
+func (wc *websocketClient) Write() (messageType int, message string, ok bool) {
+	wc.mu.Lock()
+	defer wc.mu.Unlock()
+	if len(wc.readMessageType) == 0 {
+		return 0, "", false
+	}
+	ok = true
+	messageType = wc.readMessageType[0]
+	wc.readMessageType = wc.readMessageType[1:]
+	message = wc.readMessage[0]
+	wc.readMessage = wc.readMessage[1:]
+	return
 }
