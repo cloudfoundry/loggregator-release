@@ -6,7 +6,7 @@ require (
 	code.cloudfoundry.org/go-batching v0.0.0-20230410204558-9e170fab4fdc
 	code.cloudfoundry.org/go-diodes v0.0.0-20230406180255-f141159491b0
 	code.cloudfoundry.org/go-envstruct v1.6.0
-	code.cloudfoundry.org/go-loggregator/v9 v9.0.8
+	code.cloudfoundry.org/go-loggregator/v9 v9.1.0
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20230418213642-fa3811b324ec
 	code.cloudfoundry.org/go-pubsub v0.0.0-20230412182433-a8a7df0a1709
 	code.cloudfoundry.org/tlsconfig v0.0.0-20230320190829-8f91c367795b
@@ -20,7 +20,7 @@ require (
 	github.com/prometheus/client_golang v1.17.0
 	golang.org/x/net v0.19.0
 	google.golang.org/grpc v1.60.1
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/protobuf v1.32.0
 )
 
 require (
