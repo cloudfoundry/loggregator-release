@@ -7,7 +7,7 @@ require (
 	code.cloudfoundry.org/go-diodes v0.0.0-20230911203732-c04be32f825e
 	code.cloudfoundry.org/go-envstruct v1.6.0
 	code.cloudfoundry.org/go-log-cache v1.0.1-0.20220808235537-54ad6006c0c4
-	code.cloudfoundry.org/go-loggregator/v9 v9.0.8
+	code.cloudfoundry.org/go-loggregator/v9 v9.1.0
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20230906204350-82f6303ad953
 	code.cloudfoundry.org/go-pubsub v0.0.0-20230906204417-8ab1fb16aa03
 	code.cloudfoundry.org/tlsconfig v0.0.0-20230612153104-23c0622de227
@@ -46,14 +46,14 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
-	github.com/onsi/ginkgo/v2 v2.13.0 // indirect
+	github.com/onsi/ginkgo/v2 v2.13.2 // indirect
 	github.com/prometheus/client_model v0.4.1-0.20230718164431-9a2bf3000d16 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/square/certstrap v1.3.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	golang.org/x/tools v0.13.0 // indirect
+	golang.org/x/tools v0.14.0 // indirect
 	google.golang.org/genproto v0.0.0-20231002182017-d307bd883b97 // indirect
 	google.golang.org/protobuf v1.32.0
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
