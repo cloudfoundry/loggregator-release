@@ -1,6 +1,6 @@
 set -ex
 
-source /var/vcap/packages/golang-1.20-linux/bosh/compile.env
+source /var/vcap/packages/golang-1.21-linux/bosh/compile.env
 export GOPATH=/var/vcap
 
 go build -o ${BOSH_INSTALL_TARGET}/trafficcontroller ./trafficcontroller/
