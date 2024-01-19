@@ -173,6 +173,8 @@ builds:
     version: 106.3.5
   6ffc7abc-ee4b-445f-69ca-2bcc81a58ce6:
     version: 107.0.0
+  705fb735-00b5-4cab-6a21-cd77d844e8ea:
+    version: 107.0.12
   740315e7-84ee-4210-b605-9802482c4e8e:
     version: "25"
   741f7375-adb0-4e68-5c08-856c02d08fe0:
