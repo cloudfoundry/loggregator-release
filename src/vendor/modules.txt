@@ -12,8 +12,8 @@ code.cloudfoundry.org/go-envstruct
 code.cloudfoundry.org/go-log-cache
 code.cloudfoundry.org/go-log-cache/internal
 code.cloudfoundry.org/go-log-cache/rpc/logcache_v1
-# code.cloudfoundry.org/go-loggregator/v9 v9.1.0
-## explicit; go 1.19
+# code.cloudfoundry.org/go-loggregator/v9 v9.2.0
+## explicit; go 1.21
 code.cloudfoundry.org/go-loggregator/v9/conversion
 code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2
 # code.cloudfoundry.org/go-metric-registry v0.0.0-20230906204350-82f6303ad953
