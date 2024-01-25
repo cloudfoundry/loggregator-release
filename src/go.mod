@@ -10,7 +10,7 @@ require (
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20230418213642-fa3811b324ec
 	code.cloudfoundry.org/go-pubsub v0.0.0-20230412182433-a8a7df0a1709
 	code.cloudfoundry.org/tlsconfig v0.0.0-20230320190829-8f91c367795b
-	github.com/cloudfoundry/noaa/v2 v2.3.0
+	github.com/cloudfoundry/noaa/v2 v2.4.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20230710164515-a0a43d1dbbf8
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
