@@ -4,8 +4,8 @@ code.cloudfoundry.org/go-batching
 # code.cloudfoundry.org/go-diodes v0.0.0-20230911203732-c04be32f825e
 ## explicit; go 1.18
 code.cloudfoundry.org/go-diodes
-# code.cloudfoundry.org/go-envstruct v1.6.0
-## explicit; go 1.19
+# code.cloudfoundry.org/go-envstruct v1.7.0
+## explicit; go 1.21
 code.cloudfoundry.org/go-envstruct
 # code.cloudfoundry.org/go-log-cache v1.0.1-0.20220808235537-54ad6006c0c4
 ## explicit; go 1.14
@@ -78,7 +78,6 @@ github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
 # github.com/google/pprof v0.0.0-20230912144702-c363fe2c2ed8
 ## explicit; go 1.19
-github.com/google/pprof/profile
 # github.com/gorilla/handlers v1.5.2
 ## explicit; go 1.20
 github.com/gorilla/handlers
@@ -134,24 +133,6 @@ github.com/onsi/ginkgo/reporters/stenographer
 github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable
 github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
 github.com/onsi/ginkgo/types
-# github.com/onsi/ginkgo/v2 v2.15.0
-## explicit; go 1.20
-github.com/onsi/ginkgo/v2/config
-github.com/onsi/ginkgo/v2/formatter
-github.com/onsi/ginkgo/v2/ginkgo
-github.com/onsi/ginkgo/v2/ginkgo/build
-github.com/onsi/ginkgo/v2/ginkgo/command
-github.com/onsi/ginkgo/v2/ginkgo/generators
-github.com/onsi/ginkgo/v2/ginkgo/internal
-github.com/onsi/ginkgo/v2/ginkgo/labels
-github.com/onsi/ginkgo/v2/ginkgo/outline
-github.com/onsi/ginkgo/v2/ginkgo/run
-github.com/onsi/ginkgo/v2/ginkgo/unfocus
-github.com/onsi/ginkgo/v2/ginkgo/watch
-github.com/onsi/ginkgo/v2/internal/interrupt_handler
-github.com/onsi/ginkgo/v2/internal/parallel_support
-github.com/onsi/ginkgo/v2/reporters
-github.com/onsi/ginkgo/v2/types
 # github.com/onsi/gomega v1.31.1
 ## explicit; go 1.20
 github.com/onsi/gomega

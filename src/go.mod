@@ -5,7 +5,7 @@ go 1.21
 require (
 	code.cloudfoundry.org/go-batching v0.0.0-20230906204632-2319ee09f66b
 	code.cloudfoundry.org/go-diodes v0.0.0-20230911203732-c04be32f825e
-	code.cloudfoundry.org/go-envstruct v1.6.0
+	code.cloudfoundry.org/go-envstruct v1.7.0
 	code.cloudfoundry.org/go-log-cache v1.0.1-0.20220808235537-54ad6006c0c4
 	code.cloudfoundry.org/go-loggregator/v9 v9.1.0
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20230906204350-82f6303ad953
@@ -46,7 +46,6 @@ require (
 	github.com/google/pprof v0.0.0-20230912144702-c363fe2c2ed8 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
-	github.com/onsi/ginkgo/v2 v2.15.0 // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.45.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
