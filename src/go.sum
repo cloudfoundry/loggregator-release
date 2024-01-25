@@ -26,8 +26,8 @@ github.com/cespare/xxhash/v2 v2.2.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XL
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
-github.com/cloudfoundry/noaa/v2 v2.3.0 h1:+f//s7zTaiTtjz/Vf1LFKKfJb/6x2hRenTXlSb4dU5g=
-github.com/cloudfoundry/noaa/v2 v2.3.0/go.mod h1:W9uqRvqZMmwLB8P4hFsUrb0jKKdWPhmCSeRhQaOawGk=
+github.com/cloudfoundry/noaa/v2 v2.4.0 h1:F983/Ts6z1PZ/EqY1pgwMlGa4iEHpGDs7S2L1fwd7ig=
+github.com/cloudfoundry/noaa/v2 v2.4.0/go.mod h1:Jcw+SulY1JeFlEqqd4s4g0TNFuA1an6SAnTfAOCgtWE=
 github.com/cloudfoundry/sonde-go v0.0.0-20230710164515-a0a43d1dbbf8 h1:IpMHKJul/Wr6Rae9VXO+1K0TuORVyhKFjpqkY5ClEAM=
 github.com/cloudfoundry/sonde-go v0.0.0-20230710164515-a0a43d1dbbf8/go.mod h1:GiUWdcLKuM+RX4gSQBSHn3ADveMrRadWxuY6AFK5JNk=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
