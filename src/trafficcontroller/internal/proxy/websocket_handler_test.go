@@ -32,9 +32,6 @@ var _ = Describe("WebsocketHandler", func() {
 		keepAlive = 200 * time.Millisecond
 		count = metricemitter.NewCounter("egress", "")
 		wc = newWebsocketClient()
-	})
-
-	JustBeforeEach(func() {
 		wsh := proxy.NewWebsocketHandler(input, keepAlive, count)
 		handlerDone = make(chan struct{})
 		ts = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
@@ -49,8 +46,11 @@ var _ = Describe("WebsocketHandler", func() {
 		u.Scheme = "ws"
 		c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 		Expect(err).NotTo(HaveOccurred())
-		go wc.Start(c)
 		conn = c
+	})
+
+	JustBeforeEach(func() {
+		go wc.Start(conn)
 	})
 
 	AfterEach(func() {
@@ -127,7 +127,7 @@ var _ = Describe("WebsocketHandler", func() {
 	})
 
 	Context("when the client doesn't respond to pings for the keep-alive duration", func() {
-		JustBeforeEach(func() {
+		BeforeEach(func() {
 			conn.SetPingHandler(func(string) error { return nil })
 		})
 
