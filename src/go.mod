@@ -18,7 +18,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.31.1
-	github.com/prometheus/client_golang v1.18.0
+	github.com/prometheus/client_golang v1.19.0
 	golang.org/x/net v0.21.0
 	google.golang.org/grpc v1.62.0
 )
@@ -26,7 +26,6 @@ require (
 require (
 	filippo.io/edwards25519 v1.0.0 // indirect
 	github.com/elazarl/goproxy v0.0.0-20230731152917-f99041a5c027 // indirect
-	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	go.step.sm/crypto v0.35.1 // indirect
 	golang.org/x/crypto v0.19.0 // indirect
@@ -47,7 +46,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect
-	github.com/prometheus/common v0.45.0 // indirect
+	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/square/certstrap v1.3.0 // indirect
 	golang.org/x/sys v0.17.0 // indirect
