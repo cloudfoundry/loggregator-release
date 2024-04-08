@@ -171,6 +171,8 @@ builds:
     version: "11"
   6b751a4b-012d-4772-4337-ad96c7685e37:
     version: 106.7.17
+  6b8cd85c-03cf-4d93-4eff-7dfc2aab3016:
+    version: 106.7.18
   6f49dfb3-5ef3-4faf-a938-e2120d88cbfe:
     version: "1"
   6f62762d-aeeb-4e28-82dd-7926efa45cbc:
