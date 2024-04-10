@@ -3,8 +3,8 @@ package pemutil
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/des"
-	"crypto/sha1"
+	"crypto/des"  //nolint:gosec // support for legacy keys
+	"crypto/sha1" //nolint:gosec // support for legacy keys
 	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -20,9 +20,14 @@ import (
 // PBKDF2SaltSize is the default size of the salt for PBKDF2, 128-bit salt.
 const PBKDF2SaltSize = 16
 
-// PBKDF2Iterations is the default number of iterations for PBKDF2, 100k
-// iterations. Nist recommends at least 10k, 1Passsword uses 100k.
-const PBKDF2Iterations = 100000
+// PBKDF2Iterations is the default number of iterations for PBKDF2.
+//
+// 600k is the current OWASP recommendation (Dec 2022)
+// https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2
+//
+// Nist recommends at least 10k (800-63B), 1Password increased in 2023 the
+// number of iterations from 100k to 650k.
+const PBKDF2Iterations = 600000
 
 // pkcs8 reflects an ASN.1, PKCS#8 PrivateKey. See
 // ftp://ftp.rsasecurity.com/pub/pkcs/pkcs-8/pkcs-8v1_2.asn
@@ -87,7 +92,7 @@ var (
 
 	// encryption
 	oidAES128CBC = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 1, 2}
-	oidAES196CBC = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 1, 22}
+	oidAES192CBC = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 1, 22}
 	oidAES256CBC = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 1, 42}
 	oidDESCBC    = asn1.ObjectIdentifier{1, 3, 14, 3, 2, 7}
 	oidD3DESCBC  = asn1.ObjectIdentifier{1, 2, 840, 113549, 3, 7}
@@ -132,7 +137,7 @@ var rfc1423Algos = []rfc1423Algo{{
 	cipherFunc: aes.NewCipher,
 	keySize:    24,
 	blockSize:  aes.BlockSize,
-	identifier: oidAES196CBC,
+	identifier: oidAES192CBC,
 }, {
 	cipher:     x509.PEMCipherAES256,
 	name:       "AES-256-CBC",
@@ -225,7 +230,7 @@ func DecryptPKCS8PrivateKey(data, password []byte) ([]byte, error) {
 	case encParam.EncryAlgo.Equal(oidAES128CBC):
 		symkey = pbkdf2.Key(password, salt, iter, 16, keyHash)
 		block, err = aes.NewCipher(symkey)
-	case encParam.EncryAlgo.Equal(oidAES196CBC):
+	case encParam.EncryAlgo.Equal(oidAES192CBC):
 		symkey = pbkdf2.Key(password, salt, iter, 24, keyHash)
 		block, err = aes.NewCipher(symkey)
 	case encParam.EncryAlgo.Equal(oidAES256CBC):
@@ -234,10 +239,10 @@ func DecryptPKCS8PrivateKey(data, password []byte) ([]byte, error) {
 	// DES, TripleDES
 	case encParam.EncryAlgo.Equal(oidDESCBC):
 		symkey = pbkdf2.Key(password, salt, iter, 8, keyHash)
-		block, err = des.NewCipher(symkey)
+		block, err = des.NewCipher(symkey) //nolint:gosec // support for legacy keys
 	case encParam.EncryAlgo.Equal(oidD3DESCBC):
 		symkey = pbkdf2.Key(password, salt, iter, 24, keyHash)
-		block, err = des.NewTripleDESCipher(symkey)
+		block, err = des.NewTripleDESCipher(symkey) //nolint:gosec // support for legacy keys
 	default:
 		return nil, errors.Errorf("unsupported encrypted PEM: unknown algorithm %v", encParam.EncryAlgo)
 	}
@@ -313,7 +318,7 @@ func EncryptPKCS8PrivateKey(rand io.Reader, data, password []byte, alg x509.PEMC
 	}
 	enc.CryptBlocks(encrypted, encrypted)
 
-	// Build encrypted ans1 data
+	// Build encrypted asn1 data
 	pki := encryptedPrivateKeyInfo{
 		Algo: encryptedlAlgorithmIdentifier{
 			Algorithm: oidPBES2,
@@ -324,7 +329,8 @@ func EncryptPKCS8PrivateKey(rand io.Reader, data, password []byte, alg x509.PEMC
 						Salt:           salt,
 						IterationCount: PBKDF2Iterations,
 						PrfParam: prfParam{
-							Algo: oidHMACWithSHA256,
+							Algo:      oidHMACWithSHA256,
+							NullParam: asn1.NullRawValue,
 						},
 					},
 				},

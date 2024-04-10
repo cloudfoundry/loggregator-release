@@ -143,7 +143,7 @@ func SerializeOpenSSHPrivateKey(key crypto.PrivateKey, opts ...Options) (*pem.Bl
 
 	switch k := key.(type) {
 	case *rsa.PrivateKey:
-		E := new(big.Int).SetInt64(int64(k.PublicKey.E))
+		e := new(big.Int).SetInt64(int64(k.PublicKey.E))
 		// Marshal public key:
 		// E and N are in reversed order in the public and private key.
 		pubKey := struct {
@@ -152,7 +152,7 @@ func SerializeOpenSSHPrivateKey(key crypto.PrivateKey, opts ...Options) (*pem.Bl
 			N       *big.Int
 		}{
 			ssh.KeyAlgoRSA,
-			E, k.PublicKey.N,
+			e, k.PublicKey.N,
 		}
 		w.PubKey = ssh.Marshal(pubKey)
 
@@ -166,7 +166,7 @@ func SerializeOpenSSHPrivateKey(key crypto.PrivateKey, opts ...Options) (*pem.Bl
 			Q       *big.Int
 			Comment string
 		}{
-			k.PublicKey.N, E,
+			k.PublicKey.N, e,
 			k.D, k.Precomputed.Qinv, k.Primes[0], k.Primes[1],
 			ctx.comment,
 		}

@@ -156,7 +156,7 @@ func feMulGeneric(v, a, b *Element) {
 	rr4 := r4.lo&maskLow51Bits + c3
 
 	// Now all coefficients fit into 64-bit registers but are still too large to
-	// be passed around as a Element. We therefore do one last carry chain,
+	// be passed around as an Element. We therefore do one last carry chain,
 	// where the carries will be small enough to fit in the wiggle room above 2⁵¹.
 	*v = Element{rr0, rr1, rr2, rr3, rr4}
 	v.carryPropagate()
@@ -245,7 +245,7 @@ func feSquareGeneric(v, a *Element) {
 	v.carryPropagate()
 }
 
-// carryPropagate brings the limbs below 52 bits by applying the reduction
+// carryPropagateGeneric brings the limbs below 52 bits by applying the reduction
 // identity (a * 2²⁵⁵ + b = a * 19 + b) to the l4 carry.
 func (v *Element) carryPropagateGeneric() *Element {
 	c0 := v.l0 >> 51
@@ -254,6 +254,8 @@ func (v *Element) carryPropagateGeneric() *Element {
 	c3 := v.l3 >> 51
 	c4 := v.l4 >> 51
 
+	// c4 is at most 64 - 51 = 13 bits, so c4*19 is at most 18 bits, and
+	// the final l0 will be at most 52 bits. Similarly for the rest.
 	v.l0 = v.l0&maskLow51Bits + c4*19
 	v.l1 = v.l1&maskLow51Bits + c0
 	v.l2 = v.l2&maskLow51Bits + c1
