@@ -1,0 +1,30 @@
+name: scripts
+
+on:
+  push:
+    branches:
+    - main
+    - v[0-9]*
+  pull_request:
+    branches:
+    - main
+    - v[0-9]*
+
+jobs:
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: "src/go.mod"
+      - run: ./scripts/subtests/unit-test
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: "src/go.mod"
+      - run: ./scripts/subtests/lint
