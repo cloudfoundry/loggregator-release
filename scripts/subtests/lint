@@ -7,7 +7,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 set +e
 golangci_lint_executable=$(which golangci-lint)
-set +e
+set -e
 if [ -z "${golangci_lint_executable}" ] || [ ! -x "${golangci_lint_executable}" ]; then
   go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 fi
