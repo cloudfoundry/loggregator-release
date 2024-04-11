@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -eux
+set -o pipefail
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+pushd "${SCRIPT_DIR}/../../src" > /dev/null
+    go run github.com/onsi/ginkgo/ginkgo -r -race -randomizeAllSpecs -randomizeSuites -keepGoing
+popd > /dev/null
+
