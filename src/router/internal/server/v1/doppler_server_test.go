@@ -356,7 +356,7 @@ func startGRPCServer(ds plumbing.DopplerServer) net.Listener {
 }
 
 func establishClient(dopplerAddr string) (plumbing.DopplerClient, io.Closer) {
-	conn, err := grpc.Dial(dopplerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(dopplerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	Expect(err).ToNot(HaveOccurred())
 	c := plumbing.NewDopplerClient(conn)
 

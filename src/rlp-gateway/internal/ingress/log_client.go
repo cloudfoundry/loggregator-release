@@ -18,10 +18,9 @@ type LogClient struct {
 
 // NewClient dials the logs provider and returns a new log client.
 func NewLogClient(creds credentials.TransportCredentials, logsProviderAddr string) *LogClient {
-	conn, err := grpc.Dial(logsProviderAddr,
+	conn, err := grpc.NewClient(logsProviderAddr,
 		grpc.WithTransportCredentials(creds),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(10*1024*1024)),
-		grpc.WithBlock(),
 	)
 	if err != nil {
 		log.Fatalf("failed to dial logs provider: %s", err)

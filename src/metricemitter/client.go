@@ -79,7 +79,7 @@ func NewClient(addr string, opts ...ClientOption) (*Client, error) {
 		opt(client)
 	}
 
-	conn, err := grpc.Dial(addr, client.dialOpts...)
+	conn, err := grpc.NewClient(addr, client.dialOpts...)
 	if err != nil {
 		return nil, err
 	}
