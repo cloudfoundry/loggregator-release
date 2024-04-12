@@ -41,7 +41,7 @@ github.com/blang/semver
 # github.com/cespare/xxhash/v2 v2.2.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/cloudfoundry/noaa/v2 v2.2.0
+# github.com/cloudfoundry/noaa/v2 v2.2.0 => github.com/cloudfoundry/noaa/v2 v2.2.0
 ## explicit; go 1.18
 github.com/cloudfoundry/noaa/v2
 github.com/cloudfoundry/noaa/v2/consumer
@@ -343,3 +343,4 @@ gopkg.in/tomb.v1
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
+# github.com/cloudfoundry/noaa/v2 => github.com/cloudfoundry/noaa/v2 v2.2.0
