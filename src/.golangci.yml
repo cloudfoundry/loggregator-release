@@ -17,3 +17,10 @@ issues:
   max-issues-per-linter: 0
   # Disable max same issues.
   max-same-issues: 0
+
+  exclude-rules:
+  # Exclude grpc.Dial deprecation warnings. We want to continue using
+  # WithBlock which is ignored by grpc.NewClient.
+  - linters:
+    - staticcheck
+    text: "SA1019: grpc.Dial is deprecated"
