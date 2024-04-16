@@ -280,29 +280,23 @@ func ParseCertificateRequest(pemData []byte) (*x509.CertificateRequest, error) {
 // ReadCertificate returns a *x509.Certificate from the given filename. It
 // supports certificates formats PEM and DER.
 func ReadCertificate(filename string, opts ...Options) (*x509.Certificate, error) {
-	b, err := utils.ReadFile(filename)
-	if err != nil {
+	// Populate options
+	ctx := newContext(filename)
+	if err := ctx.apply(opts); err != nil {
 		return nil, err
 	}
 
-	// PEM format
-	if bytes.Contains(b, PEMBlockHeader) {
-		var crt interface{}
-		crt, err = Read(filename, opts...)
-		if err != nil {
-			return nil, err
-		}
-		switch crt := crt.(type) {
-		case *x509.Certificate:
-			return crt, nil
-		default:
-			return nil, errors.Errorf("error decoding PEM: file '%s' does not contain a certificate", filename)
-		}
+	bundle, err := ReadCertificateBundle(filename)
+	switch {
+	case err != nil:
+		return nil, err
+	case len(bundle) == 0:
+		return nil, errors.Errorf("file %s does not contain a valid PEM or DER formatted certificate", filename)
+	case len(bundle) > 1 && !ctx.firstBlock:
+		return nil, errors.Errorf("error decoding %s: contains more than one PEM encoded block", filename)
+	default:
+		return bundle[0], nil
 	}
-
-	// DER format (binary)
-	crt, err := x509.ParseCertificate(b)
-	return crt, errors.Wrapf(err, "error parsing %s", filename)
 }
 
 // ReadCertificateBundle returns a list of *x509.Certificate from the given
@@ -324,7 +318,7 @@ func ReadCertificateBundle(filename string) ([]*x509.Certificate, error) {
 				break
 			}
 			if block.Type != "CERTIFICATE" {
-				return nil, errors.Errorf("error decoding PEM: file '%s' is not a certificate bundle", filename)
+				continue
 			}
 			var crt *x509.Certificate
 			crt, err = x509.ParseCertificate(block.Bytes)
@@ -333,8 +327,8 @@ func ReadCertificateBundle(filename string) ([]*x509.Certificate, error) {
 			}
 			bundle = append(bundle, crt)
 		}
-		if len(b) > 0 {
-			return nil, errors.Errorf("error decoding PEM: file '%s' contains unexpected data", filename)
+		if len(bundle) == 0 {
+			return nil, errors.Errorf("file %s does not contain a valid PEM formatted certificate", filename)
 		}
 		return bundle, nil
 	}
