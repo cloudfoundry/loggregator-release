@@ -139,7 +139,6 @@ func WithIdentity(cert tls.Certificate) TLSOption {
 			return fail(err)
 		}
 		c.Certificates = []tls.Certificate{cert}
-		c.BuildNameToCertificate() //nolint:staticcheck
 		return nil
 	}
 }
