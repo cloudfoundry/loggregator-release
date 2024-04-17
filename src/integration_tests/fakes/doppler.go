@@ -21,7 +21,7 @@ func DopplerEgressV1Client(addr string) (func(), plumbing.DopplerClient) {
 	)
 	Expect(err).ToNot(HaveOccurred())
 
-	out, err := grpc.Dial(addr, grpc.WithTransportCredentials(creds))
+	out, err := grpc.NewClient(addr, grpc.WithTransportCredentials(creds))
 	Expect(err).ToNot(HaveOccurred())
 	return func() {
 		_ = out.Close()
@@ -37,7 +37,7 @@ func DopplerEgressV2Client(addr string) (func(), loggregator_v2.EgressClient) {
 	)
 	Expect(err).ToNot(HaveOccurred())
 
-	out, err := grpc.Dial(addr, grpc.WithTransportCredentials(creds))
+	out, err := grpc.NewClient(addr, grpc.WithTransportCredentials(creds))
 	Expect(err).ToNot(HaveOccurred())
 	return func() {
 		_ = out.Close()
@@ -53,7 +53,7 @@ func DopplerIngressV1Client(addr string) (func(), plumbing.DopplerIngestor_Pushe
 	)
 	Expect(err).ToNot(HaveOccurred())
 
-	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(creds))
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(creds))
 	Expect(err).ToNot(HaveOccurred())
 	client := plumbing.NewDopplerIngestorClient(conn)
 
@@ -91,7 +91,7 @@ func DopplerIngressV2Client(addr string) (func(), loggregator_v2.Ingress_SenderC
 	)
 	Expect(err).ToNot(HaveOccurred())
 
-	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(creds))
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(creds))
 	Expect(err).ToNot(HaveOccurred())
 	client := loggregator_v2.NewIngressClient(conn)
 

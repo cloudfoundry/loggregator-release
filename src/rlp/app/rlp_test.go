@@ -243,7 +243,7 @@ func setupRLPClient(egressAddr string, testCerts *testservers.TestCerts) (loggre
 	)
 	Expect(err).ToNot(HaveOccurred())
 
-	conn, err := grpc.Dial(
+	conn, err := grpc.NewClient(
 		egressAddr,
 		grpc.WithTransportCredentials(ingressTLSCredentials),
 	)

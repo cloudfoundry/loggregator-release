@@ -36,7 +36,7 @@ var _ = Describe("IngestorServer", func() {
 	}
 
 	var establishClient = func(dopplerAddr string) (plumbing.DopplerIngestorClient, io.Closer) {
-		conn, err := grpc.Dial(dopplerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		conn, err := grpc.NewClient(dopplerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		Expect(err).ToNot(HaveOccurred())
 		c := plumbing.NewDopplerIngestorClient(conn)
 

@@ -14,7 +14,7 @@ type Receiver func() (*loggregator_v2.EnvelopeBatch, error)
 // LogsProvder defines the interface for opening streams to the
 // logs provider
 type LogsProvider interface {
-	Stream(ctx context.Context, req *loggregator_v2.EgressBatchRequest) Receiver
+	Stream(ctx context.Context, req *loggregator_v2.EgressBatchRequest) (Receiver, error)
 }
 
 // Handler defines a struct for servering http endpoints

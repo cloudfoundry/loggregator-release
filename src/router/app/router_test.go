@@ -259,7 +259,7 @@ func grpcDial(addr string, g app.GRPC) *grpc.ClientConn {
 		panic(err)
 	}
 
-	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(creds))
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(creds))
 	if err != nil {
 		panic(err)
 	}

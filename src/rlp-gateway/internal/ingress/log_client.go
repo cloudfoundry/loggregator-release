@@ -18,10 +18,9 @@ type LogClient struct {
 
 // NewClient dials the logs provider and returns a new log client.
 func NewLogClient(creds credentials.TransportCredentials, logsProviderAddr string) *LogClient {
-	conn, err := grpc.Dial(logsProviderAddr,
+	conn, err := grpc.NewClient(logsProviderAddr,
 		grpc.WithTransportCredentials(creds),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(10*1024*1024)),
-		grpc.WithBlock(),
 	)
 	if err != nil {
 		log.Fatalf("failed to dial logs provider: %s", err)
@@ -34,13 +33,14 @@ func NewLogClient(creds credentials.TransportCredentials, logsProviderAddr strin
 }
 
 // Stream opens a new stream on the log client.
-func (c *LogClient) Stream(ctx context.Context, req *loggregator_v2.EgressBatchRequest) web.Receiver {
+func (c *LogClient) Stream(ctx context.Context, req *loggregator_v2.EgressBatchRequest) (web.Receiver, error) {
 	receiver, err := c.c.BatchedReceiver(ctx, req)
 	if err != nil {
 		log.Printf("failed to open stream from logs provider: %s", err)
+		return nil, err
 	}
 
-	return receiver.Recv
+	return receiver.Recv, nil
 }
 
 func (c *LogClient) Close() error {
