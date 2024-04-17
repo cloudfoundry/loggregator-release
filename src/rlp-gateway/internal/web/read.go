@@ -47,13 +47,7 @@ func ReadHandler(
 			return
 		}
 
-		w.Header().Set("Content-Type", "text/event-stream")
-		w.Header().Set("Cache-Control", "no-cache")
-		w.Header().Set("Connection", "keep-alive")
-
-		flusher.Flush()
-
-		recv := lp.Stream(
+		recv, err := lp.Stream(
 			ctx,
 			&loggregator_v2.EgressBatchRequest{
 				ShardId:           query.Get("shard_id"),
@@ -62,6 +56,16 @@ func ReadHandler(
 				Selectors:         s,
 			},
 		)
+		if err != nil {
+			errStreamingUnavailable.Write(w)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+
+		flusher.Flush()
 
 		data := make(chan *loggregator_v2.EnvelopeBatch)
 		errs := make(chan error, 1)

@@ -27,7 +27,7 @@ var _ = Describe("Read", func() {
 
 	BeforeEach(func() {
 		lp = newStubLogsProvider()
-		lp._batchResponse = &loggregator_v2.EnvelopeBatch{
+		lp.resp = &loggregator_v2.EnvelopeBatch{
 			Batch: []*loggregator_v2.Envelope{
 				{
 					SourceId: "source-id-a",
@@ -150,7 +150,7 @@ var _ = Describe("Read", func() {
 	})
 
 	It("contains zero values for gauge metrics", func() {
-		lp._batchResponse = &loggregator_v2.EnvelopeBatch{
+		lp.resp = &loggregator_v2.EnvelopeBatch{
 			Batch: []*loggregator_v2.Envelope{
 				{
 					SourceId: "source-id-a",
@@ -310,9 +310,28 @@ var _ = Describe("Read", func() {
 		}).Should(Equal(io.EOF))
 	})
 
+	It("returns service unavailable when unable to stream from the logs provider", func() {
+		lp.streamErr = errors.New("streaming unavailable")
+		req, err := http.NewRequest(http.MethodGet, server.URL+"/v2/read?log", nil)
+		Expect(err).ToNot(HaveOccurred())
+
+		req = req.WithContext(ctx)
+
+		resp, err := server.Client().Do(req)
+		Expect(err).ToNot(HaveOccurred())
+		body, err := io.ReadAll(resp.Body)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(resp.StatusCode).To(Equal(http.StatusServiceUnavailable))
+		Expect(body).To(MatchJSON(`{
+			"error": "streaming_unavailable",
+			"message": "streaming is temporarily unavailable"
+		}`))
+	})
+
 	It("closes the SSE stream if the envelope stream returns any error", func() {
-		lp._batchResponse = nil
-		lp._errorResponse = errors.New("an error")
+		lp.resp = nil
+		lp.respErr = errors.New("an error")
 
 		req, err := http.NewRequest(http.MethodGet, server.URL+"/v2/read?log", nil)
 		Expect(err).ToNot(HaveOccurred())
@@ -379,21 +398,26 @@ var _ = Describe("Read", func() {
 })
 
 type stubLogsProvider struct {
-	mu             sync.Mutex
-	_requests      []*loggregator_v2.EgressBatchRequest
-	_batchResponse *loggregator_v2.EnvelopeBatch
-	_errorResponse error
-	block          bool
+	mu        sync.Mutex
+	reqs      []*loggregator_v2.EgressBatchRequest
+	resp      *loggregator_v2.EnvelopeBatch
+	respErr   error
+	block     bool
+	streamErr error
 }
 
 func newStubLogsProvider() *stubLogsProvider {
 	return &stubLogsProvider{}
 }
 
-func (s *stubLogsProvider) Stream(ctx context.Context, req *loggregator_v2.EgressBatchRequest) web.Receiver {
+func (s *stubLogsProvider) Stream(ctx context.Context, req *loggregator_v2.EgressBatchRequest) (web.Receiver, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s._requests = append(s._requests, req)
+	s.reqs = append(s.reqs, req)
+
+	if s.streamErr != nil {
+		return nil, s.streamErr
+	}
 
 	return func() (*loggregator_v2.EnvelopeBatch, error) {
 		if s.block {
@@ -401,16 +425,16 @@ func (s *stubLogsProvider) Stream(ctx context.Context, req *loggregator_v2.Egres
 			<-block
 		}
 
-		return s._batchResponse, s._errorResponse
-	}
+		return s.resp, s.respErr
+	}, nil
 }
 
 func (s *stubLogsProvider) requests() []*loggregator_v2.EgressBatchRequest {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	result := make([]*loggregator_v2.EgressBatchRequest, len(s._requests))
-	copy(result, s._requests)
+	result := make([]*loggregator_v2.EgressBatchRequest, len(s.reqs))
+	copy(result, s.reqs)
 
 	return result
 }

@@ -13,6 +13,7 @@ var (
 	errCounterNamePresentButEmpty = newJSONError(http.StatusBadRequest, "missing_counter_name", "counter.name is invalid without value")
 	errGaugeNamePresentButEmpty   = newJSONError(http.StatusBadRequest, "missing_gauge_name", "gauge.name is invalid without value")
 	errStreamingUnsupported       = newJSONError(http.StatusInternalServerError, "streaming_unsupported", "request does not support streaming")
+	errStreamingUnavailable       = newJSONError(http.StatusServiceUnavailable, "streaming_unavailable", "streaming is temporarily unavailable")
 	errNotFound                   = newJSONError(http.StatusNotFound, "not_found", "resource not found")
 )
 
