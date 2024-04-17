@@ -79,3 +79,9 @@ func (p *Pool) connectToDoppler(addr string) {
 		return
 	}
 }
+
+func (p *Pool) Size() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return len(p.dopplers)
+}

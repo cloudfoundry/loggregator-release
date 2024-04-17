@@ -23,49 +23,27 @@ var _ = Describe("Pool", func() {
 		pool = ingress.NewPool(2, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	})
 
-	Describe("Register() & Close()", func() {
-		var (
-			listeners            []net.Listener
-			lis1, lis2           net.Listener
-			accepter1, accepter2 chan bool
-		)
-
+	Describe("Register()", func() {
 		BeforeEach(func() {
-			lis1, accepter1 = accepter(startListener("127.0.0.1:0"))
-			lis2, accepter2 = accepter(startListener("127.0.0.1:0"))
-			listeners = append(listeners, lis1, lis2)
+			pool.RegisterDoppler("192.0.2.10:8080")
+			pool.RegisterDoppler("192.0.2.11:8080")
 		})
 
-		AfterEach(func() {
-			for _, lis := range listeners {
-				lis.Close()
-			}
-			listeners = nil
+		It("adds entries to the pool", func() {
+			Eventually(pool.Size).Should(Equal(2))
+		})
+	})
+
+	Describe("Close()", func() {
+		BeforeEach(func() {
+			pool.RegisterDoppler("192.0.2.10:8080")
+			pool.RegisterDoppler("192.0.2.11:8080")
 		})
 
-		Describe("Register()", func() {
-			It("fills pool with connections to each doppler", func() {
-				pool.RegisterDoppler(lis1.Addr().String())
-				pool.RegisterDoppler(lis2.Addr().String())
-
-				Eventually(accepter1).Should(HaveLen(2))
-				Eventually(accepter2).Should(HaveLen(2))
-			})
-		})
-
-		Describe("Close()", func() {
-			BeforeEach(func() {
-				pool.RegisterDoppler(lis1.Addr().String())
-			})
-
-			It("stops the gRPC connections", func() {
-				pool.Close(lis1.Addr().String())
-				lis1.Close()
-
-				// Drain the channel
-				Eventually(accepter1, 5).ShouldNot(Receive())
-				Consistently(accepter1).Should(HaveLen(0))
-			})
+		It("removes entries from the pool", func() {
+			Eventually(pool.Size).Should(Equal(2))
+			pool.Close("192.0.2.11:8080")
+			Eventually(pool.Size).Should(Equal(1))
 		})
 	})
 

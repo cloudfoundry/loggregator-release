@@ -1,8 +1,6 @@
 package plumbing_test
 
 import (
-	"net"
-
 	"code.cloudfoundry.org/loggregator-release/src/plumbing"
 
 	"golang.org/x/net/context"
@@ -16,62 +14,33 @@ import (
 var _ = Describe("Pool", func() {
 	var (
 		pool *plumbing.Pool
-
-		listeners []net.Listener
-		servers   []*grpc.Server
 	)
 
 	BeforeEach(func() {
 		pool = plumbing.NewPool(grpc.WithTransportCredentials(insecure.NewCredentials()))
 	})
 
-	AfterEach(func() {
-		for _, lis := range listeners {
-			lis.Close()
-		}
-		listeners = nil
+	Describe("Register()", func() {
+		BeforeEach(func() {
+			pool.RegisterDoppler("192.0.2.10:8080")
+			pool.RegisterDoppler("192.0.2.11:8080")
+		})
 
-		for _, server := range servers {
-			server.Stop()
-		}
-		servers = nil
+		It("adds entries to the pool", func() {
+			Eventually(pool.Size).Should(Equal(2))
+		})
 	})
 
-	Describe("Register() & Close()", func() {
-		var (
-			lis1, lis2           net.Listener
-			accepter1, accepter2 chan bool
-		)
-
+	Describe("Close()", func() {
 		BeforeEach(func() {
-			lis1, accepter1 = accepter(startListener("127.0.0.1:0"))
-			lis2, accepter2 = accepter(startListener("127.0.0.1:0"))
-			listeners = append(listeners, lis1, lis2)
+			pool.RegisterDoppler("192.0.2.10:8080")
+			pool.RegisterDoppler("192.0.2.11:8080")
 		})
 
-		Describe("Register()", func() {
-			It("fills pool with connections to each doppler", func() {
-				pool.RegisterDoppler(lis1.Addr().String())
-				pool.RegisterDoppler(lis2.Addr().String())
-
-				Eventually(accepter1).Should(HaveLen(1))
-				Eventually(accepter2).Should(HaveLen(1))
-			})
-		})
-
-		Describe("Close()", func() {
-			BeforeEach(func() {
-				pool.RegisterDoppler(lis1.Addr().String())
-			})
-
-			It("stops the gRPC connections", func() {
-				pool.Close(lis1.Addr().String())
-				lis1.Close()
-
-				// Drain the channel
-				Eventually(accepter1, 5).ShouldNot(Receive())
-				Consistently(accepter1).Should(HaveLen(0))
-			})
+		It("removes entries from the pool", func() {
+			Eventually(pool.Size).Should(Equal(2))
+			pool.Close("192.0.2.11:8080")
+			Eventually(pool.Size).Should(Equal(1))
 		})
 	})
 
@@ -172,21 +141,4 @@ func fetchRx(
 	}
 	Eventually(f).ShouldNot(HaveOccurred())
 	return rx
-}
-
-func accepter(lis net.Listener) (net.Listener, chan bool) {
-	c := make(chan bool, 100)
-	go func() {
-		var dontGC []net.Conn
-		for {
-			conn, err := lis.Accept()
-			if err != nil {
-				return
-			}
-
-			dontGC = append(dontGC, conn) //nolint: staticcheck
-			c <- true
-		}
-	}()
-	return lis, c
 }

@@ -123,3 +123,9 @@ func (p *Pool) connectToDoppler(addr string, clients []unsafe.Pointer, idx int) 
 		return
 	}
 }
+
+func (p *Pool) Size() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return len(p.dopplers)
+}
