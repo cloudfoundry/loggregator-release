@@ -19,7 +19,7 @@ code.cloudfoundry.org/go-metric-registry
 code.cloudfoundry.org/go-pubsub
 code.cloudfoundry.org/go-pubsub/internal/node
 code.cloudfoundry.org/go-pubsub/pubsub-gen/setters
-# code.cloudfoundry.org/tlsconfig v0.0.0-20240410162701-78a97c114f7f
+# code.cloudfoundry.org/tlsconfig v0.0.0-20240417163319-a2cf10de323a
 ## explicit; go 1.19
 code.cloudfoundry.org/tlsconfig
 code.cloudfoundry.org/tlsconfig/certtest
@@ -62,7 +62,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/pprof v0.0.0-20240415144954-be81aee2d733
+# github.com/google/pprof v0.0.0-20240416155748-26353dc0451f
 ## explicit; go 1.19
 github.com/google/pprof/profile
 # github.com/gorilla/handlers v1.5.2
@@ -167,7 +167,7 @@ github.com/prometheus/procfs/internal/util
 # github.com/square/certstrap v1.3.0
 ## explicit; go 1.18
 github.com/square/certstrap/pkix
-# go.step.sm/crypto v0.44.5
+# go.step.sm/crypto v0.44.6
 ## explicit; go 1.20
 go.step.sm/crypto/fingerprint
 go.step.sm/crypto/internal/bcrypt_pbkdf
