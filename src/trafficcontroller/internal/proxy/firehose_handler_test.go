@@ -171,14 +171,17 @@ var _ = Describe("FirehoseHandler", func() {
 		server := httptest.NewServer(handler)
 		defer server.CloseClientConnections()
 
-		conn, _, err := websocket.DefaultDialer.Dial(
-			wsEndpoint(server, "/firehose/subscription-id"),
-			http.Header{"Authorization": []string{"token"}},
-		)
-		Expect(err).ToNot(HaveOccurred())
-
 		f := func() error {
-			_, _, err := conn.ReadMessage()
+			conn, _, err := websocket.DefaultDialer.Dial(
+				wsEndpoint(server, "/firehose/subscription-id"),
+				http.Header{"Authorization": []string{"token"}},
+			)
+			if err != nil {
+				return err
+			}
+			defer conn.Close()
+
+			_, _, err = conn.ReadMessage()
 			return err
 		}
 		Eventually(f).Should(MatchError(&websocket.CloseError{
