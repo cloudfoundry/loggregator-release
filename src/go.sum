@@ -71,8 +71,8 @@ code.cloudfoundry.org/go-metric-registry v0.0.0-20240325232813-eb1144b007e4/go.m
 code.cloudfoundry.org/go-pubsub v0.0.0-20240220213308-3a13ece7c8f3 h1:5/NWzEtJLIcGTaN3uIydLZKoKhlqrxvdbAC3OFeNbnU=
 code.cloudfoundry.org/go-pubsub v0.0.0-20240220213308-3a13ece7c8f3/go.mod h1:QxOFtPAFdKuZ2+ZsNW9GcMfxc8wAucVJ7dCuai+H6+s=
 code.cloudfoundry.org/tlsconfig v0.0.0-20200131000646-bbe0f8da39b3/go.mod h1:eTbFJpyXRGuFVyg5+oaj9B2eIbIc+0/kZjH8ftbtdew=
-code.cloudfoundry.org/tlsconfig v0.0.0-20240416163159-16b37d67cb91 h1:NSjgca6N8Ozg5NjSagMJiHgOOsC6TzVEcm6vVwTxuP8=
-code.cloudfoundry.org/tlsconfig v0.0.0-20240416163159-16b37d67cb91/go.mod h1:+tUojmqPan76xFy75nGWE8AgsbTsZO00e72KIzR59Yk=
+code.cloudfoundry.org/tlsconfig v0.0.0-20240417163319-a2cf10de323a h1:k54Ave0EIhSrvV0uSGRuSSYhiJnEI/a/Q9dRbKZLa8c=
+code.cloudfoundry.org/tlsconfig v0.0.0-20240417163319-a2cf10de323a/go.mod h1:H397f5P8Jq2Z20iIyC8UIY+vkC9ouur2Dxe4a+KTIQQ=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
 filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
