@@ -6,10 +6,10 @@ toolchain go1.21.9
 
 require (
 	code.cloudfoundry.org/go-batching v0.0.0-20240325232529-c21ea48767e2
-	code.cloudfoundry.org/go-diodes v0.0.0-20240325171903-fa19631aa7ba
+	code.cloudfoundry.org/go-diodes v0.0.0-20240419195010-376885f5f3d4
 	code.cloudfoundry.org/go-envstruct v1.7.0
 	code.cloudfoundry.org/go-log-cache v1.0.1-0.20220808235537-54ad6006c0c4
-	code.cloudfoundry.org/go-loggregator/v9 v9.2.0
+	code.cloudfoundry.org/go-loggregator/v9 v9.2.1
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20240325232813-eb1144b007e4
 	code.cloudfoundry.org/go-pubsub v0.0.0-20240220213308-3a13ece7c8f3
 	code.cloudfoundry.org/tlsconfig v0.0.0-20240417163319-a2cf10de323a
@@ -48,7 +48,7 @@ require (
 	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.53.0 // indirect
-	github.com/prometheus/procfs v0.13.0 // indirect
+	github.com/prometheus/procfs v0.14.0 // indirect
 	github.com/square/certstrap v1.3.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
