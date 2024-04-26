@@ -19,7 +19,7 @@ code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2
 # code.cloudfoundry.org/go-metric-registry v0.0.0-20240325232813-eb1144b007e4
 ## explicit; go 1.21
 code.cloudfoundry.org/go-metric-registry
-# code.cloudfoundry.org/go-pubsub v0.0.0-20240220213308-3a13ece7c8f3
+# code.cloudfoundry.org/go-pubsub v0.0.0-20240425210215-ceac3b794091
 ## explicit; go 1.17
 code.cloudfoundry.org/go-pubsub
 code.cloudfoundry.org/go-pubsub/internal/node

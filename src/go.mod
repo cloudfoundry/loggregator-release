@@ -11,7 +11,7 @@ require (
 	code.cloudfoundry.org/go-log-cache v1.0.1-0.20220808235537-54ad6006c0c4
 	code.cloudfoundry.org/go-loggregator/v9 v9.2.1
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20240325232813-eb1144b007e4
-	code.cloudfoundry.org/go-pubsub v0.0.0-20240220213308-3a13ece7c8f3
+	code.cloudfoundry.org/go-pubsub v0.0.0-20240425210215-ceac3b794091
 	code.cloudfoundry.org/tlsconfig v0.0.0-20240423163804-1b0dcf57fddb
 	github.com/cloudfoundry/noaa/v2 v2.4.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20240311165458-423aa0d4dfc8
