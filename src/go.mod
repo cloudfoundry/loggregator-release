@@ -12,7 +12,7 @@ require (
 	code.cloudfoundry.org/go-loggregator/v9 v9.2.1
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20240325232813-eb1144b007e4
 	code.cloudfoundry.org/go-pubsub v0.0.0-20240425210215-ceac3b794091
-	code.cloudfoundry.org/tlsconfig v0.0.0-20240423163804-1b0dcf57fddb
+	code.cloudfoundry.org/tlsconfig v0.0.0-20240427164042-d6180ef19863
 	github.com/cloudfoundry/noaa/v2 v2.4.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20240311165458-423aa0d4dfc8
 	github.com/gorilla/handlers v1.5.2
@@ -29,7 +29,7 @@ require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/elazarl/goproxy v0.0.0-20230731152917-f99041a5c027 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	go.step.sm/crypto v0.44.7 // indirect
+	go.step.sm/crypto v0.44.8 // indirect
 	golang.org/x/crypto v0.22.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240415180920-8c6c420018be // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240415180920-8c6c420018be // indirect
