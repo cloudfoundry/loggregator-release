@@ -2,22 +2,22 @@ module code.cloudfoundry.org/loggregator-release/src
 
 go 1.21.0
 
-toolchain go1.21.9
+toolchain go1.21.10
 
 require (
-	code.cloudfoundry.org/go-batching v0.0.0-20240325232529-c21ea48767e2
-	code.cloudfoundry.org/go-diodes v0.0.0-20240419195010-376885f5f3d4
+	code.cloudfoundry.org/go-batching v0.0.0-20240507185452-b51464486eb5
+	code.cloudfoundry.org/go-diodes v0.0.0-20240507202434-96dd3c119b5c
 	code.cloudfoundry.org/go-envstruct v1.7.0
 	code.cloudfoundry.org/go-loggregator/v9 v9.2.1
-	code.cloudfoundry.org/go-metric-registry v0.0.0-20240325232813-eb1144b007e4
-	code.cloudfoundry.org/go-pubsub v0.0.0-20240425210215-ceac3b794091
+	code.cloudfoundry.org/go-metric-registry v0.0.0-20240507185439-f0b17e194563
+	code.cloudfoundry.org/go-pubsub v0.0.0-20240507202717-46f088ee8990
 	code.cloudfoundry.org/tlsconfig v0.0.0-20240506165053-ee50c1ee9388
 	github.com/cloudfoundry/noaa/v2 v2.4.0
-	github.com/cloudfoundry/sonde-go v0.0.0-20240311165458-423aa0d4dfc8
+	github.com/cloudfoundry/sonde-go v0.0.0-20240507181428-8b8ae008ea35
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.1
-	github.com/onsi/ginkgo/v2 v2.17.2
+	github.com/onsi/ginkgo/v2 v2.17.3
 	github.com/onsi/gomega v1.33.1
 	github.com/prometheus/client_golang v1.19.0
 	golang.org/x/net v0.25.0
@@ -35,7 +35,7 @@ require (
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/google/pprof v0.0.0-20240430035430-e4905b036c4e // indirect
+	github.com/google/pprof v0.0.0-20240507183855-6f11f98ebb1c // indirect
 	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
