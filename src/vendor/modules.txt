@@ -1,7 +1,7 @@
 # code.cloudfoundry.org/go-batching v0.0.0-20240507185452-b51464486eb5
 ## explicit; go 1.21
 code.cloudfoundry.org/go-batching
-# code.cloudfoundry.org/go-diodes v0.0.0-20240507202434-96dd3c119b5c
+# code.cloudfoundry.org/go-diodes v0.0.0-20240515174142-71582f284718
 ## explicit; go 1.21
 code.cloudfoundry.org/go-diodes
 # code.cloudfoundry.org/go-envstruct v1.7.0
@@ -39,7 +39,7 @@ github.com/cloudfoundry/noaa/v2
 github.com/cloudfoundry/noaa/v2/consumer
 github.com/cloudfoundry/noaa/v2/consumer/internal
 github.com/cloudfoundry/noaa/v2/errors
-# github.com/cloudfoundry/sonde-go v0.0.0-20240507181428-8b8ae008ea35
+# github.com/cloudfoundry/sonde-go v0.0.0-20240515174134-adba8bce1248
 ## explicit; go 1.17
 github.com/cloudfoundry/sonde-go/events
 # github.com/felixge/httpsnoop v1.0.4
@@ -170,7 +170,7 @@ github.com/prometheus/procfs/internal/util
 # github.com/square/certstrap v1.3.0
 ## explicit; go 1.18
 github.com/square/certstrap/pkix
-# go.step.sm/crypto v0.44.8
+# go.step.sm/crypto v0.45.0
 ## explicit; go 1.20
 go.step.sm/crypto/fingerprint
 go.step.sm/crypto/internal/bcrypt_pbkdf
@@ -241,8 +241,8 @@ golang.org/x/text/unicode/norm
 ## explicit; go 1.19
 golang.org/x/tools/cover
 golang.org/x/tools/go/ast/inspector
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20240513163218-0867130af1f8
-## explicit; go 1.19
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20240515191416-fc5f0ca64291
+## explicit; go 1.20
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.64.0
 ## explicit; go 1.19
