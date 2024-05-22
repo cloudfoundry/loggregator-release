@@ -24,3 +24,8 @@ issues:
   - linters:
     - staticcheck
     text: "SA1019: grpc.Dial is deprecated"
+  # Exclude grpc.WithBlock deprecation warnings. WithBlock will be honored for
+  # the duration of the gRPC-Go 1.x line.
+  - linters:
+    - staticcheck
+    text: "SA1019: grpc.WithBlock is deprecated"
