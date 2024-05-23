@@ -1,4 +1,4 @@
-# code.cloudfoundry.org/go-batching v0.0.0-20240507185452-b51464486eb5
+# code.cloudfoundry.org/go-batching v0.0.0-20240522165838-74c69d79243c
 ## explicit; go 1.21
 code.cloudfoundry.org/go-batching
 # code.cloudfoundry.org/go-diodes v0.0.0-20240515174142-71582f284718
@@ -11,7 +11,7 @@ code.cloudfoundry.org/go-envstruct
 ## explicit; go 1.21
 code.cloudfoundry.org/go-loggregator/v9/conversion
 code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2
-# code.cloudfoundry.org/go-metric-registry v0.0.0-20240507185439-f0b17e194563
+# code.cloudfoundry.org/go-metric-registry v0.0.0-20240522170000-72a4274ce4cc
 ## explicit; go 1.21
 code.cloudfoundry.org/go-metric-registry
 # code.cloudfoundry.org/go-pubsub v0.0.0-20240509170011-216eb11c629b
@@ -19,7 +19,7 @@ code.cloudfoundry.org/go-metric-registry
 code.cloudfoundry.org/go-pubsub
 code.cloudfoundry.org/go-pubsub/internal/node
 code.cloudfoundry.org/go-pubsub/pubsub-gen/setters
-# code.cloudfoundry.org/tlsconfig v0.0.0-20240516170203-d50b3d56ba06
+# code.cloudfoundry.org/tlsconfig v0.0.0-20240522170710-79df114af82a
 ## explicit; go 1.19
 code.cloudfoundry.org/tlsconfig
 code.cloudfoundry.org/tlsconfig/certtest
@@ -170,7 +170,7 @@ github.com/prometheus/procfs/internal/util
 # github.com/square/certstrap v1.3.0
 ## explicit; go 1.18
 github.com/square/certstrap/pkix
-# go.step.sm/crypto v0.45.0
+# go.step.sm/crypto v0.45.1
 ## explicit; go 1.20
 go.step.sm/crypto/fingerprint
 go.step.sm/crypto/internal/bcrypt_pbkdf

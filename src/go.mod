@@ -5,13 +5,13 @@ go 1.21.0
 toolchain go1.21.10
 
 require (
-	code.cloudfoundry.org/go-batching v0.0.0-20240507185452-b51464486eb5
+	code.cloudfoundry.org/go-batching v0.0.0-20240522165838-74c69d79243c
 	code.cloudfoundry.org/go-diodes v0.0.0-20240515174142-71582f284718
 	code.cloudfoundry.org/go-envstruct v1.7.0
 	code.cloudfoundry.org/go-loggregator/v9 v9.2.1
-	code.cloudfoundry.org/go-metric-registry v0.0.0-20240507185439-f0b17e194563
+	code.cloudfoundry.org/go-metric-registry v0.0.0-20240522170000-72a4274ce4cc
 	code.cloudfoundry.org/go-pubsub v0.0.0-20240509170011-216eb11c629b
-	code.cloudfoundry.org/tlsconfig v0.0.0-20240516170203-d50b3d56ba06
+	code.cloudfoundry.org/tlsconfig v0.0.0-20240522170710-79df114af82a
 	github.com/cloudfoundry/noaa/v2 v2.4.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20240515174134-adba8bce1248
 	github.com/gorilla/handlers v1.5.2
@@ -43,7 +43,7 @@ require (
 	github.com/prometheus/common v0.53.0 // indirect
 	github.com/prometheus/procfs v0.15.0 // indirect
 	github.com/square/certstrap v1.3.0 // indirect
-	go.step.sm/crypto v0.45.0 // indirect
+	go.step.sm/crypto v0.45.1 // indirect
 	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
