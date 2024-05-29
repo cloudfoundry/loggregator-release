@@ -227,12 +227,12 @@ golang.org/x/text/unicode/norm
 # golang.org/x/tools v0.21.0
 ## explicit; go 1.19
 golang.org/x/tools/go/ast/inspector
-# google.golang.org/genproto/googleapis/api v0.0.0-20240521202816-d264139d666e
+# google.golang.org/genproto/googleapis/api v0.0.0-20240528184218-531527333157
 ## explicit; go 1.20
 google.golang.org/genproto/googleapis/api
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/api/httpbody
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20240521202816-d264139d666e
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20240528184218-531527333157
 ## explicit; go 1.20
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.64.0
