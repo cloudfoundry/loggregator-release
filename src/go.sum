@@ -10,8 +10,8 @@ code.cloudfoundry.org/go-metric-registry v0.0.0-20240604201903-7cef498efb7a h1:X
 code.cloudfoundry.org/go-metric-registry v0.0.0-20240604201903-7cef498efb7a/go.mod h1:/Be8VtLiCeMUoYdUzFtmW8GGkk89HAy3zD79KUXzbhs=
 code.cloudfoundry.org/go-pubsub v0.0.0-20240509170011-216eb11c629b h1:BU6KPaRKN6oV7Diy/Qtf6JOW70S8qLYVtV1KNdjPiKo=
 code.cloudfoundry.org/go-pubsub v0.0.0-20240509170011-216eb11c629b/go.mod h1:QxOFtPAFdKuZ2+ZsNW9GcMfxc8wAucVJ7dCuai+H6+s=
-code.cloudfoundry.org/tlsconfig v0.0.0-20240606172222-82aa02bc07ea h1:PjyR5Os5IVETrZkgATzSNl4R++/h+r6uQchSJ3dZsgc=
-code.cloudfoundry.org/tlsconfig v0.0.0-20240606172222-82aa02bc07ea/go.mod h1:RwJBA7HrvmyPNY8pRzAwlJ56WFmqJiPjxywZpxCZdWQ=
+code.cloudfoundry.org/tlsconfig v0.0.0-20240613173017-075d5b187a0d h1:nedO/GTZuf/FlRvrAuXWX9FdBBEd1hWXlhn1bp6li68=
+code.cloudfoundry.org/tlsconfig v0.0.0-20240613173017-075d5b187a0d/go.mod h1:qDYY1KwaNSWV7beH9J/IJR5erYD3bwO4zs+nDbpgbf8=
 filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
 filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
 github.com/apoydence/eachers v0.0.0-20181020210610-23942921fe77 h1:afT88tB6u9JCKQZVAAaa9ICz/uGn5Uw9ekn6P22mYKM=
@@ -63,8 +63,8 @@ github.com/gorilla/handlers v1.5.2 h1:cLTUSsNkgcwhgRqvCNmdbRWG0A3N4F+M2nWKdScwyE
 github.com/gorilla/handlers v1.5.2/go.mod h1:dX+xVpaxdSw+q0Qek8SSsl3dfMk3jNddUkMzo0GtH0w=
 github.com/gorilla/mux v1.8.1 h1:TuBL49tXwgrFYWhqrNgrUNEY92u81SPhu7sTdzQEiWY=
 github.com/gorilla/mux v1.8.1/go.mod h1:AKf9I4AEqPTmMytcMc0KkNouC66V3BtZ4qD5fmWSiMQ=
-github.com/gorilla/websocket v1.5.2 h1:qoW6V1GT3aZxybsbC6oLnailWnB+qTMVwMreOso9XUw=
-github.com/gorilla/websocket v1.5.2/go.mod h1:0n9H61RBAcf5/38py2MCYbxzPIY9rOkpvvMT24Rqs30=
+github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=
+github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
 github.com/kr/pretty v0.3.1/go.mod h1:hoEshYVHaxMs3cyo3Yncou5ZscifuDolrwPKZanG3xk=
