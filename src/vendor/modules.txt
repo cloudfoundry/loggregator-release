@@ -47,8 +47,8 @@ github.com/cloudfoundry/noaa/v2
 github.com/cloudfoundry/noaa/v2/consumer
 github.com/cloudfoundry/noaa/v2/consumer/internal
 github.com/cloudfoundry/noaa/v2/errors
-# github.com/cloudfoundry/sonde-go v0.0.0-20240515174134-adba8bce1248
-## explicit; go 1.17
+# github.com/cloudfoundry/sonde-go v0.0.0-20240620221854-09ef53324489
+## explicit; go 1.18
 github.com/cloudfoundry/sonde-go/events
 # github.com/elazarl/goproxy v0.0.0-20230731152917-f99041a5c027
 ## explicit

@@ -14,7 +14,7 @@ require (
 	code.cloudfoundry.org/go-pubsub v0.0.0-20240509170011-216eb11c629b
 	code.cloudfoundry.org/tlsconfig v0.0.0-20240613173017-075d5b187a0d
 	github.com/cloudfoundry/noaa/v2 v2.4.0
-	github.com/cloudfoundry/sonde-go v0.0.0-20240515174134-adba8bce1248
+	github.com/cloudfoundry/sonde-go v0.0.0-20240620221854-09ef53324489
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
