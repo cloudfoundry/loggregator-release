@@ -15,7 +15,7 @@ import (
 
 	"code.cloudfoundry.org/loggregator-release/src/internal/testhelper"
 
-	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
+	"code.cloudfoundry.org/go-loggregator/v10/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator-release/src/plumbing" // TODO: Resolve duplicate proto error
 	"code.cloudfoundry.org/loggregator-release/src/rlp-gateway/app"
 	"code.cloudfoundry.org/loggregator-release/src/testservers"
