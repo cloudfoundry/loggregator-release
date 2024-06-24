@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"code.cloudfoundry.org/go-loggregator/v9/conversion"
+	"code.cloudfoundry.org/go-loggregator/v10/conversion"
 	"code.cloudfoundry.org/loggregator-release/src/diodes"
 	"code.cloudfoundry.org/loggregator-release/src/metricemitter"
 	"code.cloudfoundry.org/loggregator-release/src/plumbing"

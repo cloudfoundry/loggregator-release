@@ -3,7 +3,7 @@ package v2_test
 import (
 	"io"
 
-	"code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2"
+	"code.cloudfoundry.org/go-loggregator/v10/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator-release/src/diodes"
 	"code.cloudfoundry.org/loggregator-release/src/metricemitter"
 	v2 "code.cloudfoundry.org/loggregator-release/src/router/internal/server/v2"
