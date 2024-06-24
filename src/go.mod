@@ -8,7 +8,7 @@ require (
 	code.cloudfoundry.org/go-batching v0.0.0-20240730230425-f1661a61b989
 	code.cloudfoundry.org/go-diodes v0.0.0-20240730232652-ce6331b0e7c0
 	code.cloudfoundry.org/go-envstruct v1.7.0
-	code.cloudfoundry.org/go-loggregator/v9 v9.2.1
+	code.cloudfoundry.org/go-loggregator/v10 v10.0.0
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20240731205343-e778db45fec9
 	code.cloudfoundry.org/go-pubsub v0.0.0-20240509170011-216eb11c629b
 	code.cloudfoundry.org/tlsconfig v0.0.0-20240804182054-12ab4b1e7eda
