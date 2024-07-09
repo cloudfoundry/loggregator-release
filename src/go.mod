@@ -32,8 +32,8 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	go.step.sm/crypto v0.48.1 // indirect
 	golang.org/x/crypto v0.25.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240701130421-f6361c86f094 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240701130421-f6361c86f094 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240708141625-4ad9e859172b // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240708141625-4ad9e859172b // indirect
 )
 
 require (
