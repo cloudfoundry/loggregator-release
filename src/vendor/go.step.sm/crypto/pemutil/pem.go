@@ -5,6 +5,7 @@ package pemutil
 
 import (
 	"bytes"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
@@ -732,24 +733,48 @@ func ParseSSH(b []byte) (interface{}, error) {
 			return nil, errors.Wrap(err, "error unmarshaling key")
 		}
 
-		key := new(ecdsa.PublicKey)
+		var c ecdh.Curve
 		switch w.Name {
 		case ssh.KeyAlgoECDSA256:
-			key.Curve = elliptic.P256()
+			c = ecdh.P256()
 		case ssh.KeyAlgoECDSA384:
-			key.Curve = elliptic.P384()
+			c = ecdh.P384()
 		case ssh.KeyAlgoECDSA521:
-			key.Curve = elliptic.P521()
+			c = ecdh.P521()
 		default:
 			return nil, errors.Errorf("unsupported ecdsa curve %s", w.Name)
 		}
 
-		key.X, key.Y = elliptic.Unmarshal(key.Curve, w.KeyBytes)
-		if key.X == nil || key.Y == nil {
-			return nil, errors.New("invalid ecdsa curve point")
+		var p *ecdh.PublicKey
+		if p, err = c.NewPublicKey(w.KeyBytes); err != nil {
+			return nil, errors.Wrapf(err, "failed decoding %s key", w.Name)
 		}
-		return key, nil
 
+		// convert ECDH public key to ECDSA public key to keep
+		// the returned type backwards compatible.
+		rawKey := p.Bytes()
+		switch p.Curve() {
+		case ecdh.P256():
+			return &ecdsa.PublicKey{
+				Curve: elliptic.P256(),
+				X:     big.NewInt(0).SetBytes(rawKey[1:33]),
+				Y:     big.NewInt(0).SetBytes(rawKey[33:]),
+			}, nil
+		case ecdh.P384():
+			return &ecdsa.PublicKey{
+				Curve: elliptic.P384(),
+				X:     big.NewInt(0).SetBytes(rawKey[1:49]),
+				Y:     big.NewInt(0).SetBytes(rawKey[49:]),
+			}, nil
+		case ecdh.P521():
+			return &ecdsa.PublicKey{
+				Curve: elliptic.P521(),
+				X:     big.NewInt(0).SetBytes(rawKey[1:67]),
+				Y:     big.NewInt(0).SetBytes(rawKey[67:]),
+			}, nil
+		default:
+			return nil, errors.New("cannot convert non-NIST *ecdh.PublicKey to *ecdsa.PublicKey")
+		}
 	case ssh.KeyAlgoED25519:
 		var w struct {
 			Name     string
@@ -759,10 +784,8 @@ func ParseSSH(b []byte) (interface{}, error) {
 			return nil, errors.Wrap(err, "error unmarshaling key")
 		}
 		return ed25519.PublicKey(w.KeyBytes), nil
-
 	case ssh.KeyAlgoDSA:
-		return nil, errors.Errorf("step does not support DSA keys")
-
+		return nil, errors.Errorf("DSA keys not supported")
 	default:
 		return nil, errors.Errorf("unsupported key type %T", key)
 	}
