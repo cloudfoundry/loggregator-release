@@ -11,7 +11,7 @@ require (
 	code.cloudfoundry.org/go-loggregator/v9 v9.2.1
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20240604201903-7cef498efb7a
 	code.cloudfoundry.org/go-pubsub v0.0.0-20240509170011-216eb11c629b
-	code.cloudfoundry.org/tlsconfig v0.0.0-20240710175717-1267031d8b88
+	code.cloudfoundry.org/tlsconfig v0.0.0-20240712175922-ffce9516cec8
 	github.com/cloudfoundry/noaa/v2 v2.4.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20240620221854-09ef53324489
 	github.com/gorilla/handlers v1.5.2
@@ -44,12 +44,12 @@ require (
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/square/certstrap v1.3.0 // indirect
-	go.step.sm/crypto v0.49.0 // indirect
+	go.step.sm/crypto v0.50.0 // indirect
 	golang.org/x/crypto v0.25.0 // indirect
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/tools v0.23.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240709173604-40e1e62336c5 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240711142825-46eb208f015d // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
