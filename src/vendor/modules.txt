@@ -1,7 +1,7 @@
 # code.cloudfoundry.org/go-batching v0.0.0-20240730230425-f1661a61b989
 ## explicit; go 1.21
 code.cloudfoundry.org/go-batching
-# code.cloudfoundry.org/go-diodes v0.0.0-20240730232652-ce6331b0e7c0
+# code.cloudfoundry.org/go-diodes v0.0.0-20240807231455-f9cf434a8c3e
 ## explicit; go 1.22
 code.cloudfoundry.org/go-diodes
 # code.cloudfoundry.org/go-envstruct v1.7.0
@@ -39,7 +39,7 @@ github.com/cloudfoundry/noaa/v2
 github.com/cloudfoundry/noaa/v2/consumer
 github.com/cloudfoundry/noaa/v2/consumer/internal
 github.com/cloudfoundry/noaa/v2/errors
-# github.com/cloudfoundry/sonde-go v0.0.0-20240620221854-09ef53324489
+# github.com/cloudfoundry/sonde-go v0.0.0-20240807231527-361c7ad33dc7
 ## explicit; go 1.18
 github.com/cloudfoundry/sonde-go/events
 # github.com/felixge/httpsnoop v1.0.4
