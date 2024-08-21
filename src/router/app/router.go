@@ -235,7 +235,7 @@ func initV2Metrics(c *Config) *metricemitter.Client {
 		log.Fatalf("Could not use GRPC creds for server: %s", err)
 	}
 
-	batchInterval := time.Duration(c.MetricBatchIntervalMilliseconds) * time.Millisecond
+	batchInterval := time.Duration(c.MetricBatchIntervalMilliseconds) * time.Millisecond //#nosec G115
 
 	// metric-documentation-v2: setup function
 	metricClient, err := metricemitter.NewClient(
