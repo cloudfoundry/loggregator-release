@@ -151,7 +151,7 @@ func (m *DopplerServer) sendBatchData(req *plumbing.SubscriptionRequest, sender 
 
 	errStream := make(chan error, 1)
 	batcher := batching.NewByteBatcher(
-		int(m.batchSize),
+		int(m.batchSize), //#nosec G115
 		m.batchInterval,
 		&batchWriter{
 			sender:       sender,

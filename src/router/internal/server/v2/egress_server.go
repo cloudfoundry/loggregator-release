@@ -95,7 +95,7 @@ func (s *EgressServer) BatchedReceiver(
 
 	errStream := make(chan error, 1)
 	batcher := batching.NewV2EnvelopeBatcher(
-		int(s.batchSize),
+		int(s.batchSize), //#nosec G115
 		s.batchInterval,
 		&batchWriter{
 			sender:       sender,

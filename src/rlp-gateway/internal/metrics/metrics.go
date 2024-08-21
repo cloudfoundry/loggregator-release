@@ -37,7 +37,7 @@ func (m *Metrics) NewCounter(name string) func(delta uint64) {
 	i := m.m.Get(name).(*expvar.Int)
 
 	return func(d uint64) {
-		i.Add(int64(d))
+		i.Add(int64(d)) //#nosec G115
 	}
 }
 
