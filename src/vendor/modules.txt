@@ -1,4 +1,4 @@
-# code.cloudfoundry.org/go-batching v0.0.0-20240822165321-9efe0c9350d9
+# code.cloudfoundry.org/go-batching v0.0.0-20240826183250-00c4aeaff7d0
 ## explicit; go 1.21
 code.cloudfoundry.org/go-batching
 # code.cloudfoundry.org/go-diodes v0.0.0-20240813203737-5032edb05ceb
@@ -11,7 +11,7 @@ code.cloudfoundry.org/go-envstruct
 ## explicit; go 1.21
 code.cloudfoundry.org/go-loggregator/v10/conversion
 code.cloudfoundry.org/go-loggregator/v10/rpc/loggregator_v2
-# code.cloudfoundry.org/go-metric-registry v0.0.0-20240822165235-8c5a42e1ec33
+# code.cloudfoundry.org/go-metric-registry v0.0.0-20240826183307-0f068571a61f
 ## explicit; go 1.21
 code.cloudfoundry.org/go-metric-registry
 # code.cloudfoundry.org/go-pubsub v0.0.0-20240509170011-216eb11c629b
@@ -255,7 +255,7 @@ golang.org/x/text/unicode/norm
 ## explicit; go 1.19
 golang.org/x/tools/cover
 golang.org/x/tools/go/ast/inspector
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20240823204242-4ba0660f739c
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20240826202546-f6391c0de4c7
 ## explicit; go 1.21
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.65.0

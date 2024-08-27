@@ -5,11 +5,11 @@ go 1.22.0
 toolchain go1.22.6
 
 require (
-	code.cloudfoundry.org/go-batching v0.0.0-20240822165321-9efe0c9350d9
+	code.cloudfoundry.org/go-batching v0.0.0-20240826183250-00c4aeaff7d0
 	code.cloudfoundry.org/go-diodes v0.0.0-20240813203737-5032edb05ceb
 	code.cloudfoundry.org/go-envstruct v1.7.0
 	code.cloudfoundry.org/go-loggregator/v10 v10.0.0
-	code.cloudfoundry.org/go-metric-registry v0.0.0-20240822165235-8c5a42e1ec33
+	code.cloudfoundry.org/go-metric-registry v0.0.0-20240826183307-0f068571a61f
 	code.cloudfoundry.org/go-pubsub v0.0.0-20240509170011-216eb11c629b
 	code.cloudfoundry.org/tlsconfig v0.1.0
 	github.com/cloudfoundry/noaa/v2 v2.4.0
@@ -51,7 +51,7 @@ require (
 	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240823204242-4ba0660f739c // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240826202546-f6391c0de4c7 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
