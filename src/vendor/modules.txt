@@ -7,7 +7,7 @@ code.cloudfoundry.org/go-diodes
 # code.cloudfoundry.org/go-envstruct v1.7.0
 ## explicit; go 1.21
 code.cloudfoundry.org/go-envstruct
-# code.cloudfoundry.org/go-loggregator/v10 v10.0.0
+# code.cloudfoundry.org/go-loggregator/v10 v10.0.1
 ## explicit; go 1.21
 code.cloudfoundry.org/go-loggregator/v10/conversion
 code.cloudfoundry.org/go-loggregator/v10/rpc/loggregator_v2
