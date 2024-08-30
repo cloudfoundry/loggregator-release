@@ -8,8 +8,8 @@ require (
 	code.cloudfoundry.org/go-batching v0.0.0-20240826183250-00c4aeaff7d0
 	code.cloudfoundry.org/go-diodes v0.0.0-20240813203737-5032edb05ceb
 	code.cloudfoundry.org/go-envstruct v1.7.0
-	code.cloudfoundry.org/go-loggregator/v10 v10.0.0
-	code.cloudfoundry.org/go-metric-registry v0.0.0-20240826183307-0f068571a61f
+	code.cloudfoundry.org/go-loggregator/v10 v10.0.1
+	code.cloudfoundry.org/go-metric-registry v0.0.0-20240828184116-9710cd731bb8
 	code.cloudfoundry.org/go-pubsub v0.0.0-20240509170011-216eb11c629b
 	code.cloudfoundry.org/tlsconfig v0.1.0
 	github.com/cloudfoundry/noaa/v2 v2.4.0
@@ -17,11 +17,11 @@ require (
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
-	github.com/onsi/ginkgo/v2 v2.20.1
-	github.com/onsi/gomega v1.34.1
+	github.com/onsi/ginkgo/v2 v2.20.2
+	github.com/onsi/gomega v1.34.2
 	github.com/prometheus/client_golang v1.20.2
 	golang.org/x/net v0.28.0
-	google.golang.org/grpc v1.65.0
+	google.golang.org/grpc v1.66.0
 	google.golang.org/protobuf v1.34.2
 )
 
@@ -35,23 +35,22 @@ require (
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/google/pprof v0.0.0-20240727154555-813a5fbdbec8 // indirect
+	github.com/google/pprof v0.0.0-20240829160300-da1f7e9f2b25 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.55.0 // indirect
+	github.com/prometheus/common v0.57.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/square/certstrap v1.3.0 // indirect
 	go.step.sm/crypto v0.51.1 // indirect
 	golang.org/x/crypto v0.26.0 // indirect
-	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948 // indirect
 	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240826202546-f6391c0de4c7 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240827150818-7e3bb234dfed // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
