@@ -63,7 +63,7 @@ func NewEgressServer(
 
 // Alert logs dropped message counts to stderr.
 func (s *EgressServer) Alert(missed int) {
-	s.droppedMetric.Increment(uint64(missed))
+	s.droppedMetric.Increment(uint64(missed)) // nolint:gosec
 }
 
 // Receiver implements loggregator_v2.EgressServer.
