@@ -19,7 +19,7 @@ code.cloudfoundry.org/go-metric-registry
 code.cloudfoundry.org/go-pubsub
 code.cloudfoundry.org/go-pubsub/internal/node
 code.cloudfoundry.org/go-pubsub/pubsub-gen/setters
-# code.cloudfoundry.org/tlsconfig v0.4.0
+# code.cloudfoundry.org/tlsconfig v0.5.0
 ## explicit; go 1.22
 code.cloudfoundry.org/tlsconfig
 code.cloudfoundry.org/tlsconfig/certtest
@@ -33,8 +33,8 @@ github.com/beorn7/perks/quantile
 # github.com/cespare/xxhash/v2 v2.3.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/cloudfoundry/noaa/v2 v2.4.0
-## explicit; go 1.21
+# github.com/cloudfoundry/noaa/v2 v2.5.0
+## explicit; go 1.22
 github.com/cloudfoundry/noaa/v2
 github.com/cloudfoundry/noaa/v2/consumer
 github.com/cloudfoundry/noaa/v2/consumer/internal
@@ -65,7 +65,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/pprof v0.0.0-20240903155634-a8630aee4ab9
+# github.com/google/pprof v0.0.0-20240910150728-a0b0bb1d4134
 ## explicit; go 1.22
 github.com/google/pprof/profile
 # github.com/gorilla/handlers v1.5.2
@@ -183,7 +183,7 @@ github.com/prometheus/procfs/internal/util
 # github.com/square/certstrap v1.3.0
 ## explicit; go 1.18
 github.com/square/certstrap/pkix
-# go.step.sm/crypto v0.51.2
+# go.step.sm/crypto v0.52.0
 ## explicit; go 1.22
 go.step.sm/crypto/fingerprint
 go.step.sm/crypto/internal/bcrypt_pbkdf
@@ -247,14 +247,14 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# golang.org/x/tools v0.24.0
-## explicit; go 1.19
+# golang.org/x/tools v0.25.0
+## explicit; go 1.22.0
 golang.org/x/tools/cover
 golang.org/x/tools/go/ast/inspector
 # google.golang.org/genproto/googleapis/rpc v0.0.0-20240903143218-8af14fe29dc1
 ## explicit; go 1.21
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.66.0
+# google.golang.org/grpc v1.66.1
 ## explicit; go 1.21
 google.golang.org/grpc
 google.golang.org/grpc/attributes

@@ -172,7 +172,7 @@ func (c *Consumer) Close() error {
 	}
 
 	if len(errStrings) > 0 {
-		return fmt.Errorf(strings.Join(errStrings, ", "))
+		return errors.New(strings.Join(errStrings, ", "))
 	}
 
 	return nil
