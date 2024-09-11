@@ -181,7 +181,7 @@ func (m *DopplerServer) sendBatchData(req *plumbing.SubscriptionRequest, sender 
 
 // Alert logs dropped message counts to stderr.
 func (m *DopplerServer) Alert(missed int) {
-	m.egressDropped.Increment(uint64(missed))
+	m.egressDropped.Increment(uint64(missed)) // nolint:gosec
 }
 
 func (m *DopplerServer) monitorContext(ctx context.Context, done *int64) {

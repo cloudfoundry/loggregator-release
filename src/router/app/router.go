@@ -113,13 +113,13 @@ func (d *Router) Start() {
 	v1Buf := diodes.NewManyToOneEnvelope(d.c.IngressBufferSize, gendiodes.AlertFunc(func(missed int) {
 		log.Printf("Dropped %d envelopes (v1 buffer)", missed)
 
-		ingressDropped.Increment(uint64(missed))
+		ingressDropped.Increment(uint64(missed)) // nolint:gosec
 	}))
 
 	v2Buf := diodes.NewManyToOneEnvelopeV2(d.c.IngressBufferSize, gendiodes.AlertFunc(func(missed int) {
 		log.Printf("Dropped %d envelopes (v2 buffer)", missed)
 
-		ingressDropped.Increment(uint64(missed))
+		ingressDropped.Increment(uint64(missed)) // nolint:gosec
 	}))
 
 	// metric-documentation-v2: (loggregator.doppler.subscriptions) Number of
