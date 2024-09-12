@@ -1,9 +1,3 @@
-run:
-  skip-files:
-  - gen_struct_test.go
-  - examples/structs/gen_struct.go
-  - pubsub-gen/internal/end2end/generated_traverser_test.go
-
 linters:
   enable:
   # Checks for non-ASCII identifiers
@@ -13,8 +7,19 @@ linters:
   # Inspects source code for security problems.
   - gosec
 
+linters-settings:
+  gosec:
+    excludes:
+    # Ignore controversial integer overflow warnings.
+    - G115
+
 issues:
   # Disable max issues per linter.
   max-issues-per-linter: 0
   # Disable max same issues.
   max-same-issues: 0
+  # Exclude generated test files that would otherwise fail.
+  exclude-files:
+  - gen_struct_test.go
+  - examples/structs/gen_struct.go
+  - pubsub-gen/internal/end2end/generated_traverser_test.go

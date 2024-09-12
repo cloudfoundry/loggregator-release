@@ -5,12 +5,12 @@ go 1.22.0
 toolchain go1.22.7
 
 require (
-	code.cloudfoundry.org/go-batching v0.0.0-20240826183250-00c4aeaff7d0
-	code.cloudfoundry.org/go-diodes v0.0.0-20240813203737-5032edb05ceb
+	code.cloudfoundry.org/go-batching v0.0.0-20240911223457-d5519e55d3b9
+	code.cloudfoundry.org/go-diodes v0.0.0-20240911205836-e7f77fdf9650
 	code.cloudfoundry.org/go-envstruct v1.7.0
 	code.cloudfoundry.org/go-loggregator/v10 v10.0.1
-	code.cloudfoundry.org/go-metric-registry v0.0.0-20240828184116-9710cd731bb8
-	code.cloudfoundry.org/go-pubsub v0.0.0-20240509170011-216eb11c629b
+	code.cloudfoundry.org/go-metric-registry v0.0.0-20240911230103-8810864fa5d2
+	code.cloudfoundry.org/go-pubsub v0.0.0-20240911225432-dce7646b4e4e
 	code.cloudfoundry.org/tlsconfig v0.5.0
 	github.com/cloudfoundry/noaa/v2 v2.5.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20240807231527-361c7ad33dc7
@@ -21,7 +21,7 @@ require (
 	github.com/onsi/gomega v1.34.2
 	github.com/prometheus/client_golang v1.20.3
 	golang.org/x/net v0.29.0
-	google.golang.org/grpc v1.66.1
+	google.golang.org/grpc v1.66.2
 	google.golang.org/protobuf v1.34.2
 )
 
