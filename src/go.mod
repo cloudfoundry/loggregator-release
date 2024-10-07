@@ -20,7 +20,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.20.2
 	github.com/onsi/gomega v1.34.2
 	github.com/prometheus/client_golang v1.20.4
-	golang.org/x/net v0.29.0
+	golang.org/x/net v0.30.0
 	google.golang.org/grpc v1.67.0
 	google.golang.org/protobuf v1.34.2
 )
@@ -46,9 +46,9 @@ require (
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/square/certstrap v1.3.0 // indirect
 	go.step.sm/crypto v0.53.0 // indirect
-	golang.org/x/crypto v0.27.0 // indirect
-	golang.org/x/sys v0.25.0 // indirect
-	golang.org/x/text v0.18.0 // indirect
+	golang.org/x/crypto v0.28.0 // indirect
+	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/text v0.19.0 // indirect
 	golang.org/x/tools v0.25.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240924160255-9d4c2d233b61 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
