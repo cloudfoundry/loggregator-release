@@ -9,11 +9,11 @@ require (
 	code.cloudfoundry.org/go-diodes v0.0.0-20241007161556-ec30366c7912
 	code.cloudfoundry.org/go-envstruct v1.7.0
 	code.cloudfoundry.org/go-loggregator/v10 v10.0.1
-	code.cloudfoundry.org/go-metric-registry v0.0.0-20241007183436-1a2326addb3c
+	code.cloudfoundry.org/go-metric-registry v0.0.0-20241016180114-4959be80b5ec
 	code.cloudfoundry.org/go-pubsub v0.0.0-20241004173325-747df57058b2
 	code.cloudfoundry.org/tlsconfig v0.7.0
 	github.com/cloudfoundry/noaa/v2 v2.5.0
-	github.com/cloudfoundry/sonde-go v0.0.0-20241007161526-e3ce7aa1aabc
+	github.com/cloudfoundry/sonde-go v0.0.0-20241016180203-3c0e1c24e908
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
@@ -35,7 +35,7 @@ require (
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/google/pprof v0.0.0-20241009165004-a3522334989c // indirect
+	github.com/google/pprof v0.0.0-20241017200806-017d972448fc // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nxadm/tail v1.4.11 // indirect
@@ -50,7 +50,7 @@ require (
 	golang.org/x/sys v0.26.0 // indirect
 	golang.org/x/text v0.19.0 // indirect
 	golang.org/x/tools v0.26.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241007155032-5fefd90f89a9 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241015192408-796eee8c2d53 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

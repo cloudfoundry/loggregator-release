@@ -11,7 +11,7 @@ code.cloudfoundry.org/go-envstruct
 ## explicit; go 1.21
 code.cloudfoundry.org/go-loggregator/v10/conversion
 code.cloudfoundry.org/go-loggregator/v10/rpc/loggregator_v2
-# code.cloudfoundry.org/go-metric-registry v0.0.0-20241007183436-1a2326addb3c
+# code.cloudfoundry.org/go-metric-registry v0.0.0-20241016180114-4959be80b5ec
 ## explicit; go 1.22
 code.cloudfoundry.org/go-metric-registry
 # code.cloudfoundry.org/go-pubsub v0.0.0-20241004173325-747df57058b2
@@ -39,7 +39,7 @@ github.com/cloudfoundry/noaa/v2
 github.com/cloudfoundry/noaa/v2/consumer
 github.com/cloudfoundry/noaa/v2/consumer/internal
 github.com/cloudfoundry/noaa/v2/errors
-# github.com/cloudfoundry/sonde-go v0.0.0-20241007161526-e3ce7aa1aabc
+# github.com/cloudfoundry/sonde-go v0.0.0-20241016180203-3c0e1c24e908
 ## explicit; go 1.18
 github.com/cloudfoundry/sonde-go/events
 # github.com/felixge/httpsnoop v1.0.4
@@ -65,7 +65,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/pprof v0.0.0-20241009165004-a3522334989c
+# github.com/google/pprof v0.0.0-20241017200806-017d972448fc
 ## explicit; go 1.22
 github.com/google/pprof/profile
 # github.com/gorilla/handlers v1.5.2
@@ -251,7 +251,7 @@ golang.org/x/text/unicode/norm
 ## explicit; go 1.22.0
 golang.org/x/tools/cover
 golang.org/x/tools/go/ast/inspector
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20241007155032-5fefd90f89a9
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20241015192408-796eee8c2d53
 ## explicit; go 1.21
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.67.1
