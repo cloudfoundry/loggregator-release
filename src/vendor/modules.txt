@@ -65,7 +65,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/pprof v0.0.0-20241023014458-598669927662
+# github.com/google/pprof v0.0.0-20241029153458-d1b30febd7db
 ## explicit; go 1.22
 github.com/google/pprof/profile
 # github.com/gorilla/handlers v1.5.2
@@ -121,8 +121,8 @@ github.com/onsi/ginkgo/reporters/stenographer
 github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable
 github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
 github.com/onsi/ginkgo/types
-# github.com/onsi/ginkgo/v2 v2.20.2
-## explicit; go 1.22
+# github.com/onsi/ginkgo/v2 v2.21.0
+## explicit; go 1.22.0
 github.com/onsi/ginkgo/v2
 github.com/onsi/ginkgo/v2/config
 github.com/onsi/ginkgo/v2/formatter
