@@ -616,7 +616,7 @@ func (t *transportReader) ReadHeader(header []byte) (int, error) {
 		t.er = err
 		return 0, err
 	}
-	t.windowHandler(n)
+	t.windowHandler(len(header))
 	return n, nil
 }
 
