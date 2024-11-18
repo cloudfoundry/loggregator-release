@@ -2,7 +2,7 @@ module code.cloudfoundry.org/loggregator-release/src
 
 go 1.22.0
 
-toolchain go1.22.8
+toolchain go1.22.9
 
 require (
 	code.cloudfoundry.org/go-batching v0.0.0-20241104233206-68f6863ec92a
@@ -11,7 +11,7 @@ require (
 	code.cloudfoundry.org/go-loggregator/v10 v10.0.1
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20241104233614-1bb1a592dfb9
 	code.cloudfoundry.org/go-pubsub v0.0.0-20241004173325-747df57058b2
-	code.cloudfoundry.org/tlsconfig v0.8.0
+	code.cloudfoundry.org/tlsconfig v0.9.0
 	github.com/cloudfoundry/noaa/v2 v2.5.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20241016180203-3c0e1c24e908
 	github.com/gorilla/handlers v1.5.2
@@ -22,7 +22,7 @@ require (
 	github.com/prometheus/client_golang v1.20.5
 	golang.org/x/net v0.31.0
 	google.golang.org/grpc v1.68.0-dev
-	google.golang.org/protobuf v1.35.1
+	google.golang.org/protobuf v1.35.2
 )
 
 require (
@@ -45,12 +45,12 @@ require (
 	github.com/prometheus/common v0.60.1 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/square/certstrap v1.3.0 // indirect
-	go.step.sm/crypto v0.54.0 // indirect
+	go.step.sm/crypto v0.54.2 // indirect
 	golang.org/x/crypto v0.29.0 // indirect
 	golang.org/x/sys v0.27.0 // indirect
 	golang.org/x/text v0.20.0 // indirect
 	golang.org/x/tools v0.27.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241104194629-dd2ea8efbc28 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241113202542-65e8d215514f // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
