@@ -5,11 +5,11 @@ go 1.22.0
 toolchain go1.22.9
 
 require (
-	code.cloudfoundry.org/go-batching v0.0.0-20241104233206-68f6863ec92a
+	code.cloudfoundry.org/go-batching v0.0.0-20241125161418-1c4c43ed1a1e
 	code.cloudfoundry.org/go-diodes v0.0.0-20241125060457-612558937770
 	code.cloudfoundry.org/go-envstruct v1.7.0
 	code.cloudfoundry.org/go-loggregator/v10 v10.0.1
-	code.cloudfoundry.org/go-metric-registry v0.0.0-20241104233614-1bb1a592dfb9
+	code.cloudfoundry.org/go-metric-registry v0.0.0-20241125210533-4270b99b04f2
 	code.cloudfoundry.org/go-pubsub v0.0.0-20241004173325-747df57058b2
 	code.cloudfoundry.org/tlsconfig v0.10.0
 	github.com/cloudfoundry/noaa/v2 v2.5.0
@@ -18,7 +18,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/onsi/ginkgo/v2 v2.22.0
-	github.com/onsi/gomega v1.35.1
+	github.com/onsi/gomega v1.36.0
 	github.com/prometheus/client_golang v1.20.5
 	golang.org/x/net v0.31.0
 	google.golang.org/grpc v1.68.0-dev
@@ -35,7 +35,7 @@ require (
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/google/pprof v0.0.0-20241122213907-cbe949e5a41b // indirect
+	github.com/google/pprof v0.0.0-20241128161848-dc51965c6481 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nxadm/tail v1.4.11 // indirect
