@@ -1,7 +1,6 @@
 module code.cloudfoundry.org/loggregator-release/src
 
 go 1.22.0
-
 toolchain go1.22.9
 
 require (
@@ -21,7 +20,7 @@ require (
 	github.com/onsi/gomega v1.36.0
 	github.com/prometheus/client_golang v1.20.5
 	golang.org/x/net v0.31.0
-	google.golang.org/grpc v1.68.0-dev
+	google.golang.org/grpc v1.69.0-dev
 	google.golang.org/protobuf v1.35.2
 )
 
