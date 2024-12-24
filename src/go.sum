@@ -10,8 +10,8 @@ code.cloudfoundry.org/go-metric-registry v0.0.0-20241216212740-f99815f94a2a h1:o
 code.cloudfoundry.org/go-metric-registry v0.0.0-20241216212740-f99815f94a2a/go.mod h1:LQEPfezhF2NsdnSxnBCmJm1qacL7+3+Fe9A/kLn7l5s=
 code.cloudfoundry.org/go-pubsub v0.0.0-20241004173325-747df57058b2 h1:vp3BkAKn/rg+WSxDFMdsZW0hD3E9o+N4gMYKjtIoWXQ=
 code.cloudfoundry.org/go-pubsub v0.0.0-20241004173325-747df57058b2/go.mod h1:QxOFtPAFdKuZ2+ZsNW9GcMfxc8wAucVJ7dCuai+H6+s=
-code.cloudfoundry.org/tlsconfig v0.13.0 h1:3SL/zM7qWWHea5gA2S0+dV7qGRhdkET3lnyAB0CYNtM=
-code.cloudfoundry.org/tlsconfig v0.13.0/go.mod h1:1gRXjcf4Af14MDfTOlF+2//hYRF14/Ki1zxz/txa+cY=
+code.cloudfoundry.org/tlsconfig v0.14.0 h1:VqUDzLvrYTMF8tfuTSEFoynouR+7k2tZsIjIsHfepOM=
+code.cloudfoundry.org/tlsconfig v0.14.0/go.mod h1:5PijwOC6oYPIrEGFmYmv+eqLnXjvVIxnGMz3RPn/4vA=
 filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
 filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
 github.com/apoydence/eachers v0.0.0-20181020210610-23942921fe77 h1:afT88tB6u9JCKQZVAAaa9ICz/uGn5Uw9ekn6P22mYKM=
