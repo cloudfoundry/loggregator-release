@@ -11,14 +11,14 @@ require (
 	code.cloudfoundry.org/go-loggregator/v10 v10.0.1
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20241216212740-f99815f94a2a
 	code.cloudfoundry.org/go-pubsub v0.0.0-20241004173325-747df57058b2
-	code.cloudfoundry.org/tlsconfig v0.13.0
+	code.cloudfoundry.org/tlsconfig v0.14.0
 	github.com/cloudfoundry/noaa/v2 v2.5.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20241223073712-8666f251e654
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/onsi/ginkgo/v2 v2.22.1
-	github.com/onsi/gomega v1.36.1
+	github.com/onsi/gomega v1.36.2
 	github.com/prometheus/client_golang v1.20.5
 	golang.org/x/net v0.33.0
 	google.golang.org/grpc v1.69.2

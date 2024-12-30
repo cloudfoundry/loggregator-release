@@ -19,7 +19,7 @@ code.cloudfoundry.org/go-metric-registry
 code.cloudfoundry.org/go-pubsub
 code.cloudfoundry.org/go-pubsub/internal/node
 code.cloudfoundry.org/go-pubsub/pubsub-gen/setters
-# code.cloudfoundry.org/tlsconfig v0.13.0
+# code.cloudfoundry.org/tlsconfig v0.14.0
 ## explicit; go 1.22
 code.cloudfoundry.org/tlsconfig
 code.cloudfoundry.org/tlsconfig/certtest
@@ -144,8 +144,8 @@ github.com/onsi/ginkgo/v2/internal/parallel_support
 github.com/onsi/ginkgo/v2/internal/testingtproxy
 github.com/onsi/ginkgo/v2/reporters
 github.com/onsi/ginkgo/v2/types
-# github.com/onsi/gomega v1.36.1
-## explicit; go 1.22
+# github.com/onsi/gomega v1.36.2
+## explicit; go 1.22.0
 github.com/onsi/gomega
 github.com/onsi/gomega/format
 github.com/onsi/gomega/gbytes
