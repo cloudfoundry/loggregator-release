@@ -2,25 +2,27 @@ module code.cloudfoundry.org/loggregator-release/src
 
 go 1.23.0
 
+toolchain go1.23.4
+
 require (
-	code.cloudfoundry.org/go-batching v0.0.0-20241223135445-b8f45a03eb70
-	code.cloudfoundry.org/go-diodes v0.0.0-20241223074059-7f8c1f03edeb
+	code.cloudfoundry.org/go-batching v0.0.0-20250107092849-12350a48cdcd
+	code.cloudfoundry.org/go-diodes v0.0.0-20250107092748-442ea8f9957b
 	code.cloudfoundry.org/go-envstruct v1.7.0
 	code.cloudfoundry.org/go-loggregator/v10 v10.0.1
-	code.cloudfoundry.org/go-metric-registry v0.0.0-20241216212740-f99815f94a2a
+	code.cloudfoundry.org/go-metric-registry v0.0.0-20250107131239-51ba784c3fe1
 	code.cloudfoundry.org/go-pubsub v0.0.0-20241004173325-747df57058b2
-	code.cloudfoundry.org/tlsconfig v0.14.0
+	code.cloudfoundry.org/tlsconfig v0.15.0
 	github.com/cloudfoundry/noaa/v2 v2.5.0
-	github.com/cloudfoundry/sonde-go v0.0.0-20241223073712-8666f251e654
+	github.com/cloudfoundry/sonde-go v0.0.0-20250107093625-3b887caf8df2
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2
 	github.com/prometheus/client_golang v1.20.5
-	golang.org/x/net v0.33.0
-	google.golang.org/grpc v1.69.2
-	google.golang.org/protobuf v1.36.1
+	golang.org/x/net v0.34.0
+	google.golang.org/grpc v1.69.4
+	google.golang.org/protobuf v1.36.2
 )
 
 require (
@@ -44,11 +46,11 @@ require (
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/square/certstrap v1.3.0 // indirect
 	go.step.sm/crypto v0.56.0 // indirect
-	golang.org/x/crypto v0.31.0 // indirect
+	golang.org/x/crypto v0.32.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
-	golang.org/x/tools v0.28.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250102185135-69823020774d // indirect
+	golang.org/x/tools v0.29.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250106144421-5f5ef82da422 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
