@@ -51,7 +51,7 @@ var _ = Describe("CAPIClient", func() {
 			r = capiClient.requests[1]
 
 			Expect(r.Method).To(Equal(http.MethodGet))
-			Expect(r.URL.String()).To(Equal("http://external.capi.com/v2/service_instances/some-id"))
+			Expect(r.URL.String()).To(Equal("http://external.capi.com/v3/service_instances/some-id"))
 			Expect(r.Header.Get("Authorization")).To(Equal("some-token"))
 		})
 
@@ -121,7 +121,7 @@ var _ = Describe("CAPIClient", func() {
 
 			servicesReq := capiClient.requests[1]
 			Expect(servicesReq.Method).To(Equal(http.MethodGet))
-			Expect(servicesReq.URL.String()).To(Equal("http://external.capi.com/v2/service_instances"))
+			Expect(servicesReq.URL.String()).To(Equal("http://external.capi.com/v3/service_instances"))
 			Expect(servicesReq.Header.Get("Authorization")).To(Equal("some-token"))
 		})
 
