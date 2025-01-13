@@ -83,7 +83,7 @@ func (c *CAPIClient) IsAuthorized(sourceID, token string) bool {
 		return true
 	}
 
-	uri = fmt.Sprintf("%s/v2/service_instances/%s", c.externalCapi, sourceID)
+	uri = fmt.Sprintf("%s/v3/service_instances/%s", c.externalCapi, sourceID)
 	req, err = http.NewRequest(http.MethodGet, uri, nil)
 	if err != nil {
 		log.Printf("failed to build authorize service instance access request: %s", err)
@@ -149,7 +149,7 @@ func (c *CAPIClient) AvailableSourceIDs(token string) []string {
 		sourceIDs = append(sourceIDs, v.Guid)
 	}
 
-	req, err = http.NewRequest(http.MethodGet, c.externalCapi+"/v2/service_instances", nil)
+	req, err = http.NewRequest(http.MethodGet, c.externalCapi+"/v3/service_instances", nil)
 	if err != nil {
 		log.Printf("failed to build authorize service instance access request: %s", err)
 		return nil
@@ -169,7 +169,7 @@ func (c *CAPIClient) AvailableSourceIDs(token string) []string {
 	}(resp)
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("CAPI request failed (/v2/service_instances): %d", resp.StatusCode)
+		log.Printf("CAPI request failed (/v3/service_instances): %d", resp.StatusCode)
 		return nil
 	}
 
