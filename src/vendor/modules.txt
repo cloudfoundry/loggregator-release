@@ -39,7 +39,7 @@ github.com/cloudfoundry/noaa/v2
 github.com/cloudfoundry/noaa/v2/consumer
 github.com/cloudfoundry/noaa/v2/consumer/internal
 github.com/cloudfoundry/noaa/v2/errors
-# github.com/cloudfoundry/sonde-go v0.0.0-20250120125159-edcf91eb21e5
+# github.com/cloudfoundry/sonde-go v0.0.0-20250127102140-78b0e7da13b3
 ## explicit; go 1.18
 github.com/cloudfoundry/sonde-go/events
 # github.com/felixge/httpsnoop v1.0.4
@@ -66,7 +66,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/pprof v0.0.0-20250125003558-7fdb3d7e6fa0
+# github.com/google/pprof v0.0.0-20250202011525-fc3143867406
 ## explicit; go 1.22
 github.com/google/pprof/profile
 # github.com/gorilla/handlers v1.5.2
@@ -185,7 +185,7 @@ github.com/prometheus/procfs/internal/util
 # github.com/square/certstrap v1.3.0
 ## explicit; go 1.18
 github.com/square/certstrap/pkix
-# go.step.sm/crypto v0.57.0
+# go.step.sm/crypto v0.57.1
 ## explicit; go 1.22
 go.step.sm/crypto/fingerprint
 go.step.sm/crypto/internal/bcrypt_pbkdf
@@ -253,7 +253,7 @@ golang.org/x/text/unicode/norm
 ## explicit; go 1.22.0
 golang.org/x/tools/cover
 golang.org/x/tools/go/ast/inspector
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20250124145028-65684f501c47
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20250127172529-29210b9bc287
 ## explicit; go 1.22
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.70.0
