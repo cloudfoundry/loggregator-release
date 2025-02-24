@@ -20,10 +20,11 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/ssh"
+
 	"go.step.sm/crypto/internal/utils"
 	"go.step.sm/crypto/keyutil"
 	"go.step.sm/crypto/x25519"
-	"golang.org/x/crypto/ssh"
 )
 
 // DefaultEncCipher is the default algorithm used when encrypting sensitive
@@ -640,7 +641,7 @@ func Serialize(in interface{}, opts ...Options) (*pem.Block, error) {
 				}
 			} else {
 				var err error
-				p, err = x509.EncryptPEMBlock(rand.Reader, p.Type, p.Bytes, password, DefaultEncCipher)
+				p, err = x509.EncryptPEMBlock(rand.Reader, p.Type, p.Bytes, password, DefaultEncCipher) //nolint:staticcheck // support legacy use cases
 				if err != nil {
 					return nil, errors.Wrap(err, "failed to serialize to PEM")
 				}
