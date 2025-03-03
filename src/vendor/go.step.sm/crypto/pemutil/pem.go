@@ -68,7 +68,7 @@ type context struct {
 func newContext(name string) *context {
 	return &context{
 		filename: name,
-		perm:     0600,
+		perm:     0o600,
 	}
 }
 
@@ -128,7 +128,7 @@ func WithFilename(name string) Options {
 		ctx.filename = name
 		// Default perm mode if not set
 		if ctx.perm == 0 {
-			ctx.perm = 0600
+			ctx.perm = 0o600
 		}
 		return nil
 	}
@@ -160,6 +160,23 @@ func WithPasswordFile(filename string) Options {
 			return err
 		}
 		ctx.password = b
+		return nil
+	}
+}
+
+// WithMinLengthPasswordFile is a method that adds the password in a file to the
+// context. If the password does not meet the minimum length requirement an
+// error is returned. If minimum length input is <=0 then the requirement is
+// ignored.
+func WithMinLengthPasswordFile(filename string, minLength int) Options {
+	return func(ctx *context) error {
+		if err := WithPasswordFile(filename)(ctx); err != nil {
+			return err
+		}
+
+		if minLength > 0 && len(ctx.password) < minLength {
+			return fmt.Errorf("password does not meet minimum length requirement; must be at least %v characters", minLength)
+		}
 		return nil
 	}
 }
