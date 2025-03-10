@@ -5,11 +5,11 @@ go 1.23.0
 toolchain go1.23.7
 
 require (
-	code.cloudfoundry.org/go-batching v0.0.0-20250217142405-e451d572b3eb
-	code.cloudfoundry.org/go-diodes v0.0.0-20250217093403-cd1363c1f46a
+	code.cloudfoundry.org/go-batching v0.0.0-20250310150613-869590bc8908
+	code.cloudfoundry.org/go-diodes v0.0.0-20250310100414-f7864bba1e4e
 	code.cloudfoundry.org/go-envstruct v1.7.0
 	code.cloudfoundry.org/go-loggregator/v10 v10.1.0
-	code.cloudfoundry.org/go-metric-registry v0.0.0-20250225215424-238194030075
+	code.cloudfoundry.org/go-metric-registry v0.0.0-20250310133323-4cab4f919c81
 	code.cloudfoundry.org/go-pubsub v0.0.0-20250217211141-cd4c6d8fe3c6
 	code.cloudfoundry.org/tlsconfig v0.20.0
 	github.com/cloudfoundry/noaa/v2 v2.5.0

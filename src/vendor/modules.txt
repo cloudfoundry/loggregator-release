@@ -1,8 +1,8 @@
-# code.cloudfoundry.org/go-batching v0.0.0-20250217142405-e451d572b3eb
-## explicit; go 1.22.0
+# code.cloudfoundry.org/go-batching v0.0.0-20250310150613-869590bc8908
+## explicit; go 1.23.0
 code.cloudfoundry.org/go-batching
-# code.cloudfoundry.org/go-diodes v0.0.0-20250217093403-cd1363c1f46a
-## explicit; go 1.22.0
+# code.cloudfoundry.org/go-diodes v0.0.0-20250310100414-f7864bba1e4e
+## explicit; go 1.23.0
 code.cloudfoundry.org/go-diodes
 # code.cloudfoundry.org/go-envstruct v1.7.0
 ## explicit; go 1.21
@@ -11,8 +11,8 @@ code.cloudfoundry.org/go-envstruct
 ## explicit; go 1.22.0
 code.cloudfoundry.org/go-loggregator/v10/conversion
 code.cloudfoundry.org/go-loggregator/v10/rpc/loggregator_v2
-# code.cloudfoundry.org/go-metric-registry v0.0.0-20250225215424-238194030075
-## explicit; go 1.22.0
+# code.cloudfoundry.org/go-metric-registry v0.0.0-20250310133323-4cab4f919c81
+## explicit; go 1.23.0
 code.cloudfoundry.org/go-metric-registry
 # code.cloudfoundry.org/go-pubsub v0.0.0-20250217211141-cd4c6d8fe3c6
 ## explicit; go 1.17
