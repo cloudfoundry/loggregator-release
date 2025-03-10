@@ -30,7 +30,7 @@ func MustUint64[T integer](x T) uint64 {
 
 // SafeUint32 converts an integer value to [uint32]. It returns an error if the value is out of range.
 func SafeUint32[T integer](x T) (uint32, error) {
-	if x < 0 || x > math.MaxUint32 {
+	if x < 0 || int64(x) > math.MaxUint32 {
 		return 0, fmt.Errorf("value %d out of range for uint32", x)
 	}
 
