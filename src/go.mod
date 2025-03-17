@@ -6,12 +6,12 @@ toolchain go1.23.7
 
 require (
 	code.cloudfoundry.org/go-batching v0.0.0-20250310150613-869590bc8908
-	code.cloudfoundry.org/go-diodes v0.0.0-20250310100414-f7864bba1e4e
+	code.cloudfoundry.org/go-diodes v0.0.0-20250313101733-a4678758a1c9
 	code.cloudfoundry.org/go-envstruct v1.7.0
 	code.cloudfoundry.org/go-loggregator/v10 v10.1.0
-	code.cloudfoundry.org/go-metric-registry v0.0.0-20250310133323-4cab4f919c81
+	code.cloudfoundry.org/go-metric-registry v0.0.0-20250312102122-36f5e06dd363
 	code.cloudfoundry.org/go-pubsub v0.0.0-20250217211141-cd4c6d8fe3c6
-	code.cloudfoundry.org/tlsconfig v0.20.0
+	code.cloudfoundry.org/tlsconfig v0.21.0
 	github.com/cloudfoundry/noaa/v2 v2.5.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20250217093333-7351ffed9384
 	github.com/gorilla/handlers v1.5.2
@@ -35,14 +35,14 @@ require (
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/pprof v0.0.0-20250302191652-9094ed2288e7 // indirect
+	github.com/google/pprof v0.0.0-20250315033105-103756e64e1d // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.62.0 // indirect
+	github.com/prometheus/common v0.63.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/square/certstrap v1.3.0 // indirect
 	go.step.sm/crypto v0.59.1 // indirect
@@ -50,7 +50,7 @@ require (
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/tools v0.31.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250303144028-a0af3efb3deb // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250313205543-e70fdf4c4cb4 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
