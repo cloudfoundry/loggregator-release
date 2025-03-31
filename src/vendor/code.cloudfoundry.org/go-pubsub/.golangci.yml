@@ -1,25 +1,41 @@
+version: "2"
 linters:
   enable:
-  # Checks for non-ASCII identifiers
-  - asciicheck
-  # Computes and checks the cyclomatic complexity of functions.
-  - gocyclo
-  # Inspects source code for security problems.
-  - gosec
-
-linters-settings:
-  gosec:
-    excludes:
-    # Ignore controversial integer overflow warnings.
-    - G115
-
+    # Checks for non-ASCII identifiers
+    - asciicheck
+    # Computes and checks the cyclomatic complexity of functions.
+    - gocyclo
+    # Inspects source code for security problems.
+    - gosec
+  settings:
+    gosec:
+      excludes:
+        # Ignore controversial integer overflow warnings.
+        - G115
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      # Exclude generated test files that would otherwise fail.
+      - gen_struct_test.go
+      - examples/structs/gen_struct.go
+      - pubsub-gen/internal/end2end/generated_traverser_test.go
+      - third_party$
+      - builtin$
+      - examples$
 issues:
   # Disable max issues per linter.
   max-issues-per-linter: 0
   # Disable max same issues.
   max-same-issues: 0
-  # Exclude generated test files that would otherwise fail.
-  exclude-files:
-  - gen_struct_test.go
-  - examples/structs/gen_struct.go
-  - pubsub-gen/internal/end2end/generated_traverser_test.go
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

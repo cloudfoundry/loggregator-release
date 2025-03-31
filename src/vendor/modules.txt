@@ -1,7 +1,7 @@
-# code.cloudfoundry.org/go-batching v0.0.0-20250317153438-425cd9af613c
+# code.cloudfoundry.org/go-batching v0.0.0-20250324153037-ac776dbe7880
 ## explicit; go 1.23.0
 code.cloudfoundry.org/go-batching
-# code.cloudfoundry.org/go-diodes v0.0.0-20250317104522-5c806ff4fd8d
+# code.cloudfoundry.org/go-diodes v0.0.0-20250324121313-75aea42a1fc3
 ## explicit; go 1.23.0
 code.cloudfoundry.org/go-diodes
 # code.cloudfoundry.org/go-envstruct v1.7.0
@@ -11,15 +11,15 @@ code.cloudfoundry.org/go-envstruct
 ## explicit; go 1.22.0
 code.cloudfoundry.org/go-loggregator/v10/conversion
 code.cloudfoundry.org/go-loggregator/v10/rpc/loggregator_v2
-# code.cloudfoundry.org/go-metric-registry v0.0.0-20250318085922-a92b53f5f52f
+# code.cloudfoundry.org/go-metric-registry v0.0.0-20250326210619-55aec564e1b0
 ## explicit; go 1.23.0
 code.cloudfoundry.org/go-metric-registry
-# code.cloudfoundry.org/go-pubsub v0.0.0-20250319120402-1dce9d2f0d04
+# code.cloudfoundry.org/go-pubsub v0.0.0-20250325104231-893079a7322c
 ## explicit; go 1.17
 code.cloudfoundry.org/go-pubsub
 code.cloudfoundry.org/go-pubsub/internal/node
 code.cloudfoundry.org/go-pubsub/pubsub-gen/setters
-# code.cloudfoundry.org/tlsconfig v0.21.0
+# code.cloudfoundry.org/tlsconfig v0.22.0
 ## explicit; go 1.23.0
 code.cloudfoundry.org/tlsconfig
 code.cloudfoundry.org/tlsconfig/certtest
@@ -39,7 +39,7 @@ github.com/cloudfoundry/noaa/v2
 github.com/cloudfoundry/noaa/v2/consumer
 github.com/cloudfoundry/noaa/v2/consumer/internal
 github.com/cloudfoundry/noaa/v2/errors
-# github.com/cloudfoundry/sonde-go v0.0.0-20250317104451-a50013ad58bc
+# github.com/cloudfoundry/sonde-go v0.0.0-20250324121045-7c2c4152bc7b
 ## explicit; go 1.18
 github.com/cloudfoundry/sonde-go/events
 # github.com/felixge/httpsnoop v1.0.4
@@ -186,7 +186,7 @@ github.com/prometheus/procfs/internal/util
 # github.com/square/certstrap v1.3.0
 ## explicit; go 1.18
 github.com/square/certstrap/pkix
-# go.step.sm/crypto v0.59.1
+# go.step.sm/crypto v0.60.0
 ## explicit; go 1.23.0
 go.step.sm/crypto/fingerprint
 go.step.sm/crypto/internal/bcrypt_pbkdf
@@ -210,7 +210,7 @@ golang.org/x/crypto/salsa20/salsa
 golang.org/x/crypto/scrypt
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
-# golang.org/x/net v0.37.0
+# golang.org/x/net v0.38.0
 ## explicit; go 1.23.0
 golang.org/x/net/context
 golang.org/x/net/html
@@ -256,7 +256,7 @@ golang.org/x/text/unicode/norm
 golang.org/x/tools/cover
 golang.org/x/tools/go/ast/inspector
 golang.org/x/tools/internal/astutil/edge
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20250313205543-e70fdf4c4cb4
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20250324211829-b45e905df463
 ## explicit; go 1.23.0
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.71.0
@@ -321,8 +321,8 @@ google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
-# google.golang.org/protobuf v1.36.5
-## explicit; go 1.21
+# google.golang.org/protobuf v1.36.6
+## explicit; go 1.22
 google.golang.org/protobuf/encoding/protodelim
 google.golang.org/protobuf/encoding/protojson
 google.golang.org/protobuf/encoding/prototext
