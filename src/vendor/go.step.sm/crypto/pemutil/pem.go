@@ -795,7 +795,7 @@ func ParseSSH(b []byte) (interface{}, error) {
 			return nil, errors.Wrap(err, "error unmarshaling key")
 		}
 		return ed25519.PublicKey(w.KeyBytes), nil
-	case ssh.KeyAlgoDSA:
+	case ssh.InsecureKeyAlgoDSA: //nolint:staticcheck // just using the constant; no dependent logic
 		return nil, errors.Errorf("DSA keys not supported")
 	default:
 		return nil, errors.Errorf("unsupported key type %T", key)
