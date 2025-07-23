@@ -256,7 +256,7 @@ golang.org/x/tools/go/ast/inspector
 # google.golang.org/genproto/googleapis/rpc v0.0.0-20250603155806-513f23925822
 ## explicit; go 1.23.0
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.74.0
+# google.golang.org/grpc v1.74.2
 ## explicit; go 1.23.0
 google.golang.org/grpc
 google.golang.org/grpc/attributes
