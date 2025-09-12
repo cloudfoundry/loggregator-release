@@ -1,6 +1,6 @@
 module code.cloudfoundry.org/loggregator-release/src
 
-go 1.24.0
+go 1.25.0
 
 require (
 	code.cloudfoundry.org/go-batching v0.0.0-20250505163757-782705ba2997
