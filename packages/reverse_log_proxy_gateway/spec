@@ -2,7 +2,7 @@
 name: reverse_log_proxy_gateway
 
 dependencies:
-- golang-1.23-linux
+- golang-1.25-linux
 
 files:
 - metricemitter/**/*.go
