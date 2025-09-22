@@ -35,7 +35,7 @@ func NewCounter(name, sourceID string, opts ...MetricOption) *Counter {
 		name:     name,
 		sourceID: sourceID,
 	}
-	m.Tagged.tags = make(map[string]*loggregator_v2.Value)
+	m.tags = make(map[string]*loggregator_v2.Value)
 
 	for _, opt := range opts {
 		opt(m.Tagged)

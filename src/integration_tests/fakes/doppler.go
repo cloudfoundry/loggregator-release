@@ -9,7 +9,7 @@ import (
 	"code.cloudfoundry.org/loggregator-release/src/testservers"
 	"google.golang.org/grpc"
 
-	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega" //nolint:staticcheck
 )
 
 func DopplerEgressV1Client(addr string) (func(), plumbing.DopplerClient) {

@@ -5,8 +5,8 @@ import (
 	"os"
 	"os/exec"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	. "github.com/onsi/ginkgo/v2" //nolint:staticcheck
+	. "github.com/onsi/gomega"    //nolint:staticcheck
 	"github.com/onsi/gomega/gexec"
 
 	envstruct "code.cloudfoundry.org/go-envstruct"

@@ -27,7 +27,7 @@ func NewGauge(name, unit, sourceID string, opts ...MetricOption) *Gauge {
 		unit:     unit,
 		sourceID: sourceID,
 	}
-	m.Tagged.tags = make(map[string]*loggregator_v2.Value)
+	m.tags = make(map[string]*loggregator_v2.Value)
 
 	for _, opt := range opts {
 		opt(m.Tagged)

@@ -56,8 +56,8 @@ var _ = Describe("Message Router", func() {
 	})
 })
 
-var errorMissingOrigin = errors.New("Event not emitted due to missing origin information")
-var errorUnknownEventType = errors.New("Cannot create envelope for unknown event type")
+var errorMissingOrigin = errors.New("event not emitted due to missing origin information")
+var errorUnknownEventType = errors.New("cannot create envelope for unknown event type")
 
 func wrap(event events.Event, origin string) (*events.Envelope, error) {
 	if origin == "" {
