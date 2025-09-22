@@ -22,7 +22,8 @@ func (h *FakeUaaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	token := r.FormValue("token")
 
-	if token == "iAmAnAdmin" {
+	switch token {
+	case "iAmAnAdmin":
 		authData := map[string]interface{}{
 			"scope": []string{
 				"doppler.firehose",
@@ -31,7 +32,7 @@ func (h *FakeUaaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		marshaled, _ := json.Marshal(authData)
 		_, _ = w.Write(marshaled)
-	} else if token == "iAmNotAnAdmin" {
+	case "iAmNotAnAdmin":
 		authData := map[string]interface{}{
 			"scope": []string{
 				"uaa.not-admin",
@@ -40,13 +41,13 @@ func (h *FakeUaaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		marshaled, _ := json.Marshal(authData)
 		_, _ = w.Write(marshaled)
-	} else if token == "expiredToken" {
+	case "expiredToken":
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = w.Write([]byte("{\"error\":\"invalid_token\",\"error_description\":\"Token has expired\"}"))
-	} else if token == "invalidToken" {
+	case "invalidToken":
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = w.Write([]byte("{\"invalidToken\":\"invalid_token\",\"error_description\":\"Invalid token (could not decode): invalidToken\"}"))
-	} else {
+	default:
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 

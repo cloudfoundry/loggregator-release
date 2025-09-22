@@ -45,7 +45,7 @@ func (c *uaaClient) GetAuthData(token string) (*AuthData, error) {
 	defer response.Body.Close()
 
 	if response.StatusCode == http.StatusUnauthorized {
-		return nil, errors.New("Invalid username/password")
+		return nil, errors.New("invalid username/password")
 	}
 
 	if response.StatusCode == http.StatusNotFound {
@@ -66,7 +66,7 @@ func (c *uaaClient) GetAuthData(token string) (*AuthData, error) {
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return nil, errors.New("Unknown error occurred")
+		return nil, errors.New("unknown error occurred")
 	}
 
 	var aData AuthData
