@@ -104,11 +104,7 @@ func (m *DopplerServer) sendData(req *plumbing.SubscriptionRequest, sender sende
 	var done int64
 	go m.monitorContext(sender.Context(), &done)
 
-	for {
-		if atomic.LoadInt64(&done) > 0 {
-			break
-		}
-
+	for atomic.LoadInt64(&done) <= 0 {
 		data, ok := d.TryNext()
 		if !ok {
 			time.Sleep(10 * time.Millisecond)

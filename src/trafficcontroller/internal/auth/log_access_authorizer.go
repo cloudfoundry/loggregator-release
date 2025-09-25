@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	ErrNoAuthTokenProvided = errors.New("Error: Authorization not provided")
-	ErrInvalidAuthToken    = errors.New("Error: Invalid authorization")
+	ErrNoAuthTokenProvided = errors.New("authorization not provided")
+	ErrInvalidAuthToken    = errors.New("invalid authorization")
 )
 
 // TODO: We don't need to return an error and a status code. One will suffice.
@@ -25,7 +25,7 @@ func NewLogAccessAuthorizer(c *http.Client, disableAccessControl bool, apiHost s
 
 	return LogAccessAuthorizer(func(authToken string, target string) (int, error) {
 		if authToken == "" {
-			log.Println(ErrNoAuthTokenProvided)
+			log.Println("Error:", ErrNoAuthTokenProvided)
 			return http.StatusUnauthorized, ErrNoAuthTokenProvided
 		}
 

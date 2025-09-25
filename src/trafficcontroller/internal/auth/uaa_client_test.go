@@ -92,7 +92,7 @@ var _ = Describe("UaaClient", func() {
 
 			_, err := uaaClient.GetAuthData("500Please")
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("Unknown error occurred"))
+			Expect(err.Error()).To(Equal("unknown error occurred"))
 		})
 	})
 
@@ -102,7 +102,7 @@ var _ = Describe("UaaClient", func() {
 
 			_, err := uaaClient.GetAuthData("iAmAnAdmin")
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("Invalid username/password"))
+			Expect(err.Error()).To(Equal("invalid username/password"))
 		})
 	})
 
@@ -149,7 +149,8 @@ func (h *FakeUaaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	token := r.FormValue("token")
 
-	if token == "iAmAnAdmin" {
+	switch token {
+	case "iAmAnAdmin":
 		authData := map[string]interface{}{
 			"scope": []string{
 				"doppler.firehose",
@@ -161,7 +162,7 @@ func (h *FakeUaaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		_, err = w.Write(marshaled)
 		Expect(err).ToNot(HaveOccurred())
-	} else if token == "iAmNotAnAdmin" {
+	case "iAmNotAnAdmin":
 		authData := map[string]interface{}{
 			"scope": []string{
 				"uaa.not-admin",
@@ -173,19 +174,19 @@ func (h *FakeUaaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		_, err = w.Write(marshaled)
 		Expect(err).ToNot(HaveOccurred())
-	} else if token == "expiredToken" {
+	case "expiredToken":
 		w.WriteHeader(http.StatusBadRequest)
 		_, err := w.Write([]byte("{\"error\":\"invalid_token\",\"error_description\":\"Token has expired\"}"))
 		Expect(err).ToNot(HaveOccurred())
-	} else if token == "invalidToken" {
+	case "invalidToken":
 		w.WriteHeader(http.StatusBadRequest)
 		_, err := w.Write([]byte("{\"invalidToken\":\"invalid_token\",\"error_description\":\"Invalid token (could not decode): invalidToken\"}"))
 		Expect(err).ToNot(HaveOccurred())
-	} else if token == "invalidTokenWithBadResponse" {
+	case "invalidTokenWithBadResponse":
 		w.WriteHeader(http.StatusBadRequest)
 		_, err := w.Write([]byte("{"))
 		Expect(err).ToNot(HaveOccurred())
-	} else {
+	default:
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }

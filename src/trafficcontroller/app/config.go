@@ -80,11 +80,11 @@ func LoadConfig() (*Config, error) {
 
 func (c *Config) validate() error {
 	if c.SystemDomain == "" {
-		return errors.New("Need system domain in order to create the proxies")
+		return errors.New("need system domain in order to create the proxies")
 	}
 
 	if c.IP == "" {
-		return errors.New("Need IP address for access logging")
+		return errors.New("need IP address for access logging")
 	}
 
 	if len(c.GRPC.CAFile) == 0 {

@@ -171,8 +171,8 @@ func primePumpV2(ingressClient loggregator_v2.Ingress_SenderClient, subscribeCli
 	Expect(err).ToNot(HaveOccurred())
 }
 
-var ErrorMissingOrigin = errors.New("Event not emitted due to missing origin information")
-var ErrorUnknownEventType = errors.New("Cannot create envelope for unknown event type")
+var ErrorMissingOrigin = errors.New("event not emitted due to missing origin information")
+var ErrorUnknownEventType = errors.New("cannot create envelope for unknown event type")
 
 func Wrap(event events.Event, origin string) (*events.Envelope, error) {
 	if origin == "" {
