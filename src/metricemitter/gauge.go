@@ -48,7 +48,7 @@ func (m *Gauge) Increment(value float64) {
 
 // Decrement decrements the gauge by a specified value.
 func (m *Gauge) Decrement(value float64) {
-	atomic.AddUint64(&m.value, toUint64(-value, 2))
+	atomic.AddUint64(&m.value, ^uint64(toUint64(value, 2)-1))
 }
 
 // GetValue atomically returns the current value of the gauge.
