@@ -1,6 +1,7 @@
 package router_test
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -10,8 +11,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"golang.org/x/net/context"
 )
 
 var _ = Describe("GRPC Streaming Logs", func() {

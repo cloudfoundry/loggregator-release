@@ -1,11 +1,12 @@
 package v2
 
 import (
+	"context"
+
 	"code.cloudfoundry.org/go-loggregator/v10/conversion"
 	"code.cloudfoundry.org/go-loggregator/v10/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator-release/src/diodes"
 	"code.cloudfoundry.org/loggregator-release/src/metricemitter"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

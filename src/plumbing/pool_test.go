@@ -1,9 +1,10 @@
 package plumbing_test
 
 import (
+	"context"
+
 	"code.cloudfoundry.org/loggregator-release/src/plumbing"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 

@@ -1,6 +1,7 @@
 package ingress_test
 
 import (
+	"context"
 	"log"
 	"net"
 
@@ -9,7 +10,6 @@ import (
 	"code.cloudfoundry.org/loggregator-release/src/plumbing"
 	"code.cloudfoundry.org/loggregator-release/src/rlp/internal/ingress"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"

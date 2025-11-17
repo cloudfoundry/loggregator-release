@@ -1,6 +1,7 @@
 package plumbing
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sync"
@@ -11,8 +12,6 @@ import (
 	"code.cloudfoundry.org/loggregator-release/src/metricemitter"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	"golang.org/x/net/context"
 )
 
 const (

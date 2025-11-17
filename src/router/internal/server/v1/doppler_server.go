@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"log"
 	"sync/atomic"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"code.cloudfoundry.org/loggregator-release/src/diodes"
 	"code.cloudfoundry.org/loggregator-release/src/metricemitter"
 	"code.cloudfoundry.org/loggregator-release/src/plumbing"
-	"golang.org/x/net/context"
 )
 
 // Registrar registers stream and firehose DataSetters to accept reads.

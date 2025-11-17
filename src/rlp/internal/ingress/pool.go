@@ -1,6 +1,7 @@
 package ingress
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -11,7 +12,6 @@ import (
 	"unsafe"
 
 	"code.cloudfoundry.org/go-loggregator/v10/rpc/loggregator_v2"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 

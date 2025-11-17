@@ -1,6 +1,7 @@
 package proxy_test
 
 import (
+	"context"
 	"errors"
 	"log"
 	"net/http"
@@ -12,7 +13,6 @@ import (
 	"code.cloudfoundry.org/loggregator-release/src/plumbing"
 	"code.cloudfoundry.org/loggregator-release/src/trafficcontroller/internal/proxy"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/grpclog"
 
 	. "github.com/onsi/ginkgo/v2"
