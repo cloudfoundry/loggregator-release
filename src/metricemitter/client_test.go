@@ -1,13 +1,13 @@
 package metricemitter_test
 
 import (
+	"context"
 	"log"
 	"net"
 	"time"
 
 	"code.cloudfoundry.org/go-loggregator/v10/rpc/loggregator_v2"
 	"code.cloudfoundry.org/loggregator-release/src/metricemitter"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 

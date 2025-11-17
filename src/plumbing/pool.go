@@ -1,13 +1,13 @@
 package plumbing
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
 	"sync"
 	"time"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 

@@ -1,6 +1,7 @@
 package proxy_test
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -11,8 +12,6 @@ import (
 	"code.cloudfoundry.org/loggregator-release/src/plumbing"
 
 	"code.cloudfoundry.org/loggregator-release/src/trafficcontroller/internal/proxy"
-
-	"golang.org/x/net/context"
 
 	"github.com/gorilla/websocket"
 	. "github.com/onsi/ginkgo/v2"
@@ -39,6 +38,9 @@ var _ = Describe("FirehoseHandler", func() {
 	})
 
 	It("connects to doppler servers with correct parameters", func() {
+		type ctxKey string
+		const subIDKey ctxKey = "subID"
+
 		handler := proxy.NewDopplerProxy(
 			auth.Authorize,
 			adminAuth.Authorize,
@@ -52,7 +54,7 @@ var _ = Describe("FirehoseHandler", func() {
 		req.Header.Add("Authorization", "token")
 
 		handler.ServeHTTP(recorder, req.WithContext(
-			context.WithValue(req.Context(), "subID", "abc-123")),
+			context.WithValue(req.Context(), subIDKey, "abc-123")),
 		)
 
 		Expect(connector.subscriptions.request).To(Equal(&plumbing.SubscriptionRequest{

@@ -1,6 +1,7 @@
 package plumbing_test
 
 import (
+	"context"
 	"log"
 	"net"
 	"time"
@@ -13,7 +14,6 @@ import (
 
 	"code.cloudfoundry.org/loggregator-release/src/plumbing"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	. "github.com/onsi/ginkgo/v2"

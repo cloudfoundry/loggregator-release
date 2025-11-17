@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"code.cloudfoundry.org/loggregator-release/src/trafficcontroller/internal/auth"
 
 	"github.com/gorilla/mux"
-	"golang.org/x/net/context"
 )
 
 var MetricsInterval = 15 * time.Second

@@ -1,6 +1,7 @@
 package egress
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -12,8 +13,6 @@ import (
 	"code.cloudfoundry.org/loggregator-release/src/plumbing/batching"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	"golang.org/x/net/context"
 )
 
 const (

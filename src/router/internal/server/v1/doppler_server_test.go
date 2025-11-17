@@ -1,6 +1,7 @@
 package v1_test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -11,7 +12,6 @@ import (
 	"code.cloudfoundry.org/loggregator-release/src/metricemitter/testhelper"
 	"code.cloudfoundry.org/loggregator-release/src/plumbing"
 	v1 "code.cloudfoundry.org/loggregator-release/src/router/internal/server/v1"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"

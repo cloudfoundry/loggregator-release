@@ -1,6 +1,7 @@
 package v2_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -12,7 +13,6 @@ import (
 	v2 "code.cloudfoundry.org/loggregator-release/src/router/internal/server/v2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 
