@@ -9,7 +9,7 @@ require (
 	code.cloudfoundry.org/go-loggregator/v10 v10.2.0
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20250910081605-f8a5859593c1
 	code.cloudfoundry.org/go-pubsub v0.0.0-20250904195544-b28237b2bacd
-	code.cloudfoundry.org/tlsconfig v0.39.0
+	code.cloudfoundry.org/tlsconfig v0.40.0
 	github.com/cloudfoundry/noaa/v2 v2.5.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20250915135239-ebea5d8dc26e
 	github.com/gorilla/handlers v1.5.2
