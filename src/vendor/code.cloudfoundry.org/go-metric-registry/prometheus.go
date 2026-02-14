@@ -37,14 +37,36 @@ type counterVec struct {
 	vec *prometheus.CounterVec
 }
 
+// gaugeVec allows us to hide the prometheus logic from the user. [prometheus.GaugeVec] is not
+// an actual metric but more of a metric factory which returns a metric for each set of labels.
+// To not leak the returned prometheus types, this type is used.
+type gaugeVec struct {
+	vec *prometheus.GaugeVec
+}
+
 func (c counterVec) Add(f float64, labels []string) {
 	c.vec.WithLabelValues(labels...).Add(f)
+}
+
+func (g gaugeVec) Add(f float64, labels []string) {
+	g.vec.WithLabelValues(labels...).Add(f)
+}
+
+func (g gaugeVec) Set(f float64, labels []string) {
+	g.vec.WithLabelValues(labels...).Set(f)
 }
 
 type CounterVec interface {
 	// Add to metric, the number of labels must match the number of label names that were
 	// given when the [CounterVec] was created.
 	Add(float64, []string)
+}
+
+type GaugeVec interface {
+	// Add to metric, the number of labels must match the number of label names that were
+	// given when the [GaugeVec] was created.
+	Add(float64, []string)
+	Set(float64, []string)
 }
 
 // A single numerical value that can arbitrarily go up and down.
@@ -118,6 +140,15 @@ func (p *Registry) NewCounterVec(name, helpText string, labelNames []string, opt
 	return counterVec{vec: p.registerCollector(name, c).(*prometheus.CounterVec)}
 }
 
+// Creates new gauge vector. When a duplicate is registered, the Registry will return
+// the previously created metric.
+func (p *Registry) NewGaugeVec(name, helpText string, labelNames []string, opts ...MetricOption) GaugeVec {
+	opt := toPromOpt(name, helpText, opts...)
+	g := prometheus.NewGaugeVec(prometheus.GaugeOpts(opt), labelNames)
+	// See [gaugeVec] for details.
+	return gaugeVec{vec: p.registerCollector(name, g).(*prometheus.GaugeVec)}
+}
+
 // Creates new gauge. When a duplicate is registered, the Registry will return
 // the previously created metric.
 func (p *Registry) NewGauge(name, helpText string, opts ...MetricOption) Gauge {
@@ -162,6 +193,12 @@ func (p *Registry) RemoveCounter(c Counter) {
 func (p *Registry) RemoveCounterVec(cv CounterVec) {
 	if cvIntern, ok := cv.(counterVec); ok {
 		p.registerer.Unregister(cvIntern.vec)
+	}
+}
+
+func (p *Registry) RemoveGaugeVec(gv GaugeVec) {
+	if gvIntern, ok := gv.(gaugeVec); ok {
+		p.registerer.Unregister(gvIntern.vec)
 	}
 }
 
