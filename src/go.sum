@@ -12,8 +12,8 @@ code.cloudfoundry.org/go-pubsub v0.0.0-20251204080526-f88eccbecd26 h1:fXQbh80O2q
 code.cloudfoundry.org/go-pubsub v0.0.0-20251204080526-f88eccbecd26/go.mod h1:QxOFtPAFdKuZ2+ZsNW9GcMfxc8wAucVJ7dCuai+H6+s=
 code.cloudfoundry.org/tlsconfig v0.45.0 h1:axem2ESLqMm645WyTkw1RZ9zjfZzUiojImNqxGXEtlI=
 code.cloudfoundry.org/tlsconfig v0.45.0/go.mod h1:62TfSYz4O4pgggNLF0wEZOTr2ZtrsnKPX9c2LSL1Cl0=
-filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
-filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
+filippo.io/edwards25519 v1.1.1 h1:YpjwWWlNmGIDyXOn8zLzqiD+9TyIlPhGFG96P39uBpw=
+filippo.io/edwards25519 v1.1.1/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
 github.com/Masterminds/semver/v3 v3.4.0 h1:Zog+i5UMtVoCU8oKka5P7i9q9HgrJeGzI9SA1Xbatp0=
 github.com/Masterminds/semver/v3 v3.4.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
 github.com/apoydence/eachers v0.0.0-20181020210610-23942921fe77 h1:afT88tB6u9JCKQZVAAaa9ICz/uGn5Uw9ekn6P22mYKM=
