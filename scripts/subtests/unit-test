@@ -11,6 +11,8 @@ if [ "${CI:-false}" = 'false' ]; then
 fi
 
 pushd "${SCRIPT_DIR}/../../src" > /dev/null
-    go run github.com/onsi/ginkgo/v2/ginkgo $flags
+    if ! command -v ginkgo &> /dev/null; then
+      go install github.com/onsi/ginkgo/v2/ginkgo@latest
+    fi
+    ginkgo $flags 
 popd > /dev/null
-
