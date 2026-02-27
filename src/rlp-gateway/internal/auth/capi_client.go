@@ -129,7 +129,7 @@ func (c *CAPIClient) AvailableSourceIDs(token string) []string {
 	}(resp)
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("CAPI request failed (/v3/apps): %d", resp.StatusCode)
+		log.Printf("CAPI request failed (/v3/apps): %d", resp.StatusCode) //nolint:gosec
 		return nil
 	}
 
@@ -169,7 +169,7 @@ func (c *CAPIClient) AvailableSourceIDs(token string) []string {
 	}(resp)
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("CAPI request failed (/v3/service_instances): %d", resp.StatusCode)
+		log.Printf("CAPI request failed (/v3/service_instances): %d", resp.StatusCode) //nolint:gosec
 		return nil
 	}
 

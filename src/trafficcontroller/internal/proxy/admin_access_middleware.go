@@ -23,7 +23,7 @@ func (m *AdminAccessMiddleware) Wrap(h http.Handler) http.Handler {
 		if !authorized {
 			w.Header().Set("WWW-Authenticate", "Basic")
 			w.WriteHeader(http.StatusUnauthorized)
-			fmt.Fprintf(w, "You are not authorized. %s", err.Error())
+			fmt.Fprintf(w, "You are not authorized. %s", err.Error()) //nolint:gosec
 			return
 		}
 

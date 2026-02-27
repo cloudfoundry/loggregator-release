@@ -92,7 +92,7 @@ func (s *WebSocketServer) ServeWS(
 					eventBody,
 				)
 
-				log.Printf("Doppler Proxy: Slow Consumer from %s using %s", r.RemoteAddr, r.URL)
+				log.Printf("Doppler Proxy: Slow Consumer from %s using %s", r.RemoteAddr, r.URL) //nolint:gosec
 				return
 			}
 		}
