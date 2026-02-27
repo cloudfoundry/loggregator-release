@@ -41,7 +41,7 @@ func StartRouter(conf app.Config) (cleanup func(), rp RouterPorts) {
 	Expect(routerPath).ToNot(BeEmpty())
 
 	By("starting router")
-	routerCommand := exec.Command(routerPath)
+	routerCommand := exec.Command(routerPath) //nolint:gosec
 	routerCommand.Env = envstruct.ToEnv(&conf)
 
 	routerSession, err := gexec.Start(

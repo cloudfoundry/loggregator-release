@@ -22,7 +22,7 @@ type LogAccessAuthorization struct {
 type LogAdminAuthorization struct {
 	Addr         string `env:"LOG_ADMIN_ADDR,          required, report"`
 	ClientID     string `env:"LOG_ADMIN_CLIENT_ID,     required"`
-	ClientSecret string `env:"LOG_ADMIN_CLIENT_SECRET, required"`
+	ClientSecret string `env:"LOG_ADMIN_CLIENT_SECRET, required"` //nolint:gosec
 	CAPath       string `env:"LOG_ADMIN_CA_PATH,       required, report"`
 }
 

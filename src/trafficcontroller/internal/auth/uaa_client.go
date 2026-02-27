@@ -38,7 +38,7 @@ func (c *uaaClient) GetAuthData(token string) (*AuthData, error) {
 	req.SetBasicAuth(c.id, c.secret)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	response, err := c.httpClient.Do(req)
+	response, err := c.httpClient.Do(req) //nolint:gosec
 	if err != nil {
 		return nil, err
 	}

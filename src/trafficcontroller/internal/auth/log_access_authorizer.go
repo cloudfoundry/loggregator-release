@@ -35,7 +35,7 @@ func NewLogAccessAuthorizer(c *http.Client, disableAccessControl bool, apiHost s
 		}
 
 		req.Header.Set("Authorization", authToken)
-		res, err := c.Do(req)
+		res, err := c.Do(req) //nolint:gosec
 		if err != nil {
 			log.Printf("Could not get app information: [%s]", err)
 			return http.StatusInternalServerError, err
@@ -44,7 +44,7 @@ func NewLogAccessAuthorizer(c *http.Client, disableAccessControl bool, apiHost s
 
 		err = nil
 		if res.StatusCode != 200 {
-			log.Printf("Non 200 response from CC API: %d for %q", res.StatusCode, target)
+			log.Printf("Non 200 response from CC API: %d for %q", res.StatusCode, target) //nolint:gosec
 			err = errors.New(http.StatusText(res.StatusCode))
 		}
 

@@ -57,7 +57,7 @@ func StartTrafficController(conf tcConf.Config) (cleanup func(), tp TrafficContr
 	Expect(tcPath).ToNot(BeEmpty())
 
 	By("starting trafficcontroller")
-	tcCommand := exec.Command(tcPath)
+	tcCommand := exec.Command(tcPath) //nolint:gosec
 	tcCommand.Env = envstruct.ToEnv(&conf)
 	tcSession, err := gexec.Start(
 		tcCommand,

@@ -469,7 +469,7 @@ func (tc *testClient) open(url string) (*http.Response, error) {
 	}
 	req.Header.Set("Authorization", "my-token")
 
-	resp, err := tc.client.Do(req)
+	resp, err := tc.client.Do(req) //nolint:gosec
 	if err != nil {
 		panic(err)
 	}

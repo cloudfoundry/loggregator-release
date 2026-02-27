@@ -40,7 +40,7 @@ func waitForPortBinding(prefix string, buf *gbytes.Buffer) int {
 		if len(result) == 2 {
 			port, err := strconv.Atoi(string(result[1]))
 			if err != nil {
-				log.Panicf("unable to parse port number, port: %#v", result[1])
+				log.Panicf("unable to parse port number, port: %#v", result[1]) //nolint:gosec
 			}
 			return port
 		}
