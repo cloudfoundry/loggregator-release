@@ -391,7 +391,7 @@ func (c *Consumer) websocketConn(path, authToken string) (*websocket.Conn, error
 	}
 
 	if URL.Scheme != "wss" && URL.Scheme != "ws" {
-		return nil, noaa_errors.NewNonRetryError(fmt.Errorf("Invalid scheme '%s'", URL.Scheme))
+		return nil, noaa_errors.NewNonRetryError(fmt.Errorf("invalid scheme '%s'", URL.Scheme))
 	}
 
 	ws, httpErr := c.tryWebsocketConnection(path, authToken)
@@ -456,8 +456,8 @@ func (c *Consumer) tryWebsocketConnection(path, token string) (*websocket.Conn, 
 		httpErr.statusCode = resp.StatusCode
 	}
 	if err != nil {
-		errMsg := "Error dialing trafficcontroller server: %s.\n" +
-			"Please ask your Cloud Foundry Operator to check the platform configuration (trafficcontroller is %s)."
+		errMsg := "error dialing trafficcontroller server: %s.\n" +
+			"Please ask your Cloud Foundry Operator to check the platform configuration (trafficcontroller is %s)"
 		httpErr.error = fmt.Errorf(errMsg, err.Error(), c.trafficControllerUrl)
 		return nil, httpErr
 	}
