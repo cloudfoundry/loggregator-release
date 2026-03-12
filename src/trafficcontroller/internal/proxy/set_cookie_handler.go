@@ -13,7 +13,11 @@ func NewSetCookieHandler(domain string) *SetCookieHandler {
 }
 
 func (h SetCookieHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
+	if r.Body != nil {
+		r.Body = http.MaxBytesReader(w, r.Body, 4096) // limit request body to 4kB
+	}
+	err := r.ParseForm()
+	if err != nil || r.FormValue("CookieName") == "" || r.FormValue("CookieValue") == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
