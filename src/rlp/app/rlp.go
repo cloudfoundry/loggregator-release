@@ -53,7 +53,7 @@ type RLP struct {
 
 // NewRLP returns a new unstarted RLP.
 func NewRLP(m MetricClient, opts ...RLPOption) *RLP {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec
 	rlp := &RLP{
 		ingressAddrs:         []string{"doppler.service.cf.internal"},
 		ingressDialOpts:      []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())},
