@@ -104,7 +104,7 @@ var _ = Describe("DopplerProxy", func() {
 		})
 
 		It("returns a bad request if the form does not parse", func() {
-			req, _ := http.NewRequest("POST", "/set-cookie", nil)
+			req, _ := http.NewRequest("POST", "/set-cookie", http.NoBody)
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 			dopplerProxy.ServeHTTP(recorder, req)

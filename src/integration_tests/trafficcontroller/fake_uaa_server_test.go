@@ -20,7 +20,7 @@ func (h *FakeUaaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token := r.FormValue("token")
+	token := r.FormValue("token") //nolint:gosec
 
 	switch token {
 	case "iAmAnAdmin":
