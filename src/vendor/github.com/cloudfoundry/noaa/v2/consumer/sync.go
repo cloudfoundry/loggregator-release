@@ -41,7 +41,7 @@ func (c *Consumer) ContainerEnvelopes(appGuid, authToken string) ([]*events.Enve
 	}
 	for _, env := range envelopes {
 		if env.GetEventType() == events.Envelope_LogMessage {
-			return nil, fmt.Errorf("Upstream error: %s", env.GetLogMessage().GetMessage())
+			return nil, fmt.Errorf("upstream error: %s", env.GetLogMessage().GetMessage())
 		}
 	}
 	return envelopes, nil
@@ -121,8 +121,8 @@ func (c *Consumer) tryTCConnection(recentPath, token string) (*http.Response, *h
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		message := `Error dialing trafficcontroller server: %s.
-Please ask your Cloud Foundry Operator to check the platform configuration (trafficcontroller endpoint is %s).`
+		message := `error dialing trafficcontroller server: %s.
+Please ask your Cloud Foundry Operator to check the platform configuration (trafficcontroller endpoint is %s)`
 		return nil, &httpError{
 			statusCode: -1,
 			error:      fmt.Errorf(message, err, c.trafficControllerUrl),
