@@ -56,6 +56,10 @@ func (g gaugeVec) Set(f float64, labels []string) {
 	g.vec.WithLabelValues(labels...).Set(f)
 }
 
+func (g gaugeVec) Delete(labels []string) bool {
+	return g.vec.DeleteLabelValues(labels...)
+}
+
 type CounterVec interface {
 	// Add to metric, the number of labels must match the number of label names that were
 	// given when the [CounterVec] was created.
@@ -67,6 +71,7 @@ type GaugeVec interface {
 	// given when the [GaugeVec] was created.
 	Add(float64, []string)
 	Set(float64, []string)
+	Delete([]string) bool
 }
 
 // A single numerical value that can arbitrarily go up and down.
