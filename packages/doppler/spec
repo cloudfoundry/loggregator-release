@@ -2,7 +2,7 @@
 name: doppler
 
 dependencies:
-- golang-1.25-linux
+- golang-1.26-linux
 
 files:
 - diodes/**/*.go
