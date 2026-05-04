@@ -30,5 +30,6 @@ func (h SetCookieHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Domain:   h.domain,
 		Secure:   true,
 		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
 	})
 }
