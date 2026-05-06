@@ -1,6 +1,8 @@
 builds:
   0005e567-168c-4f48-8b53-905d38f9cbd6:
     version: "57"
+  02ebf454-76a2-45d9-7917-da82b8a5c314:
+    version: 107.0.29
   038b8396-5b9d-4550-7cf7-445944d0991d:
     version: "103.1"
   046b128e-f60e-455f-aa4a-8a55b2489ca4:
