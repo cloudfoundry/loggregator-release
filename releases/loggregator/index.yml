@@ -37,6 +37,8 @@ builds:
     version: 107.0.21
   15c6a249-741f-4d4b-8ed0-235aaea99bfc:
     version: "70"
+  15e8f594-76a4-4658-5994-774f6c884001:
+    version: 107.0.30
   167ed5f7-fed5-46f9-7e68-119ba41846ec:
     version: "105.4"
   16db52e6-67b1-4da8-8b7d-712f802598da:
