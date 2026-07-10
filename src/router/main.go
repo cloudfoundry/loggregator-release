@@ -36,6 +36,7 @@ func main() {
 			conf.IngressBufferSize,
 			conf.EgressBufferSize,
 		),
+		app.WithFanoutWriter(conf.FanoutWriterEnabled, conf.PublishWorkers),
 		app.WithMetricReporting(
 			conf.Agent,
 			conf.MetricBatchIntervalMilliseconds,

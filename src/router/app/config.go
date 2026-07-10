@@ -27,6 +27,8 @@ type Config struct {
 
 	IngressBufferSize               int    `env:"INGRESS_BUFFER_SIZE"`
 	EgressBufferSize                int    `env:"EGRESS_BUFFER_SIZE"`
+	PublishWorkers                  int    `env:"ROUTER_PUBLISH_WORKERS"`
+	FanoutWriterEnabled             bool   `env:"ROUTER_FANOUT_WRITER_ENABLED"`
 	UseRFC339                       bool   `env:"USE_RFC339"`
 	PProfPort                       uint32 `env:"ROUTER_PPROF_PORT"`
 	Agent                           Agent

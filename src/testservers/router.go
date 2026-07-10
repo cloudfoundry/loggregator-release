@@ -30,6 +30,16 @@ func BuildRouterConfig(agentUDPPort, agentGRPCPort int) app.Config {
 	}
 }
 
+// BuildRouterConfigWithFanoutWriter returns a router config with the
+// FanoutWriter path enabled, for exercising the concurrent Publish() path
+// in integration tests.
+func BuildRouterConfigWithFanoutWriter(agentUDPPort, agentGRPCPort, workers int) app.Config {
+	conf := BuildRouterConfig(agentUDPPort, agentGRPCPort)
+	conf.FanoutWriterEnabled = true
+	conf.PublishWorkers = workers
+	return conf
+}
+
 type RouterPorts struct {
 	GRPC  int
 	PProf int

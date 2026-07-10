@@ -13,5 +13,7 @@ processes:
       ROUTER_PPROF_PORT: "<%=  p("doppler.pprof_port") %>"
       INGRESS_BUFFER_SIZE: "<%=  p("doppler.ingress_buffer_size") %>"
       EGRESS_BUFFER_SIZE: "<%=  p("doppler.egress_buffer_size") %>"
+      ROUTER_FANOUT_WRITER_ENABLED: "<%=  p("doppler.fanout_writer_enabled") %>"
+      ROUTER_PUBLISH_WORKERS: "<%=  p("doppler.publish_workers") %>"
     limits:
       open_files: 65536

@@ -145,6 +145,80 @@ var _ = Describe("V2 Egress", func() {
 			}).ShouldNot(BeEmpty())
 		})
 
+		Describe("with FanoutWriter enabled", func() {
+			var (
+				fanoutDopplerCleanup func()
+				fanoutIngressCleanup func()
+				fanoutEgressCleanup  func()
+
+				fanoutIngressClient loggregator_v2.Ingress_SenderClient
+				fanoutEgressClient  loggregator_v2.EgressClient
+			)
+
+			BeforeEach(func() {
+				var dopplerPorts testservers.RouterPorts
+
+				fanoutDopplerCleanup, dopplerPorts = testservers.StartRouter(
+					testservers.BuildRouterConfigWithFanoutWriter(0, 0, 4),
+				)
+				fanoutIngressCleanup, fanoutIngressClient = fakes.DopplerIngressV2Client(
+					fmt.Sprintf("127.0.0.1:%d", dopplerPorts.GRPC),
+				)
+				fanoutEgressCleanup, fanoutEgressClient = fakes.DopplerEgressV2Client(
+					fmt.Sprintf("127.0.0.1:%d", dopplerPorts.GRPC),
+				)
+			})
+
+			AfterEach(func() {
+				fanoutEgressCleanup()
+				fanoutIngressCleanup()
+				fanoutDopplerCleanup()
+			})
+
+			It("receives envelope batches", func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				receiverClient, err := fanoutEgressClient.BatchedReceiver(ctx, &loggregator_v2.EgressBatchRequest{
+					Selectors: []*loggregator_v2.Selector{
+						{
+							Message: &loggregator_v2.Selector_Log{
+								Log: &loggregator_v2.LogSelector{},
+							},
+						},
+					},
+				})
+				Expect(err).ToNot(HaveOccurred())
+				defer func() {
+					err := receiverClient.CloseSend()
+					Expect(err).ToNot(HaveOccurred())
+				}()
+
+				done := make(chan struct{})
+				defer close(done)
+				go func() {
+					for {
+						_ = sendV2AppLog("some-test-app-id", "message", fanoutIngressClient)
+
+						select {
+						case <-time.After(500 * time.Millisecond):
+						case <-done:
+							return
+						}
+					}
+				}()
+
+				Eventually(func() []*loggregator_v2.Envelope {
+					resp, err := receiverClient.Recv()
+					Expect(err).ToNot(HaveOccurred())
+					if err != nil {
+						return nil
+					}
+
+					return resp.GetBatch()
+				}).ShouldNot(BeEmpty())
+			})
+		})
+
 		Describe("requests with selectors", func() {
 			It("only returns envelopes of the requested type", func() {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

@@ -59,6 +59,14 @@ properties:
     description: "The buffer size for egress traffic for the v1 loggregator"
     default: 1000
 
+  doppler.fanout_writer_enabled:
+    description: "Enable the fanout writer for the router"
+    default: false
+
+  doppler.publish_workers:
+    description: "The number of workers for the publish path. If set to 0, the number of workers will be equal to the number of CPUs."
+    default: 0
+
   metron_endpoint.host:
     description: "The host used to emit messages to the Metron agent"
     default: "127.0.0.1"

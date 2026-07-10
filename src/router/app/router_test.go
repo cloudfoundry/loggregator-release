@@ -227,6 +227,67 @@ var _ = Describe("Router", func() {
 			})
 		})
 	})
+
+	Describe("FanoutWriter enabled", func() {
+		var fanoutRouter *app.Router
+
+		BeforeEach(func() {
+			fanoutRouter = app.NewRouter(
+				grpcConfig,
+				app.WithBufferSizes(
+					10000,
+					1000,
+				),
+				app.WithFanoutWriter(true, 2),
+			)
+			fanoutRouter.Start()
+		})
+
+		AfterEach(func() {
+			fanoutRouter.Stop()
+		})
+
+		It("sends envelopes that can be read with an egress client", func() {
+			addrs := fanoutRouter.Addrs()
+
+			ingressClient := createRouterV2IngressClient(addrs.GRPC, grpcConfig)
+			egressClient := createRouterV2EgressClient(addrs.GRPC, grpcConfig)
+
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			sender, err := ingressClient.Sender(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			go func() {
+				defer GinkgoRecover()
+				ticker := time.NewTicker(50 * time.Millisecond)
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case <-ticker.C:
+						err := sender.Send(genericLogEnvelope())
+						Expect(err).ToNot(HaveOccurred())
+					}
+				}
+			}()
+
+			rcvr, err := egressClient.BatchedReceiver(ctx, &loggregator_v2.EgressBatchRequest{
+				Selectors: []*loggregator_v2.Selector{
+					{
+						Message: &loggregator_v2.Selector_Log{
+							Log: &loggregator_v2.LogSelector{},
+						},
+					},
+				},
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			batch, err := rcvr.Recv()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(batch.GetBatch()).ToNot(BeEmpty())
+		})
+	})
 })
 
 func genericLogEnvelope() *loggregator_v2.Envelope {
