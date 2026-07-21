@@ -9,7 +9,7 @@ require (
 	code.cloudfoundry.org/go-loggregator/v10 v10.3.1
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20260630084347-8cab5693edd1
 	code.cloudfoundry.org/go-pubsub v0.0.0-20260630084434-04d107daa255
-	code.cloudfoundry.org/tlsconfig v0.62.0
+	code.cloudfoundry.org/tlsconfig v0.63.0
 	github.com/cloudfoundry/noaa/v2 v2.6.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20260706112804-cd2c61a47573
 	github.com/gorilla/handlers v1.5.2
@@ -39,7 +39,7 @@ require (
 	github.com/prometheus/common v0.70.0 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
 	github.com/square/certstrap v1.3.0 // indirect
-	go.step.sm/crypto v0.84.1 // indirect
+	go.step.sm/crypto v0.85.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/mod v0.37.0 // indirect
