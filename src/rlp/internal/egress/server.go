@@ -2,6 +2,7 @@ package egress
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -248,7 +249,10 @@ func (s *Server) BatchedReceiver(r *loggregator_v2.EgressBatchRequest, srv loggr
 				<-timer.C
 			}
 			timer.Reset(resetDuration)
-		case <-senderErrorStream:
+		case err := <-senderErrorStream:
+			if !errors.Is(err, io.ErrUnexpectedEOF) {
+				log.Printf("Send error: %s", err)
+			}
 			return io.ErrUnexpectedEOF
 		case <-receiverStopped:
 			for d := range buffer {
