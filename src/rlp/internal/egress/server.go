@@ -221,8 +221,8 @@ func (s *Server) BatchedReceiver(r *loggregator_v2.EgressBatchRequest, srv loggr
 		return fmt.Errorf("unable to setup subscription")
 	}
 
-	receiveErrorStream := make(chan error, 1)
-	go s.consumeBatchReceiver(r.UsePreferredTags, buffer, receiveErrorStream, rx, cancel)
+	receiverStopped := make(chan struct{}, 1)
+	go s.consumeBatchReceiver(r.UsePreferredTags, buffer, receiverStopped, rx, cancel)
 
 	senderErrorStream := make(chan error, 1)
 	batcher := batching.NewV2EnvelopeBatcher(
@@ -250,7 +250,7 @@ func (s *Server) BatchedReceiver(r *loggregator_v2.EgressBatchRequest, srv loggr
 			timer.Reset(resetDuration)
 		case <-senderErrorStream:
 			return io.ErrUnexpectedEOF
-		case <-receiveErrorStream:
+		case <-receiverStopped:
 			for d := range buffer {
 				batcher.Write(d)
 			}
@@ -309,7 +309,7 @@ func (b *batchWriter) Write(batch []*loggregator_v2.Envelope) {
 func (s *Server) consumeBatchReceiver(
 	usePreferred bool,
 	buffer chan<- *loggregator_v2.Envelope,
-	errorStream chan<- error,
+	stopped chan<- struct{},
 	rx func() (*loggregator_v2.Envelope, error),
 	cancel func(),
 ) {
@@ -320,13 +320,13 @@ func (s *Server) consumeBatchReceiver(
 	for {
 		e, err := rx()
 		if err == io.EOF {
-			errorStream <- err
+			stopped <- struct{}{}
 			break
 		}
 
 		if err != nil {
 			log.Printf("Subscribe error: %s", err)
-			errorStream <- err
+			stopped <- struct{}{}
 			break
 		}
 
