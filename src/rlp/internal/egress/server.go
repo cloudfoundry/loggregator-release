@@ -130,8 +130,8 @@ func (s *Server) Receiver(r *loggregator_v2.EgressRequest, srv loggregator_v2.Eg
 	if len(r.Selectors) == 0 {
 		return status.Errorf(codes.InvalidArgument, "Selectors cannot be empty")
 	}
-	for _, s := range r.Selectors {
-		if s.Message == nil {
+	for _, sel := range r.Selectors {
+		if sel.Message == nil {
 			return status.Errorf(codes.InvalidArgument, "Selectors must have a Message")
 		}
 	}
@@ -195,8 +195,8 @@ func (s *Server) BatchedReceiver(r *loggregator_v2.EgressBatchRequest, srv loggr
 	if len(r.Selectors) == 0 {
 		return status.Errorf(codes.InvalidArgument, "Selectors cannot be empty")
 	}
-	for _, s := range r.Selectors {
-		if s.Message == nil {
+	for _, sel := range r.Selectors {
+		if sel.Message == nil {
 			return status.Errorf(codes.InvalidArgument, "Selectors must have a Message")
 		}
 	}
@@ -248,9 +248,11 @@ func (s *Server) BatchedReceiver(r *loggregator_v2.EgressBatchRequest, srv loggr
 				<-timer.C
 			}
 			timer.Reset(resetDuration)
-		case <-senderErrorStream:
+		case err := <-senderErrorStream:
+			_ = err
 			return io.ErrUnexpectedEOF
-		case <-receiveErrorStream:
+		case err := <-receiveErrorStream:
+			_ = err
 			for d := range buffer {
 				batcher.Write(d)
 			}
