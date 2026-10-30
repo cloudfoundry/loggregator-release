@@ -1,6 +1,6 @@
 module code.cloudfoundry.org/loggregator-release/src
 
-go 1.26.7
+go 1.27.3
 
 require (
 	code.cloudfoundry.org/go-batching v0.0.0-20260928211223-16dd17ccfe80
@@ -9,7 +9,7 @@ require (
 	code.cloudfoundry.org/go-loggregator/v10 v10.3.1
 	code.cloudfoundry.org/go-metric-registry v0.0.0-20260928211359-6c1485edfdb8
 	code.cloudfoundry.org/go-pubsub v0.0.0-20260716182600-b9f352f16768
-	code.cloudfoundry.org/tlsconfig v0.69.0
+	code.cloudfoundry.org/tlsconfig v0.70.0
 	github.com/cloudfoundry/noaa/v2 v2.6.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20260818080958-d46298cd8513
 	github.com/gorilla/handlers v1.5.2
@@ -38,7 +38,7 @@ require (
 	github.com/prometheus/client_model v0.6.3 // indirect
 	github.com/prometheus/common v0.72.1 // indirect
 	github.com/prometheus/procfs v0.22.0 // indirect
-	github.com/square/certstrap v1.4.0 // indirect
+	github.com/square/certstrap v1.4.1 // indirect
 	go.step.sm/crypto v0.91.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.58.0 // indirect

@@ -10,8 +10,8 @@ code.cloudfoundry.org/go-metric-registry v0.0.0-20260928211359-6c1485edfdb8 h1:h
 code.cloudfoundry.org/go-metric-registry v0.0.0-20260928211359-6c1485edfdb8/go.mod h1:Ui38F1h80OnKa1tZOp+eW/XPz6IQDjQd18QHJFp44+w=
 code.cloudfoundry.org/go-pubsub v0.0.0-20260716182600-b9f352f16768 h1:xysp/EWmvOfGsYMgUBi0mJ66/oNwwAj4YAoe9aktGcE=
 code.cloudfoundry.org/go-pubsub v0.0.0-20260716182600-b9f352f16768/go.mod h1:ksBkA8eNuGcJ2qg9X3ion43Han9SwvMAyXKEn1E8uWc=
-code.cloudfoundry.org/tlsconfig v0.69.0 h1:bvlvdU2BKiSEcgeiv0Csomzmq7Gn8vGU4yeNXy5FN2M=
-code.cloudfoundry.org/tlsconfig v0.69.0/go.mod h1:gKv5uSKC6EUgBllA7qDmXPYRz8sJaV3BWpCMsg24R8I=
+code.cloudfoundry.org/tlsconfig v0.70.0 h1:QsR1Ys8j/UcsQmAn8Zv+5BNC4pT66BZmxl+juTPdPvg=
+code.cloudfoundry.org/tlsconfig v0.70.0/go.mod h1:BFWFL5mEhEorvMWj6Pc9qxHJMWkU5UN15DYQ8vHCbk0=
 filippo.io/edwards25519 v1.2.0 h1:crnVqOiS4jqYleHd9vaKZ+HKtHfllngJIiOpNpoJsjo=
 filippo.io/edwards25519 v1.2.0/go.mod h1:xzAOLCNug/yB62zG1bQ8uziwrIqIuxhctzJT18Q77mc=
 github.com/Masterminds/semver/v3 v3.5.0 h1:kQceYJfbupGfZOKZQg0kou0DgAKhzDg2NZPAwZ/2OOE=
@@ -90,8 +90,8 @@ github.com/prometheus/procfs v0.22.0 h1:6q9+/JL9IKAPbCmBrv9n5O5Ty3NKnciV5X7YGw0o
 github.com/prometheus/procfs v0.22.0/go.mod h1:CvmFr/GVhIjIvWJZW3tgkODBQMRIf0EyWMQLHCHab58=
 github.com/rogpeppe/go-internal v1.16.0 h1:O9DK+vNMDVGLr2BeZqmpLeMjiMNkuXfcqntWbZV6S5g=
 github.com/rogpeppe/go-internal v1.16.0/go.mod h1:DrUVZyrJU+txYW5/1kwtXQSMFio52ZOxX7yM1VHvnxs=
-github.com/square/certstrap v1.4.0 h1:mi39IWdw+RU7Jt/fQnDYPxiI5VrkkAbPz0ATmsND4ug=
-github.com/square/certstrap v1.4.0/go.mod h1:fKLEQEqfbeBX384nbu8WIQc66GA5rF2eESVVJXzkvjI=
+github.com/square/certstrap v1.4.1 h1:jmahdEGXxvVYpzOoP3aSSiWWVA4BMfzxgBXkM4K+qxM=
+github.com/square/certstrap v1.4.1/go.mod h1:XG710gBIELcxqblJTWTtR9pmYvYKVRW2GOrp4T6FL6E=
 github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
 github.com/tidwall/gjson v1.18.0 h1:FIDeeyB800efLX89e5a8Y0BNH+LOngJyGrIWxG2FKQY=
