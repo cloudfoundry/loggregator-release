@@ -19,8 +19,8 @@ code.cloudfoundry.org/go-metric-registry
 code.cloudfoundry.org/go-pubsub
 code.cloudfoundry.org/go-pubsub/internal/node
 code.cloudfoundry.org/go-pubsub/pubsub-gen/setters
-# code.cloudfoundry.org/tlsconfig v0.69.0
-## explicit; go 1.26.0
+# code.cloudfoundry.org/tlsconfig v0.70.0
+## explicit; go 1.27.3
 code.cloudfoundry.org/tlsconfig
 code.cloudfoundry.org/tlsconfig/certtest
 # filippo.io/edwards25519 v1.2.0
@@ -140,8 +140,8 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/parsers
-# github.com/square/certstrap v1.4.0
-## explicit; go 1.24
+# github.com/square/certstrap v1.4.1
+## explicit; go 1.27.3
 github.com/square/certstrap/pkix
 # go.step.sm/crypto v0.91.0
 ## explicit; go 1.26.0
