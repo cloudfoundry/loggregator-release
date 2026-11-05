@@ -65,6 +65,8 @@ builds:
     version: 106.6.8
   1c0b6275-220b-4d08-b2d7-f61bdd0206ac:
     version: "29"
+  1d3cccbf-5a8d-43d1-6416-622de0b269ae:
+    version: 107.0.39
   1d9bade8-2f69-42f4-8503-cd4e5092c940:
     version: "60"
   1e777742-1b0c-4a4c-6031-bf6aee9f7015:
