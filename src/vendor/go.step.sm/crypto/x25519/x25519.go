@@ -114,9 +114,9 @@ func (p PrivateKey) SharedKey(peerPublicKey []byte) ([]byte, error) {
 // XEdDSA performs two passes over messages to be signed and therefore cannot
 // handle pre-hashed messages. Thus opts.HashFunc() must return zero to indicate
 // the message hasn't been hashed. This can be achieved by passing
-// crypto.Hash(0) as the value for opts.
+// crypto.Hash(0) or nil as the value for opts.
 func (p PrivateKey) Sign(rand io.Reader, message []byte, opts crypto.SignerOpts) (signature []byte, err error) {
-	if opts.HashFunc() != crypto.Hash(0) {
+	if opts != nil && opts.HashFunc() != crypto.Hash(0) {
 		return nil, errors.New("x25519: cannot sign hashed message")
 	}
 
