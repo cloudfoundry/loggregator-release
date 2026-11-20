@@ -19,7 +19,7 @@ code.cloudfoundry.org/go-metric-registry
 code.cloudfoundry.org/go-pubsub
 code.cloudfoundry.org/go-pubsub/internal/node
 code.cloudfoundry.org/go-pubsub/pubsub-gen/setters
-# code.cloudfoundry.org/tlsconfig v0.72.0
+# code.cloudfoundry.org/tlsconfig v0.73.0
 ## explicit; go 1.27.3
 code.cloudfoundry.org/tlsconfig
 code.cloudfoundry.org/tlsconfig/certtest
@@ -159,7 +159,7 @@ go.step.sm/crypto/x25519
 # go.yaml.in/yaml/v3 v3.0.5
 ## explicit; go 1.16
 go.yaml.in/yaml/v3
-# golang.org/x/crypto v0.58.0
+# golang.org/x/crypto v0.59.0
 ## explicit; go 1.26.0
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/chacha20
@@ -191,7 +191,7 @@ golang.org/x/net/internal/httpsfv
 golang.org/x/net/internal/timeseries
 golang.org/x/net/netutil
 golang.org/x/net/trace
-# golang.org/x/sync v0.24.0
+# golang.org/x/sync v0.25.0
 ## explicit; go 1.26.0
 golang.org/x/sync/errgroup
 # golang.org/x/sys v0.50.0
@@ -199,7 +199,7 @@ golang.org/x/sync/errgroup
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.43.0
+# golang.org/x/text v0.44.0
 ## explicit; go 1.26.0
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
