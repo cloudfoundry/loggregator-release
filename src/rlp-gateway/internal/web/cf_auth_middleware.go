@@ -66,7 +66,7 @@ func (m CFAuthMiddlewareProvider) Middleware(h http.Handler) http.Handler {
 
 		for _, sourceID := range sourceIDs {
 			if !c.IsAdmin {
-				if !m.logAuthorizer.IsAuthorized(sourceID, authToken) || !guid.MatchString(sourceID) {
+				if !guid.MatchString(sourceID) || !m.logAuthorizer.IsAuthorized(sourceID, authToken) {
 					errNotFound.Write(w)
 					return
 				}

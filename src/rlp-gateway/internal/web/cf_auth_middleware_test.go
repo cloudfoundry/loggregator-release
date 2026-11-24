@@ -104,6 +104,31 @@ var _ = Describe("CfAuthMiddleware", func() {
 			Expect(baseHandlerCalled).To(BeFalse())
 		})
 
+		DescribeTable("does not call the log authorizer for a non-GUID source ID",
+			func(rawQuery, lastAuthorizedID string) {
+				request = httptest.NewRequest(http.MethodGet, "/v2/read?"+rawQuery, nil)
+				spyLogAuthorizer.result = true
+				var baseHandlerCalled bool
+				baseHandler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+					baseHandlerCalled = true
+				})
+				authHandler := provider.Middleware(baseHandler)
+
+				request.Header.Set("Authorization", "valid-token")
+
+				authHandler.ServeHTTP(recorder, request)
+
+				Expect(recorder.Code).To(Equal(http.StatusNotFound))
+				Expect(baseHandlerCalled).To(BeFalse())
+				Expect(spyLogAuthorizer.sourceID).To(Equal(lastAuthorizedID))
+			},
+			Entry("path traversal", "source_id=..%2F..%2Fv2%2Finfo", ""),
+			Entry("plain non-GUID", "source_id=123", ""),
+			Entry("valid GUID followed by a bad one",
+				"source_id=deadbeef-dead-dead-dead-deaddeafbeef&source_id=..%2F..%2Fv2%2Finfo",
+				"deadbeef-dead-dead-dead-deaddeafbeef"),
+		)
+
 		It("returns 404 if there's no authorization header present", func() {
 			var baseHandlerCalled bool
 			baseHandler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
