@@ -208,7 +208,8 @@ func generateECKey(crv string) (crypto.Signer, error) {
 	case "P-521":
 		c = elliptic.P521()
 	default:
-		return nil, errors.Errorf("invalid value for argument crv (crv: '%s')", crv)
+		return nil, errors.Errorf("missing or invalid value for argument 'crv', "+
+			"expected 'P-256', 'P-384', or 'P-521', but got '%s'", crv)
 	}
 
 	key, err := ecdsa.GenerateKey(c, rand.Reader)
@@ -247,7 +248,7 @@ func generateOKPKey(crv string) (crypto.Signer, error) {
 		}
 		return key, nil
 	default:
-		return nil, errors.Errorf("missing or invalid value for argument 'crv'. "+
+		return nil, errors.Errorf("missing or invalid value for argument 'crv', "+
 			"expected 'Ed25519' or 'X25519', but got '%s'", crv)
 	}
 }
@@ -279,7 +280,7 @@ func generateAKPKey(alg string) (crypto.Signer, error) {
 		}
 		return key, nil
 	default:
-		return nil, errors.Errorf("missing or invalid value for argument 'alg'. "+
+		return nil, errors.Errorf("missing or invalid value for argument 'alg', "+
 			"expected 'ML-DSA-44', 'ML-DSA-65', or 'ML-DSA-87', but got '%s'", alg)
 	}
 }
